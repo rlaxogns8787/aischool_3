@@ -203,7 +203,7 @@ export default function ChatScreen({ navigation }: ChatScreenProps) {
             style={styles.backButton}
             onPress={() => navigation.goBack()}
           >
-            <ArrowLeft size={24} color="#000" />
+            <ArrowLeft size={24} />
           </TouchableOpacity>
           <View style={styles.headerTitle}>
             <Text style={styles.title}>여행 플래너</Text>
