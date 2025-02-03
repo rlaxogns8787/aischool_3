@@ -1,0 +1,12 @@
+{
+  "expo": {
+    "extra": {
+      "eas": {
+        "projectId": "048aa492-3c96-4897-a5f9-f7dbeaf0d3ea"
+      }
+    },
+    "android": {
+      "package": "com.muk2213.mytravelproject"
+    }
+  }
+}
