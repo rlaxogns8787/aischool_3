@@ -28,6 +28,7 @@
     "expo-speech": "~13.0.1",
     "expo-speech-recognition": "^1.1.1",
     "lucide-react-native": "^0.473.0",
+    "microsoft-cognitiveservices-speech-sdk": "^1.42.0",
     "react": "18.3.1",
     "react-dom": "18.3.1",
     "react-native": "0.76.6",

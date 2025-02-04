@@ -12,14 +12,18 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { ChevronLeft, Mic } from "lucide-react-native";
 import MapIcon from "../assets/map.svg";
 import * as Speech from "expo-speech";
-import * as FileSystem from "expo-file-system";
-import { Audio } from "expo-av";
+import * as sdk from "microsoft-cognitiveservices-speech-sdk";
 
 type TourScreenProps = {
   navigation: any;
 };
 
-const SPEECH_API_URL = "http://localhost:3000/api/speech-to-text";
+// Azure Speech 설정
+const speechConfig = sdk.SpeechConfig.fromSubscription(
+  "9ot6vDP41TrM6i1MRWbtsyZrOFlXDy4UunpzMcZbT5QrzyLvEHDYJQQJ99BAACYeBjFXJ3w3AAAYACOGvVzj",
+  "eastus"
+);
+speechConfig.speechRecognitionLanguage = "ko-KR";
 
 export default function TourScreen({ navigation }: TourScreenProps) {
   const [fullText] = useState(
@@ -28,9 +32,9 @@ export default function TourScreen({ navigation }: TourScreenProps) {
   const [displayedText, setDisplayedText] = useState("");
   const [highlightIndex, setHighlightIndex] = useState(0);
   const [isRecording, setIsRecording] = useState(false);
-  const [recording, setRecording] = useState<Audio.Recording | null>(null);
   const [userInput, setUserInput] = useState("");
   const scrollViewRef = useRef<ScrollView>(null);
+  const recognizer = useRef<sdk.SpeechRecognizer | null>(null);
 
   useEffect(() => {
     let timeoutId: NodeJS.Timeout;
@@ -76,27 +80,25 @@ export default function TourScreen({ navigation }: TourScreenProps) {
 
   const startRecording = async () => {
     try {
-      // 오디오 권한 요청
-      const { granted } = await Audio.requestPermissionsAsync();
-      if (!granted) {
-        alert("마이크 권한이 필요합니다.");
-        return;
-      }
-
-      // 오디오 녹음 설정
-      await Audio.setAudioModeAsync({
-        allowsRecordingIOS: true,
-        playsInSilentModeIOS: true,
-      });
-
       setIsRecording(true);
       setUserInput("듣고 있습니다...");
 
-      // 녹음 시작
-      const { recording } = await Audio.Recording.createAsync(
-        Audio.RecordingOptionsPresets.HIGH_QUALITY
-      );
-      setRecording(recording);
+      // 오디오 설정
+      const audioConfig = sdk.AudioConfig.fromDefaultMicrophoneInput();
+      recognizer.current = new sdk.SpeechRecognizer(speechConfig, audioConfig);
+
+      // 실시간 음성 인식 시작
+      recognizer.current.recognizing = (s, e) => {
+        setUserInput(e.result.text);
+      };
+
+      recognizer.current.recognized = (s, e) => {
+        if (e.result.reason === sdk.ResultReason.RecognizedSpeech) {
+          setUserInput(e.result.text);
+        }
+      };
+
+      recognizer.current.startContinuousRecognitionAsync();
     } catch (error) {
       console.error("Failed to start recording:", error);
       setIsRecording(false);
@@ -106,50 +108,15 @@ export default function TourScreen({ navigation }: TourScreenProps) {
 
   const stopRecording = async () => {
     try {
-      if (!recording) return;
-
-      await recording.stopAndUnloadAsync();
+      if (recognizer.current) {
+        await recognizer.current.stopContinuousRecognitionAsync();
+        recognizer.current.close();
+        recognizer.current = null;
+      }
       setIsRecording(false);
-
-      const uri = recording.getURI();
-      if (!uri) throw new Error("녹음 파일을 찾을 수 없습니다.");
-
-      setUserInput("음성을 텍스트로 변환하는 중...");
-
-      // 녹음된 파일을 서버로 전송
-      const formData = new FormData();
-      formData.append("audio", {
-        uri,
-        type: "audio/wav",
-        name: "speech.wav",
-      } as any);
-
-      const response = await fetch(SPEECH_API_URL, {
-        method: "POST",
-        body: formData,
-      });
-
-      if (!response.ok) {
-        const errorData = await response.text();
-        console.error("Server error:", errorData);
-        throw new Error(`Server responded with ${response.status}`);
-      }
-
-      const data = await response.json();
-      console.log("Server response:", data); // 서버 응답 로깅
-
-      if (data.text) {
-        setUserInput(data.text);
-      } else {
-        setUserInput("음성을 텍스트로 변환하지 못했습니다.");
-      }
-
-      setRecording(null);
     } catch (error) {
-      console.error("Full error:", error);
-      setRecording(null);
+      console.error("Failed to stop recording:", error);
       setIsRecording(false);
-      setUserInput("음성 인식에 실패했습니다. 다시 시도해주세요.");
     }
   };
 
