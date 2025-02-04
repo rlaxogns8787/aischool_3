@@ -1,0 +1,30 @@
+{
+  "expo": {
+    "name": "travel-chat",
+    "slug": "travel-chat",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "ios": {
+      "bundleIdentifier": "com.yourcompany.travelchat",
+      "supportsTablet": true,
+      "infoPlist": {
+        "NSMicrophoneUsageDescription": "음성으로 대화하기 위해 마이크 권한이 필요합니다.",
+        "NSCameraUsageDescription": "화상 통화를 위해 카메라 권한이 필요합니다.",
+        "NSPhotoLibraryUsageDescription": "사진을 공유하기 위해 갤러리 접근 권한이 필요합니다."
+      }
+    },
+    "android": {
+      "package": "com.travelchat.app",
+      "permissions": [
+        "RECORD_AUDIO"
+      ]
+    },
+    "plugins": [
+      "expo-speech-recognition"
+    ]
+  }
+}

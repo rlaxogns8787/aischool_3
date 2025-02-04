@@ -1,0 +1,41 @@
+# Dependencies
+node_modules/
+.expo/
+dist/
+npm-debug.*
+*.jks
+*.p8
+*.p12
+*.key
+*.mobileprovision
+*.orig.*
+web-build/
+
+# Environment
+.env
+.env.local
+
+# IDE
+.idea/
+.vscode/
+
+# Temp files
+tempfs/
+uploads/
+
+# OS
+.DS_Store
+
+# Build
+android/
+ios/
+
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Azure Bot specific
+botframework.config 
