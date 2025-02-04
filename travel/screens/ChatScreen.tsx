@@ -15,12 +15,9 @@ import { Audio } from "expo-av";
 import MessageList from "../components/MessageList";
 import MessageInput from "../components/MessageInput";
 import * as Speech from "expo-speech";
-<<<<<<< HEAD
 import OptionCard from "../components/OptionCard";
 import OptionModal from "../components/OptionModal";
-=======
-import { Voice } from "@react-native-voice/voice";
->>>>>>> haelim
+import Voice from "@react-native-voice/voice";
 
 type ChatScreenProps = {
   navigation: any;
@@ -34,22 +31,15 @@ type Message = {
   options?: { text: string; value: string }[];
 };
 
-<<<<<<< HEAD
-type MessageInputProps = {
-  onSend: (text: string) => void;
-  onVoiceStart?: () => void;
-  isListening?: boolean;
-};
-
-=======
->>>>>>> haelim
 export default function ChatScreen({ navigation }: ChatScreenProps) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [isListening, setIsListening] = useState(false);
   const [tempText, setTempText] = useState("");
-<<<<<<< HEAD
+  const [recording, setRecording] = useState<Audio.Recording | null>(null);
   const pulseAnim = React.useRef(new Animated.Value(1)).current;
-  const BOT_URL = "http://172.30.1.19:3978/api/messages";
+  const BOT_URL = "https://038c-175-195-146-122.ngrok-free.app/api/messages";
+  const SPEECH_API_URL =
+    "https://038c-175-195-146-122.ngrok-free.app/api/speech-to-text";
 
   const [isModalVisible, setModalVisible] = useState(false);
   const [showCards, setShowCards] = useState(true); // 카드 표시 여부를 관리하는 상태 변수
@@ -57,50 +47,6 @@ export default function ChatScreen({ navigation }: ChatScreenProps) {
   const toggleModal = () => {
     setModalVisible(!isModalVisible);
   };
-
-  // 음성 인식 토글
-  const toggleVoiceRecognition = async () => {
-    try {
-      if (isListening) {
-        // 음성 인식 중지
-        setIsListening(false);
-        // 테스트용 텍스트를 메시지로 전송
-        if (tempText.trim()) {
-          sendMessage(tempText.trim());
-          setTempText("");
-        }
-      } else {
-        // 음성 인식 시작
-        setIsListening(true);
-        setTempText("");
-
-        // 테스트용: 3초 후에 예시 텍스트 설정
-        setTimeout(() => {
-          setTempText("서울로 여행을 가고 싶습니다");
-          Speech.speak(
-            "음성이 인식되었습니다. 마이크를 다시 눌러 전송하세요.",
-            {
-              language: "ko",
-              onDone: () => {
-                console.log("Speech finished");
-              },
-            }
-          );
-        }, 3000);
-      }
-    } catch (error) {
-      console.error("Error in voice recognition:", error);
-      setIsListening(false);
-      Alert.alert("오류", "음성 인식을 시작할 수 없습니다.");
-    }
-  };
-=======
-  const [recording, setRecording] = useState<Audio.Recording | null>(null);
-  const pulseAnim = React.useRef(new Animated.Value(1)).current;
-  const BOT_URL = "https://038c-175-195-146-122.ngrok-free.app/api/messages";
-  const SPEECH_API_URL =
-    "https://038c-175-195-146-122.ngrok-free.app/api/speech-to-text";
->>>>>>> haelim
 
   // 파동 애니메이션
   useEffect(() => {
@@ -124,13 +70,6 @@ export default function ChatScreen({ navigation }: ChatScreenProps) {
     }
   }, [isListening]);
 
-<<<<<<< HEAD
-  // 챗봇 응답 처리 함수
-  const handleBotResponse = (userText: string): string => {
-    const text = userText.toLowerCase();
-
-    // 1번 옵션 관련 다양한 입력 처리
-=======
   const toggleVoiceRecognition = async () => {
     try {
       if (isListening) {
@@ -232,7 +171,6 @@ export default function ChatScreen({ navigation }: ChatScreenProps) {
   // 챗봇 응답 처리 함수
   const handleBotResponse = (userText: string): string => {
     const text = userText.toLowerCase();
->>>>>>> haelim
     if (
       text.includes("1") ||
       text.includes("일정") ||
@@ -242,13 +180,7 @@ export default function ChatScreen({ navigation }: ChatScreenProps) {
       text.includes("1번")
     ) {
       return "어떤 지역으로 여행을 계획하고 계신가요?";
-<<<<<<< HEAD
-    }
-    // 2번 옵션 관련 다양한 입력 처리
-    else if (
-=======
     } else if (
->>>>>>> haelim
       text.includes("2") ||
       text.includes("처음") ||
       text.includes("도와") ||
@@ -256,13 +188,7 @@ export default function ChatScreen({ navigation }: ChatScreenProps) {
       text.includes("2번")
     ) {
       return "좋습니다. 함께 여행 계획을 세워보아요. 먼저, 어떤 지역으로 여행을 가고 싶으신가요?";
-<<<<<<< HEAD
-    }
-    // 지역 선택 후 처리
-    else if (text.includes("서울")) {
-=======
     } else if (text.includes("서울")) {
->>>>>>> haelim
       return "서울로 정하셨군요! 여행 기간은 어떻게 되시나요? (예: 2박 3일)";
     } else if (text.includes("2박")) {
       return "1박2일";
@@ -273,10 +199,6 @@ export default function ChatScreen({ navigation }: ChatScreenProps) {
 
   const sendMessage = async (text: string) => {
     try {
-<<<<<<< HEAD
-      // 사용자 메시지 추가
-=======
->>>>>>> haelim
       const userMessage: Message = {
         id: Date.now().toString(),
         text,
@@ -285,14 +207,7 @@ export default function ChatScreen({ navigation }: ChatScreenProps) {
       };
       setMessages((prev) => [...prev, userMessage]);
 
-<<<<<<< HEAD
-      // 봇 응답 생성
       const botResponse = handleBotResponse(text);
-
-      // 봇 응답 추가
-=======
-      const botResponse = handleBotResponse(text);
->>>>>>> haelim
       const botMessage: Message = {
         id: (Date.now() + 1).toString(),
         text: botResponse,
@@ -315,13 +230,10 @@ export default function ChatScreen({ navigation }: ChatScreenProps) {
     }
   };
 
-<<<<<<< HEAD
-=======
   const handleOptionSelect = (option: string) => {
     sendMessage(option);
   };
 
->>>>>>> haelim
   // 초기 메시지 설정
   useEffect(() => {
     const initialMessage: Message = {
@@ -337,13 +249,6 @@ export default function ChatScreen({ navigation }: ChatScreenProps) {
     setMessages([initialMessage]);
   }, []);
 
-<<<<<<< HEAD
-  const handleOptionSelect = (option: string) => {
-    sendMessage(option);
-  };
-
-=======
->>>>>>> haelim
   return (
     <SafeAreaView style={styles.container}>
       <KeyboardAvoidingView
@@ -388,7 +293,6 @@ export default function ChatScreen({ navigation }: ChatScreenProps) {
           </Text>
         </View>
 
-<<<<<<< HEAD
         <MessageList
           messages={messages}
           onOptionSelect={handleOptionSelect}
@@ -397,10 +301,6 @@ export default function ChatScreen({ navigation }: ChatScreenProps) {
         />
 
         <OptionModal isVisible={isModalVisible} onClose={toggleModal} />
-
-=======
-        <MessageList messages={messages} onOptionSelect={handleOptionSelect} />
->>>>>>> haelim
         <MessageInput
           onSend={sendMessage}
           onVoiceStart={toggleVoiceRecognition}
@@ -419,14 +319,6 @@ const styles = StyleSheet.create({
   keyboardAvoid: {
     flex: 1,
   },
-<<<<<<< HEAD
-  cardContainer: {
-    flexDirection: "row",
-    justifyContent: "space-around",
-    width: "100%",
-  },
-=======
->>>>>>> haelim
   header: {
     flexDirection: "row",
     alignItems: "center",
@@ -442,11 +334,7 @@ const styles = StyleSheet.create({
   headerTitle: {
     flex: 1,
     alignItems: "center",
-<<<<<<< HEAD
-    marginLeft: -28, // 뒤로가기 버튼 너비만큼 보정
-=======
     marginLeft: -28,
->>>>>>> haelim
   },
   title: {
     fontSize: 16,
