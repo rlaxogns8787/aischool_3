@@ -15,6 +15,8 @@ import { Audio } from "expo-av";
 import MessageList from "../components/MessageList";
 import MessageInput from "../components/MessageInput";
 import * as Speech from "expo-speech";
+import OptionCard from "../components/OptionCard";
+import OptionModal from "../components/OptionModal";
 
 type ChatScreenProps = {
   navigation: any;
@@ -40,6 +42,13 @@ export default function ChatScreen({ navigation }: ChatScreenProps) {
   const [tempText, setTempText] = useState("");
   const pulseAnim = React.useRef(new Animated.Value(1)).current;
   const BOT_URL = "http://172.30.1.19:3978/api/messages";
+
+  const [isModalVisible, setModalVisible] = useState(false);
+  const [showCards, setShowCards] = useState(true); // 카드 표시 여부를 관리하는 상태 변수
+
+  const toggleModal = () => {
+    setModalVisible(!isModalVisible);
+  };
 
   // 음성 인식 토글
   const toggleVoiceRecognition = async () => {
@@ -235,7 +244,15 @@ export default function ChatScreen({ navigation }: ChatScreenProps) {
           </Text>
         </View>
 
-        <MessageList messages={messages} onOptionSelect={handleOptionSelect} />
+        <MessageList
+          messages={messages}
+          onOptionSelect={handleOptionSelect}
+          showCards={showCards}
+          toggleModal={toggleModal}
+        />
+
+        <OptionModal isVisible={isModalVisible} onClose={toggleModal} />
+
         <MessageInput
           onSend={sendMessage}
           onVoiceStart={toggleVoiceRecognition}
@@ -253,6 +270,11 @@ const styles = StyleSheet.create({
   },
   keyboardAvoid: {
     flex: 1,
+  },
+  cardContainer: {
+    flexDirection: "row",
+    justifyContent: "space-around",
+    width: "100%",
   },
   header: {
     flexDirection: "row",

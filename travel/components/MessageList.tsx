@@ -6,6 +6,8 @@ import {
   FlatList,
   TouchableOpacity,
 } from "react-native";
+import Carousel from "react-native-snap-carousel";
+import OptionCard from "./OptionCard";
 
 type Option = {
   text: string;
@@ -20,14 +22,25 @@ type Message = {
   options?: Option[];
 };
 
+type CardItem = {
+  image: string;
+  keyword: string;
+  title: string;
+  address: string;
+};
+
 type MessageListProps = {
   messages: Message[];
   onOptionSelect: (option: string) => void;
+  showCards: boolean;
+  toggleModal: () => void;
 };
 
 export default function MessageList({
   messages,
   onOptionSelect,
+  showCards,
+  toggleModal,
 }: MessageListProps) {
   const renderMessage = ({ item }: { item: Message }) => (
     <View style={styles.messageContainer}>
@@ -62,6 +75,16 @@ export default function MessageList({
     </View>
   );
 
+  const renderCard = ({ item }: { item: CardItem }) => (
+    <OptionCard
+      image={item.image}
+      keyword={item.keyword}
+      title={item.title}
+      address={item.address}
+      onPress={toggleModal}
+    />
+  );
+
   return (
     <FlatList
       data={messages}
@@ -69,10 +92,32 @@ export default function MessageList({
       keyExtractor={(item) => item.id}
       style={styles.container}
       contentContainerStyle={styles.contentContainer}
+      ListFooterComponent={
+        showCards ? (
+          <Carousel
+            data={[
+              {
+                image: "../assets/banner1.png",
+                keyword: "힐링",
+                title: "힐링가득 고궁여행",
+                address: "서울중구",
+              },
+              {
+                image: "../assets/banner1.png",
+                keyword: "역사",
+                title: "역사탐방",
+                address: "서울종로구",
+              },
+            ]}
+            renderItem={renderCard}
+            sliderWidth={300}
+            itemWidth={250}
+          />
+        ) : null
+      }
     />
   );
 }
-
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -121,5 +166,10 @@ const styles = StyleSheet.create({
     color: "#007AFF",
     fontSize: 16,
     textAlign: "center",
+  },
+  cardContainer: {
+    flexDirection: "row",
+    justifyContent: "space-around",
+    padding: 10,
   },
 });
