@@ -60,51 +60,45 @@ server.use(restify.plugins.bodyParser());
 server.use(restify.plugins.queryParser());
 
 // 음성을 텍스트로 변환하는 엔드포인트
-server.post(
-  "/api/speech-to-text",
-  upload.single("audio"),
-  async (req: any, res: any) => {
-    try {
-      console.log("Starting speech recognition...");
-      console.log("Speech key length:", process.env.SPEECH_KEY?.length);
-      console.log("Speech region:", process.env.SPEECH_REGION);
+server.post("/api/speech-to-text", upload.single("audio"), async (req, res) => {
+  try {
+    console.log("Starting speech recognition...");
+    console.log("Speech key length:", process.env.SPEECH_KEY?.length);
+    console.log("Speech region:", process.env.SPEECH_REGION);
 
-      if (!req.files || !req.files.audio) {
-        console.error("No audio file received");
-        return res.send(400, { error: "No audio file received" });
-      }
-
-      const speechConfig = sdk.SpeechConfig.fromSubscription(
-        process.env.SPEECH_KEY,
-        process.env.SPEECH_REGION
-      );
-      speechConfig.speechRecognitionLanguage = "ko-KR";
-      console.log("Speech config created");
-
-      const audioConfig = sdk.AudioConfig.fromWavFileInput(
-        req.files.audio.path
-      );
-      console.log("Audio config created, file path:", req.files.audio.path);
-
-      const recognizer = new sdk.SpeechRecognizer(speechConfig, audioConfig);
-      console.log("Speech recognizer created");
-
-      recognizer.recognizeOnceAsync(
-        (result) => {
-          console.log("Recognition result:", result.text);
-          res.send(200, { text: result.text });
-        },
-        (error) => {
-          console.error("Recognition error:", error);
-          res.send(500, { error: "Failed to convert speech to text" });
-        }
-      );
-    } catch (error) {
-      console.error("Server error:", error);
-      res.send(500, { error: "Server error" });
+    if (!req.files || !req.files.audio) {
+      console.error("No audio file received");
+      return res.send(400, { error: "No audio file received" });
     }
+
+    const speechConfig = sdk.SpeechConfig.fromSubscription(
+      process.env.SPEECH_KEY,
+      process.env.SPEECH_REGION
+    );
+    speechConfig.speechRecognitionLanguage = "ko-KR";
+    console.log("Speech config created");
+
+    const audioConfig = sdk.AudioConfig.fromWavFileInput(req.files.audio.path);
+    console.log("Audio config created, file path:", req.files.audio.path);
+
+    const recognizer = new sdk.SpeechRecognizer(speechConfig, audioConfig);
+    console.log("Speech recognizer created");
+
+    recognizer.recognizeOnceAsync(
+      (result) => {
+        console.log("Recognition result:", result.text);
+        res.send(200, { text: result.text });
+      },
+      (error) => {
+        console.error("Recognition error:", error);
+        res.send(500, { error: "Failed to convert speech to text" });
+      }
+    );
+  } catch (error) {
+    console.error("Server error:", error);
+    res.send(500, { error: "Server error" });
   }
-);
+});
 
 // 여행 계획 봇
 class TravelPlannerBot {

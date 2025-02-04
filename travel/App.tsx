@@ -19,6 +19,8 @@ import CalendarIcon from "./assets/calendar.svg";
 import GalleryIcon from "./assets/gallery.svg";
 import "react-native-gesture-handler";
 import ChatScreen from "./screens/ChatScreen";
+import TourScreen from "./screens/TourScreen";
+import { MessageCircle } from "lucide-react-native";
 
 export type RootStackParamList = {
   Auth: undefined;
@@ -45,7 +47,7 @@ const Drawer = createDrawerNavigator();
 function MainTabs() {
   return (
     <Tab.Navigator
-      screenOptions={{
+      screenOptions={({ route }) => ({
         headerShown: false,
         tabBarStyle: {
           height: 82,
@@ -58,6 +60,7 @@ function MainTabs() {
           right: 0,
           paddingTop: 0,
           paddingBottom: 0,
+          display: route.name === "가이드" ? "none" : "flex",
         },
         tabBarItemStyle: {
           height: 48,
@@ -76,7 +79,7 @@ function MainTabs() {
         },
         tabBarActiveTintColor: "#006FFD",
         tabBarInactiveTintColor: "#616161",
-      }}
+      })}
     >
       <Tab.Screen
         name="홈"
@@ -84,6 +87,19 @@ function MainTabs() {
         options={{
           tabBarIcon: ({ focused }: { focused: boolean }) => (
             <HomeIcon
+              width={24}
+              height={24}
+              color={focused ? "#006FFD" : "#71727A"}
+            />
+          ),
+        }}
+      />
+      <Tab.Screen
+        name="가이드"
+        component={TourScreen}
+        options={{
+          tabBarIcon: ({ focused }: { focused: boolean }) => (
+            <MessageCircle
               width={24}
               height={24}
               color={focused ? "#006FFD" : "#71727A"}

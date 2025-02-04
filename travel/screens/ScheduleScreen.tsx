@@ -41,7 +41,12 @@ export default function ScheduleScreen({ navigation }: ScheduleScreenProps) {
       <TouchableOpacity
         style={styles.registerButton}
         onPress={() => {
-          navigation.navigate("Chat");
+          navigation.navigate("Root", {
+            screen: "MainTab",
+            params: {
+              screen: "Tour",
+            },
+          });
         }}
       >
         <Text style={styles.buttonText}>일정 등록</Text>

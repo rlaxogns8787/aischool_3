@@ -1,7 +1,7 @@
 import React from "react";
 import { View, Text, StyleSheet, TouchableOpacity } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { Mic } from "lucide-react-native";
+import { Mic, MessageCircle } from "lucide-react-native";
 import MenuIcon from "../assets/menu.svg";
 import NotificationIcon from "../assets/bell.svg";
 

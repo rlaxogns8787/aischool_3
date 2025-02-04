@@ -12,6 +12,9 @@
     "@azure/openai": "^2.0.0",
     "botbuilder": "^4.23.1",
     "dotenv": "^16.4.7",
+    "express": "^4.21.2",
+    "microsoft-cognitiveservices-speech-sdk": "^1.42.0",
+    "multer": "^1.4.5-lts.1",
     "restify": "^11.1.0"
   },
   "description": ""
