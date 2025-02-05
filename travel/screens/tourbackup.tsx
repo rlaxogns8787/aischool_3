@@ -21,11 +21,6 @@ type TourScreenProps = {
   navigation: any;
 };
 
-// 하드코딩된 키 사용 (임시)
-const SPEECH_KEY =
-  "9ot6vDP41TrM6i1MRWbtsyZrOFlXDy4UunpzMcZbT5QrzyLvEHDYJQQJ99BAACYeBjFXJ3w3AAAYACOGvVzj";
-const SPEECH_REGION = "eastus";
-
 export default function TourScreen({ navigation }: TourScreenProps) {
   const [displayedText, setDisplayedText] = useState("");
   const [isRecording, setIsRecording] = useState(false);
@@ -48,8 +43,8 @@ export default function TourScreen({ navigation }: TourScreenProps) {
 
       // Azure Speech 설정
       const speechConfig = sdk.SpeechConfig.fromSubscription(
-        SPEECH_KEY,
-        SPEECH_REGION
+        "9ot6vDP41TrM6i1MRWbtsyZrOFlXDy4UunpzMcZbT5QrzyLvEHDYJQQJ99BAACYeBjFXJ3w3AAAYACOGvVzj",
+        "eastus"
       );
       speechConfig.speechSynthesisVoiceName = "ko-KR-SunHiNeural";
 
@@ -137,8 +132,8 @@ export default function TourScreen({ navigation }: TourScreenProps) {
 
       // 3. Azure Speech 설정
       const speechConfig = sdk.SpeechConfig.fromSubscription(
-        SPEECH_KEY,
-        SPEECH_REGION
+        "9ot6vDP41TrM6i1MRWbtsyZrOFlXDy4UunpzMcZbT5QrzyLvEHDYJQQJ99BAACYeBjFXJ3w3AAAYACOGvVzj",
+        "eastus"
       );
       speechConfig.speechRecognitionLanguage = "ko-KR";
 

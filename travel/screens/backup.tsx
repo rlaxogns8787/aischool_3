@@ -21,20 +21,20 @@ type TourScreenProps = {
   navigation: any;
 };
 
-// 하드코딩된 키 사용 (임시)
-const SPEECH_KEY =
-  "9ot6vDP41TrM6i1MRWbtsyZrOFlXDy4UunpzMcZbT5QrzyLvEHDYJQQJ99BAACYeBjFXJ3w3AAAYACOGvVzj";
-const SPEECH_REGION = "eastus";
-
 export default function TourScreen({ navigation }: TourScreenProps) {
+  const [fullText] = useState(
+    "경복궁은 대한민국의 수도 서울에 위치한 궁전으로 '큰 복을 누리며 번성하라' 라는 뜻을 지니고 있습니다. 면적은 약 43만 제곱미터로 축구장 60개 정도의 크기입니다..."
+  );
   const [displayedText, setDisplayedText] = useState("");
+  const [highlightIndex, setHighlightIndex] = useState(0);
   const [isRecording, setIsRecording] = useState(false);
   const [userInput, setUserInput] = useState("");
   const [isAudioReady, setIsAudioReady] = useState(false);
   const scrollViewRef = useRef<ScrollView>(null);
   const recognizer = useRef<sdk.SpeechRecognizer | null>(null);
-  const synthesizer = useRef<sdk.SpeechSynthesizer | null>(null);
+  const [permissionResponse, requestPermission] = Audio.usePermissions();
   const { processQuery, isProcessing } = useAzureBot();
+  const synthesizer = useRef<sdk.SpeechSynthesizer | null>(null);
 
   // Azure Speech 관련 함수 수정
   const startSpeaking = async (text: string) => {
@@ -48,8 +48,8 @@ export default function TourScreen({ navigation }: TourScreenProps) {
 
       // Azure Speech 설정
       const speechConfig = sdk.SpeechConfig.fromSubscription(
-        SPEECH_KEY,
-        SPEECH_REGION
+        "9ot6vDP41TrM6i1MRWbtsyZrOFlXDy4UunpzMcZbT5QrzyLvEHDYJQQJ99BAACYeBjFXJ3w3AAAYACOGvVzj",
+        "eastus"
       );
       speechConfig.speechSynthesisVoiceName = "ko-KR-SunHiNeural";
 
@@ -98,7 +98,7 @@ export default function TourScreen({ navigation }: TourScreenProps) {
 
         await Audio.setAudioModeAsync({
           playsInSilentModeIOS: true,
-          allowsRecordingIOS: true,
+          allowsRecordingIOS: true, // 마이크 사용을 위해 true로 변경
           interruptionModeIOS: 2,
           interruptionModeAndroid: 1,
           shouldDuckAndroid: true,
@@ -114,101 +114,86 @@ export default function TourScreen({ navigation }: TourScreenProps) {
     initializeAudioPermission();
   }, []);
 
-  // Azure STT(Speech-to-Text) 함수 수정
+  // 초기 텍스트 출력 useEffect 수정
+  useEffect(() => {
+    let isMounted = true;
+    let currentIndex = 0;
+    let timeoutId: NodeJS.Timeout;
+
+    const animateText = () => {
+      if (!isMounted) return;
+      if (currentIndex <= fullText.length) {
+        setDisplayedText(fullText.slice(0, currentIndex));
+        currentIndex++;
+        timeoutId = setTimeout(animateText, 50);
+      }
+    };
+
+    const initializeAudio = async () => {
+      if (isAudioReady && isMounted) {
+        try {
+          console.log("Starting initial text animation and speech");
+          animateText();
+
+          // 약간의 지연 후 음성 시작
+          setTimeout(async () => {
+            if (isMounted) {
+              console.log("Starting speech after delay");
+              await startSpeaking(fullText);
+            }
+          }, 1000);
+        } catch (error) {
+          console.error("Initial TTS error:", error);
+        }
+      }
+    };
+
+    initializeAudio();
+
+    return () => {
+      isMounted = false;
+      clearTimeout(timeoutId);
+      Speech.stop();
+    };
+  }, [isAudioReady, fullText]);
+
+  // Azure STT(Speech-to-Text) 함수
   const startAzureSTT = async () => {
     try {
-      // 1. 마이크 권한 확인
-      const permission = await Audio.requestPermissionsAsync();
-      if (!permission.granted) {
-        throw new Error("Microphone permission not granted");
-      }
-
-      // 2. Audio 세션 설정 - 숫자로 직접 지정
-      await Audio.setAudioModeAsync({
-        allowsRecordingIOS: true,
-        playsInSilentModeIOS: true,
-        // iOS: 1=MixWithOthers, 2=DuckOthers, 3=DoNotMix
-        interruptionModeIOS: 2,
-        shouldDuckAndroid: true,
-        // Android: 1=DuckOthers, 2=DoNotMix
-        interruptionModeAndroid: 2,
-        playThroughEarpieceAndroid: false,
-      });
-
-      // 3. Azure Speech 설정
       const speechConfig = sdk.SpeechConfig.fromSubscription(
-        SPEECH_KEY,
-        SPEECH_REGION
+        "9ot6vDP41TrM6i1MRWbtsyZrOFlXDy4UunpzMcZbT5QrzyLvEHDYJQQJ99BAACYeBjFXJ3w3AAAYACOGvVzj",
+        "eastus"
       );
       speechConfig.speechRecognitionLanguage = "ko-KR";
 
-      // 4. 마이크 설정
       const audioConfig = sdk.AudioConfig.fromDefaultMicrophoneInput();
+      const recognizer = new sdk.SpeechRecognizer(speechConfig, audioConfig);
 
-      // 5. 인식기 생성 및 설정
-      recognizer.current = new sdk.SpeechRecognizer(speechConfig, audioConfig);
-
-      // 6. 음성 인식 실행
       return new Promise((resolve, reject) => {
-        if (!recognizer.current) {
-          reject(new Error("Recognizer not initialized"));
-          return;
-        }
-
-        recognizer.current.recognizing = (s, e) => {
-          console.log(`RECOGNIZING: Text=${e.result.text}`);
-          setUserInput(e.result.text);
-        };
-
-        recognizer.current.recognized = (s, e) => {
-          if (e.result.reason === sdk.ResultReason.RecognizedSpeech) {
-            console.log(`RECOGNIZED: Text=${e.result.text}`);
-          } else {
-            console.log(
-              `ERROR: Speech was cancelled or could not be recognized. Ensure your microphone is working properly.`
-            );
-          }
-        };
-
-        recognizer.current.canceled = (s, e) => {
-          console.log(`CANCELED: Reason=${e.reason}`);
-          reject(new Error("Speech recognition canceled"));
-        };
-
-        recognizer.current.sessionStarted = (s, e) => {
-          console.log("\nSession started event.");
-        };
-
-        recognizer.current.sessionStopped = (s, e) => {
-          console.log("\nSession stopped event.");
-        };
-
-        // 한 번의 발화 인식
-        recognizer.current.recognizeOnceAsync(
+        recognizer.recognizeOnceAsync(
           (result) => {
             if (result.reason === sdk.ResultReason.RecognizedSpeech) {
               resolve(result.text);
             } else {
               reject(new Error("Failed to recognize speech"));
             }
-            recognizer.current?.close();
+            recognizer.close();
           },
           (error) => {
-            console.error("Recognition error:", error);
             reject(error);
-            recognizer.current?.close();
+            recognizer.close();
           }
         );
       });
     } catch (error) {
-      console.error("STT initialization failed:", error);
-      throw error;
+      throw new Error("STT initialization failed");
     }
   };
 
   // 마이크 버튼 핸들러 수정
   const handleMicPress = async () => {
     try {
+      // 현재 재생 중인 음성 중지
       if (synthesizer.current) {
         synthesizer.current.close();
       }
@@ -224,10 +209,9 @@ export default function TourScreen({ navigation }: TourScreenProps) {
       // 2. AI 검색 및 답변 생성
       const response = await processQuery(recognizedText);
       console.log("AI 답변:", response.text);
+      setUserInput(response.text);
 
-      // 3. 답변 표시 및 음성 출력
-      setDisplayedText(response.text);
-      setUserInput("");
+      // 3. 답변 음성 출력
       await startSpeaking(response.text);
 
       // 4. 지도 정보가 있다면 지도 화면으로 이동
@@ -272,7 +256,19 @@ export default function TourScreen({ navigation }: TourScreenProps) {
         style={styles.contentContainer}
         contentContainerStyle={styles.content}
       >
-        <Text style={styles.mainText}>{displayedText}</Text>
+        <Text style={styles.mainText}>
+          {displayedText.split("").map((char, index) => (
+            <Text
+              key={index}
+              style={[
+                styles.char,
+                index < highlightIndex && styles.highlightedChar,
+              ]}
+            >
+              {char}
+            </Text>
+          ))}
+        </Text>
       </ScrollView>
 
       <View style={styles.footer}>
