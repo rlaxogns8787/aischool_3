@@ -3,9 +3,24 @@ export type Message = {
   text: string;
   isBot: boolean;
   timestamp: string;
-  options?: Option[];
-  questions?: string[]; // 여러 질문을 표시하기 위한 배열
-  searchResults?: SearchResult[]; // AI Search 결과
+  options?: { text: string; value: string }[];
+  questions?: string[];
+  searchResults?: any[];
+  inputType?: "text" | "selection" | "date" | "number";
+  expectedAnswer?: {
+    type:
+      | "previousExperience"
+      | "destination"
+      | "dates"
+      | "people"
+      | "companions"
+      | "guideNeeded"
+      | "budget"
+      | "travelStyle"
+      | "transportation"
+      | "additionalRequests";
+    options?: string[];
+  };
 };
 
 export type Option = {

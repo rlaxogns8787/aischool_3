@@ -1,12 +1,36 @@
+export type TravelInfo = {
+  previousExperience?: string;
+  destination?: string;
+  dates?: {
+    start: string;
+    end: string;
+  };
+  people?: number;
+  companions?: "solo" | "family" | "friends" | "couple";
+  guideNeeded?: boolean;
+  budget?: number;
+  travelStyle?: string[];
+  transportationType?: string[];
+  additionalRequests?: string;
+};
+
 export type Schedule = {
-  id: string;
+  title: string;
   destination: string;
-  startDate: string;
-  endDate: string;
-  activities: string[];
-  budget: number;
-  isAIRecommended: boolean;
-  itinerary: ScheduleDay[];
+  activities: {
+    day: number;
+    items: {
+      time: string;
+      activity: string;
+      location: string;
+      description: string;
+      cost: number;
+      transportation: string;
+    }[];
+  }[];
+  totalBudget: number;
+  travelStyle: string;
+  guideService: boolean;
 };
 
 export type ScheduleDay = {
