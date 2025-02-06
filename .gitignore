@@ -10,6 +10,7 @@ npm-debug.*
 *.mobileprovision
 *.orig.*
 web-build/
+package-lock.json
 
 # Environment
 .env
@@ -38,4 +39,4 @@ yarn-debug.log*
 yarn-error.log*
 
 # Azure Bot specific
-botframework.config 
+botframework.config
