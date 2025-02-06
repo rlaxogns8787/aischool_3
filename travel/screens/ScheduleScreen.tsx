@@ -1,15 +1,111 @@
-import React from "react";
-import { View, Text, StyleSheet, TouchableOpacity, Image } from "react-native";
+import React, { useState } from "react";
+import {
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  Image,
+  FlatList,
+} from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import MenuIcon from "../assets/menu.svg";
 import SearchIcon from "../assets/search.svg";
 import CircularCarouselBannerView from "../components/CircularCarouselBannerView";
+import { Schedule } from "../types/schedule";
 
 type ScheduleScreenProps = {
   navigation: any;
 };
 
 export default function ScheduleScreen({ navigation }: ScheduleScreenProps) {
+  // 테스트용 임시 데이터
+  const [schedules, setSchedules] = useState<Schedule[]>([
+    {
+      id: "1",
+      destination: "서울",
+      startDate: "2024-03-20",
+      endDate: "2024-03-22",
+      activities: ["경복궁 관람", "남산타워", "인사동 거리"],
+      budget: 300000,
+      isAIRecommended: true,
+      itinerary: [
+        {
+          date: "2024-03-20",
+          activities: [
+            {
+              time: "10:00",
+              place: "경복궁",
+              description: "조선의 대표적인 궁궐 관람",
+              cost: 3000,
+            },
+          ],
+        },
+      ],
+    },
+    {
+      id: "2",
+      destination: "부산",
+      startDate: "2024-04-01",
+      endDate: "2024-04-03",
+      activities: ["해운대 해수욕장", "감천문화마을", "자갈치시장"],
+      budget: 400000,
+      isAIRecommended: false,
+      itinerary: [
+        {
+          date: "2024-04-01",
+          activities: [
+            {
+              time: "11:00",
+              place: "해운대",
+              description: "해변 산책 및 점심",
+              cost: 20000,
+            },
+          ],
+        },
+      ],
+    },
+  ]);
+
+  const renderEmptyState = () => (
+    <View style={styles.content}>
+      <Image
+        source={require("../assets/empty.png")}
+        style={styles.emptyImage}
+      />
+      <Text style={styles.emptyTitle}>아직 여행 예정되어 있지 않네요</Text>
+      <Text style={styles.emptySubtitle}>새로운 여행을 계획해보세요</Text>
+    </View>
+  );
+
+  const renderScheduleItem = ({ item }: { item: Schedule }) => (
+    <TouchableOpacity
+      style={styles.scheduleCard}
+      onPress={() => {
+        // 일정 상세보기로 이동
+        navigation.navigate("ScheduleDetail", { schedule: item });
+      }}
+    >
+      <View style={styles.scheduleHeader}>
+        <Text style={styles.destination}>{item.destination}</Text>
+        {item.isAIRecommended && (
+          <View style={styles.aiTag}>
+            <Text style={styles.aiTagText}>AI 추천</Text>
+          </View>
+        )}
+      </View>
+      <Text style={styles.date}>
+        {item.startDate} - {item.endDate}
+      </Text>
+      <View style={styles.activities}>
+        {item.activities.slice(0, 3).map((activity, index) => (
+          <Text key={index} style={styles.activity}>
+            • {activity}
+          </Text>
+        ))}
+      </View>
+    </TouchableOpacity>
+  );
+
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
@@ -29,14 +125,16 @@ export default function ScheduleScreen({ navigation }: ScheduleScreenProps) {
         />
       </View>
 
-      <View style={styles.content}>
-        <Image
-          source={require("../assets/empty.png")}
-          style={styles.emptyImage}
+      {schedules.length === 0 ? (
+        renderEmptyState()
+      ) : (
+        <FlatList
+          data={schedules}
+          renderItem={renderScheduleItem}
+          keyExtractor={(item) => item.id}
+          contentContainerStyle={styles.scheduleList}
         />
-        <Text style={styles.emptyTitle}>아직 여행 예정되어 있지 않네요</Text>
-        <Text style={styles.emptySubtitle}>새로운 여행을 계획해보세요</Text>
-      </View>
+      )}
 
       <TouchableOpacity
         style={styles.registerButton}
@@ -148,5 +246,51 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: "600",
     lineHeight: 15,
+  },
+  scheduleList: {
+    padding: 16,
+  },
+  scheduleCard: {
+    backgroundColor: "#fff",
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: "#E5E5EA",
+  },
+  scheduleHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 8,
+  },
+  destination: {
+    fontSize: 18,
+    fontWeight: "600",
+    color: "#1F2024",
+  },
+  aiTag: {
+    backgroundColor: "#007AFF",
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  aiTagText: {
+    color: "#fff",
+    fontSize: 12,
+    fontWeight: "500",
+  },
+  date: {
+    fontSize: 14,
+    color: "#71727A",
+    marginBottom: 12,
+  },
+  activities: {
+    marginTop: 8,
+  },
+  activity: {
+    fontSize: 14,
+    color: "#1F2024",
+    marginBottom: 4,
   },
 });

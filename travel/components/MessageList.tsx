@@ -1,49 +1,53 @@
-import React from "react";
+import React, { useRef, useEffect } from "react";
 import {
   View,
   Text,
   StyleSheet,
   FlatList,
   TouchableOpacity,
+  Dimensions,
 } from "react-native";
+import { Message } from "../types/message";
+import { SearchResult } from "../types/schedule";
 import Carousel from "react-native-snap-carousel";
 import OptionCard from "./OptionCard";
 
-type Option = {
-  text: string;
-  value: string;
-};
-
-type Message = {
-  id: string;
-  text: string;
-  isBot: boolean;
-  timestamp: string;
-  options?: Option[];
-};
-
-type CardItem = {
-  image: string;
-  keyword: string;
-  title: string;
-  address: string;
-};
+const { width: screenWidth } = Dimensions.get("window");
 
 type MessageListProps = {
   messages: Message[];
   onOptionSelect: (option: string) => void;
-  showCards: boolean;
   toggleModal: () => void;
 };
 
 export default function MessageList({
   messages,
   onOptionSelect,
-  showCards,
   toggleModal,
 }: MessageListProps) {
-  const renderMessage = ({ item }: { item: Message }) => (
+  const flatListRef = useRef<FlatList>(null);
+
+  // 새 메시지가 추가될 때 자동 스크롤
+  useEffect(() => {
+    if (flatListRef.current && messages.length > 0) {
+      flatListRef.current.scrollToEnd({ animated: true });
+    }
+  }, [messages]);
+
+  const renderSearchResult = ({ item: result }: { item: SearchResult }) => (
+    <OptionCard
+      key={result.id}
+      image={result.imageUrl}
+      keyword={result.type}
+      title={result.name}
+      address={result.description}
+      onPress={toggleModal}
+    />
+  );
+
+  const renderMessage = ({ item, index }: { item: Message; index: number }) => (
     <View style={styles.messageContainer}>
+      {/* 메시지 버블 */}
       <View
         style={[
           styles.messageBubble,
@@ -53,17 +57,36 @@ export default function MessageList({
         <Text
           style={[
             styles.messageText,
-            item.isBot ? null : styles.userMessageText,
+            item.isBot ? styles.botMessageText : styles.userMessageText,
           ]}
         >
           {item.text}
         </Text>
+
+        {/* 질문 리스트 */}
+        {item.questions && (
+          <View style={styles.questionsContainer}>
+            {item.questions.map((question, qIndex) => (
+              <Text
+                key={`${item.id}-q${qIndex}`}
+                style={[
+                  styles.questionText,
+                  item.isBot && styles.botQuestionText,
+                ]}
+              >
+                {question}
+              </Text>
+            ))}
+          </View>
+        )}
       </View>
+
+      {/* 옵션 버튼 (메시지 버블 외부) */}
       {item.options && (
         <View style={styles.optionsContainer}>
-          {item.options.map((option, index) => (
+          {item.options.map((option, oIndex) => (
             <TouchableOpacity
-              key={index}
+              key={`${item.id}-o${oIndex}`}
               style={styles.optionButton}
               onPress={() => onOptionSelect(option.value)}
             >
@@ -72,58 +95,46 @@ export default function MessageList({
           ))}
         </View>
       )}
-    </View>
-  );
 
-  const renderCard = ({ item }: { item: CardItem }) => (
-    <OptionCard
-      image={item.image}
-      keyword={item.keyword}
-      title={item.title}
-      address={item.address}
-      onPress={toggleModal}
-    />
+      {/* 검색 결과 카드 */}
+      {item.searchResults && item.searchResults.length > 0 && (
+        <View style={styles.searchResultsContainer}>
+          <Carousel
+            data={item.searchResults}
+            renderItem={renderSearchResult}
+            sliderWidth={screenWidth - 32}
+            itemWidth={screenWidth - 80}
+            activeSlideAlignment="center"
+            inactiveSlideScale={0.95}
+            inactiveSlideOpacity={0.7}
+            containerCustomStyle={styles.carouselContainer}
+          />
+        </View>
+      )}
+    </View>
   );
 
   return (
     <FlatList
+      ref={flatListRef}
       data={messages}
       renderItem={renderMessage}
-      keyExtractor={(item) => item.id}
+      keyExtractor={(item, index) => `${item.id}-${index}`}
       style={styles.container}
       contentContainerStyle={styles.contentContainer}
-      ListFooterComponent={
-        showCards ? (
-          <Carousel
-            data={[
-              {
-                image: "../assets/banner1.png",
-                keyword: "힐링",
-                title: "힐링가득 고궁여행",
-                address: "서울중구",
-              },
-              {
-                image: "../assets/banner1.png",
-                keyword: "역사",
-                title: "역사탐방",
-                address: "서울종로구",
-              },
-            ]}
-            renderItem={renderCard}
-            sliderWidth={300}
-            itemWidth={250}
-          />
-        ) : null
-      }
+      onContentSizeChange={() => flatListRef.current?.scrollToEnd()}
+      keyboardShouldPersistTaps="handled"
     />
   );
 }
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
   contentContainer: {
     padding: 16,
+    paddingBottom: 32,
   },
   messageContainer: {
     marginBottom: 16,
@@ -148,14 +159,29 @@ const styles = StyleSheet.create({
     fontSize: 16,
     lineHeight: 20,
   },
+  botMessageText: {
+    color: "#000000",
+  },
   userMessageText: {
     color: "#FFFFFF",
   },
-  optionsContainer: {
+  questionsContainer: {
     marginTop: 8,
   },
+  questionText: {
+    fontSize: 14,
+    marginBottom: 4,
+    color: "#000000",
+  },
+  botQuestionText: {
+    color: "#000000",
+  },
+  optionsContainer: {
+    marginTop: 8,
+    width: "100%",
+  },
   optionButton: {
-    backgroundColor: "#fff",
+    backgroundColor: "#FFFFFF",
     borderWidth: 1,
     borderColor: "#007AFF",
     borderRadius: 20,
@@ -167,9 +193,11 @@ const styles = StyleSheet.create({
     fontSize: 16,
     textAlign: "center",
   },
-  cardContainer: {
-    flexDirection: "row",
-    justifyContent: "space-around",
-    padding: 10,
+  searchResultsContainer: {
+    marginTop: 16,
+    width: "100%",
+  },
+  carouselContainer: {
+    marginBottom: 16,
   },
 });

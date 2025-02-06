@@ -10,6 +10,7 @@ import TravelLogScreen from "../screens/TravelLogScreen";
 import MapScreen from "../screens/MapScreen";
 import TourScreen from "../screens/TourScreen";
 import CustomDrawerContent from "../screens/CustomDrawerContent";
+import ScheduleDetail from "../screens/ScheduleDetail";
 
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -72,6 +73,13 @@ export default function RootNavigator() {
           headerShown: true,
           title: "투어 가이드",
           headerBackTitleVisible: false,
+        }}
+      />
+      <Stack.Screen
+        name="ScheduleDetail"
+        component={ScheduleDetail}
+        options={{
+          headerShown: false,
         }}
       />
     </Stack.Navigator>
