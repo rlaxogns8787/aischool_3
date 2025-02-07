@@ -6,6 +6,7 @@ import {
   FlatList,
   TouchableOpacity,
   Dimensions,
+  ScrollView,
 } from "react-native";
 import { Message } from "../types/message";
 import { SearchResult } from "../types/schedule";
@@ -19,6 +20,25 @@ type MessageListProps = {
   onOptionSelect: (option: string) => void;
   toggleModal: () => void;
 };
+
+const OptionButton = ({
+  text,
+  onPress,
+  selected,
+}: {
+  text: string;
+  onPress: () => void;
+  selected?: boolean;
+}) => (
+  <TouchableOpacity
+    style={[styles.optionButton, selected && styles.optionButtonSelected]}
+    onPress={onPress}
+  >
+    <Text style={[styles.optionText, selected && styles.optionTextSelected]}>
+      {text}
+    </Text>
+  </TouchableOpacity>
+);
 
 export default function MessageList({
   messages,
@@ -46,85 +66,71 @@ export default function MessageList({
   );
 
   const renderMessage = ({ item, index }: { item: Message; index: number }) => (
-    <View style={styles.messageContainer}>
-      {/* 메시지 버블 */}
+    <View style={styles.messageGroup}>
       <View
         style={[
           styles.messageBubble,
-          item.isBot ? styles.botMessage : styles.userMessage,
+          item.isBot ? styles.botBubble : styles.userBubble,
         ]}
       >
         <Text
           style={[
             styles.messageText,
-            item.isBot ? styles.botMessageText : styles.userMessageText,
+            item.isBot ? styles.botText : styles.userText,
           ]}
         >
           {item.text}
         </Text>
-
-        {/* 질문 리스트 */}
-        {item.questions && (
-          <View style={styles.questionsContainer}>
-            {item.questions.map((question, qIndex) => (
-              <Text
-                key={`${item.id}-q${qIndex}`}
-                style={[
-                  styles.questionText,
-                  item.isBot && styles.botQuestionText,
-                ]}
-              >
-                {question}
-              </Text>
-            ))}
-          </View>
-        )}
       </View>
-
-      {/* 옵션 버튼 (메시지 버블 외부) */}
       {item.options && (
         <View style={styles.optionsContainer}>
-          {item.options.map((option, oIndex) => (
-            <TouchableOpacity
-              key={`${item.id}-o${oIndex}`}
-              style={styles.optionButton}
+          {item.options.map((option) => (
+            <OptionButton
+              key={option.value}
+              text={option.text}
+              selected={option.selected}
               onPress={() => onOptionSelect(option.value)}
-            >
-              <Text style={styles.optionText}>{option.text}</Text>
-            </TouchableOpacity>
+            />
           ))}
-        </View>
-      )}
-
-      {/* 검색 결과 카드 */}
-      {item.searchResults && item.searchResults.length > 0 && (
-        <View style={styles.searchResultsContainer}>
-          <Carousel
-            data={item.searchResults}
-            renderItem={renderSearchResult}
-            sliderWidth={screenWidth - 32}
-            itemWidth={screenWidth - 80}
-            activeSlideAlignment="center"
-            inactiveSlideScale={0.95}
-            inactiveSlideOpacity={0.7}
-            containerCustomStyle={styles.carouselContainer}
-          />
         </View>
       )}
     </View>
   );
 
   return (
-    <FlatList
-      ref={flatListRef}
-      data={messages}
-      renderItem={renderMessage}
-      keyExtractor={(item, index) => `${item.id}-${index}`}
-      style={styles.container}
-      contentContainerStyle={styles.contentContainer}
-      onContentSizeChange={() => flatListRef.current?.scrollToEnd()}
-      keyboardShouldPersistTaps="handled"
-    />
+    <ScrollView style={styles.container}>
+      {messages.map((message) => (
+        <View key={message.id} style={styles.messageGroup}>
+          <View
+            style={[
+              styles.messageBubble,
+              message.isBot ? styles.botBubble : styles.userBubble,
+            ]}
+          >
+            <Text
+              style={[
+                styles.messageText,
+                message.isBot ? styles.botText : styles.userText,
+              ]}
+            >
+              {message.text}
+            </Text>
+          </View>
+          {message.options && (
+            <View style={styles.optionsContainer}>
+              {message.options.map((option) => (
+                <OptionButton
+                  key={option.value}
+                  text={option.text}
+                  selected={option.selected}
+                  onPress={() => onOptionSelect(option.value)}
+                />
+              ))}
+            </View>
+          )}
+        </View>
+      ))}
+    </ScrollView>
   );
 }
 
@@ -132,72 +138,56 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  contentContainer: {
-    padding: 16,
-    paddingBottom: 32,
-  },
-  messageContainer: {
+  messageGroup: {
     marginBottom: 16,
   },
   messageBubble: {
     maxWidth: "80%",
     padding: 12,
-    borderRadius: 16,
-    marginBottom: 8,
+    borderRadius: 20,
+    marginHorizontal: 16,
   },
-  botMessage: {
+  botBubble: {
     backgroundColor: "#F2F2F7",
     alignSelf: "flex-start",
     borderBottomLeftRadius: 4,
   },
-  userMessage: {
+  userBubble: {
     backgroundColor: "#007AFF",
     alignSelf: "flex-end",
     borderBottomRightRadius: 4,
   },
   messageText: {
     fontSize: 16,
-    lineHeight: 20,
+    lineHeight: 22,
   },
-  botMessageText: {
+  botText: {
     color: "#000000",
   },
-  userMessageText: {
+  userText: {
     color: "#FFFFFF",
-  },
-  questionsContainer: {
-    marginTop: 8,
-  },
-  questionText: {
-    fontSize: 14,
-    marginBottom: 4,
-    color: "#000000",
-  },
-  botQuestionText: {
-    color: "#000000",
   },
   optionsContainer: {
     marginTop: 8,
-    width: "100%",
+    paddingHorizontal: 16,
   },
   optionButton: {
-    backgroundColor: "#FFFFFF",
+    borderRadius: 20,
+    marginVertical: 4,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
     borderWidth: 1,
     borderColor: "#007AFF",
-    borderRadius: 20,
-    padding: 12,
-    marginBottom: 8,
+  },
+  optionButtonSelected: {
+    backgroundColor: "#007AFF",
   },
   optionText: {
-    color: "#007AFF",
     fontSize: 16,
-    textAlign: "center",
+    color: "#007AFF",
+    textAlign: "left",
   },
-  searchResultsContainer: {
-    marginTop: 16,
-    width: "100%",
-  },
-  carouselContainer: {
-    marginBottom: 16,
+  optionTextSelected: {
+    color: "#FFFFFF",
   },
 });
