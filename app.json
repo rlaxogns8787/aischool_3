@@ -22,26 +22,17 @@
     ],
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.anonymous.travelbot",
+      "bundleIdentifier": "com.anonymous.travel",
       "infoPlist": {
-        "NSMicrophoneUsageDescription": "음성 인식을 위해 마이크 접근 권한이 필요합니다.",
-        "NSSpeechRecognitionUsageDescription": "음성을 텍스트로 변환하기 위해 음성 인식 권한이 필요합니다.",
-        "UIBackgroundModes": ["audio"]
-      },
-      "jsEngine": "jsc"
+        "NSMicrophoneUsageDescription": "음성 인식을 위해 마이크 접근 권한이 필요합니다."
+      }
     },
     "android": {
-      "package": "com.anonymous.travelbot",
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
-      "permissions": [
-        "RECORD_AUDIO",
-        "INTERNET",
-        "android.permission.RECORD_AUDIO",
-        "android.permission.MODIFY_AUDIO_SETTINGS"
-      ]
+      "permissions": ["RECORD_AUDIO"]
     },
     "web": {
       "favicon": "./assets/favicon.png"
