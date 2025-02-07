@@ -50,6 +50,25 @@ export const chatWithAI = async (
 ): Promise<string> => {
   for (let i = 0; i < retries; i++) {
     try {
+      const requestBody = {
+        messages: [
+          {
+            role: "system",
+            content: SYSTEM_PROMPT,
+          },
+          {
+            role: "user",
+            content: input,
+          },
+        ],
+        max_tokens: 2000,
+        temperature: 0.7,
+        top_p: 0.95,
+        frequency_penalty: 0,
+        presence_penalty: 0,
+        stream: false,
+      };
+
       const response = await fetch(
         `${AZURE_OPENAI_ENDPOINT}/openai/deployments/${DEPLOYMENT_NAME}/chat/completions?api-version=2024-02-15-preview`,
         {
@@ -58,39 +77,32 @@ export const chatWithAI = async (
             "Content-Type": "application/json",
             "api-key": AZURE_OPENAI_KEY,
           },
-          body: JSON.stringify({
-            messages: [
-              {
-                role: "system",
-                content: SYSTEM_PROMPT,
-              },
-              {
-                role: "user",
-                content: input,
-              },
-            ],
-            max_tokens: 2000,
-            temperature: 0.7,
-            top_p: 0.95,
-            frequency_penalty: 0,
-            presence_penalty: 0,
-            stream: false,
-          }),
+          body: JSON.stringify(requestBody),
+          timeout: 30000, // 30초 타임아웃 설정
         }
       );
 
       if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+        const errorText = await response.text();
+        console.error(`API Error: ${response.status}`, errorText);
+        throw new Error(`API 요청 실패: ${response.status}`);
       }
 
       const result = await response.json();
+      if (!result.choices || result.choices.length === 0) {
+        throw new Error("AI 응답이 없습니다.");
+      }
+
       return (
         result.choices[0].message?.content || "응답을 생성하지 못했습니다."
       );
     } catch (error) {
-      if (i === retries - 1) throw error;
-      await new Promise((resolve) => setTimeout(resolve, 1000 * (i + 1))); // 재시도 전 대기
-      continue;
+      console.error(`Attempt ${i + 1} failed:`, error);
+      if (i === retries - 1) {
+        throw new Error("여러 번의 시도 후에도 연결에 실패했습니다.");
+      }
+      // 재시도 전 대기 시간을 점진적으로 증가
+      await new Promise((resolve) => setTimeout(resolve, 2000 * (i + 1)));
     }
   }
   throw new Error("네트워크 연결에 실패했습니다.");
@@ -130,29 +142,34 @@ const searchTravelInfo = async (searchQuery: string) => {
 };
 
 // 일정 생성을 위한 함수 수정
-export const generateTravelSchedule = async (tripInfo: {
-  destination: string;
-  duration: string;
-  companion: string;
-  budget: string;
-  transportation: string[];
-}) => {
-  try {
-    // 1. Azure Search로 여행지 관련 정보 검색
-    const searchResults = await searchTravelInfo(
-      `${tripInfo.destination} 관광지 맛집 숙소`
-    );
+export const generateTravelSchedule = async (
+  tripInfo: {
+    destination: string;
+    duration: string;
+    companion: string;
+    budget: string;
+    transportation: string[];
+  },
+  retries = 3
+): Promise<string> => {
+  for (let i = 0; i < retries; i++) {
+    try {
+      // 1. Azure Search로 여행지 관련 정보 검색
+      const searchResults = await searchTravelInfo(
+        `${tripInfo.destination} 관광지 맛집 숙소`
+      );
 
-    // 2. 검색 결과를 프롬프트에 포함
-    const searchContext = searchResults
-      .map(
-        (result: any) =>
-          `[${result.category}] ${result.title}\n${result.content}\n`
-      )
-      .join("\n");
+      // 2. 검색 결과를 프롬프트에 포함
+      const searchContext =
+        searchResults
+          ?.map(
+            (result: any) =>
+              `[${result.category}] ${result.title}\n${result.content}\n`
+          )
+          .join("\n") || "";
 
-    // 3. OpenAI에 일정 생성 요청
-    const prompt = `다음 여행 조건과 수집된 정보를 바탕으로 매력적인 일정을 생성해주세요:
+      // 3. OpenAI에 일정 생성 요청
+      const prompt = `다음 여행 조건과 수집된 정보를 바탕으로 매력적인 일정을 생성해주세요:
 
 [여행 조건]
 - 여행지: ${tripInfo.destination}
@@ -198,10 +215,15 @@ ${tripInfo.destination}에서 즐기는 ${tripInfo.duration} 여행
 ※ 예산 범위 내에서 식사, 입장료, 교통비 등 예상 비용을 포함해주세요.
 ※ ${tripInfo.companion} 여행에 적합한 장소와 활동을 추천해주세요.`;
 
-    const response = await chatWithAI(prompt);
-    return response;
-  } catch (error) {
-    console.error("Schedule generation error:", error);
-    throw error;
+      const response = await chatWithAI(prompt);
+      return response;
+    } catch (error) {
+      console.error(`Schedule generation attempt ${i + 1} failed:`, error);
+      if (i === retries - 1) {
+        throw new Error("일정 생성에 실패했습니다. 잠시 후 다시 시도해주세요.");
+      }
+      await new Promise((resolve) => setTimeout(resolve, 2000 * (i + 1)));
+    }
   }
+  throw new Error("서버 연결에 실패했습니다.");
 };

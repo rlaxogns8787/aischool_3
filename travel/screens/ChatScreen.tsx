@@ -510,16 +510,6 @@ export default function ChatScreen() {
             .find((msg) => msg.text.includes("여행을 계획하시는군요"))
             ?.text.match(/\d+박\d+일|\d+주일/)?.[0];
 
-          // 여행 기간 계산
-          const startDate = startDateMsg ? new Date(startDateMsg) : null;
-          const endDate =
-            startDate && durationMsg?.includes("박")
-              ? new Date(
-                  startDate.getTime() +
-                    parseInt(durationMsg[0]) * 24 * 60 * 60 * 1000
-                )
-              : startDate;
-
           const tripInfo = {
             styles: messages
               .find((msg) => msg.text.includes("을(를) 선택하셨네요"))
@@ -528,10 +518,8 @@ export default function ChatScreen() {
             destination: messages
               .find((msg) => msg.text.includes("로 여행을 계획하시는군요"))
               ?.text.split("로 여행을")[0],
-            duration:
-              startDate && endDate
-                ? `${startDate.toLocaleDateString()} - ${endDate.toLocaleDateString()}`
-                : undefined,
+            startDate: startDateMsg,
+            duration: durationMsg,
             companion: messages
               .find((msg) => msg.text.includes("여행을 준비하겠습니다"))
               ?.text.split(" 여행을")[0],
@@ -539,7 +527,13 @@ export default function ChatScreen() {
               .find((msg) => msg.text.includes("예산을"))
               ?.text.split("예산을 ")[1]
               .split("으로 설정")[0],
-            transportation: selectedStyles,
+            transportation:
+              messages
+                .find((msg) =>
+                  msg.text.includes("선호하는 교통수단을 선택해주세요")
+                )
+                ?.styleOptions?.filter((opt) => opt.selected)
+                .map((opt) => opt.text) || [],
           };
 
           // 수집된 정보로 확인 메시지 생성
@@ -549,10 +543,18 @@ export default function ChatScreen() {
 
 • 여행 스타일: ${tripInfo.styles?.join(", ")}
 • 여행 지역: ${tripInfo.destination}
-• 여행 기간: ${tripInfo.duration}
+• 여행 기간: ${
+              tripInfo.startDate
+                ? new Date(tripInfo.startDate).toLocaleDateString("ko-KR", {
+                    year: "numeric",
+                    month: "long",
+                    day: "numeric",
+                  })
+                : ""
+            } 부터 ${tripInfo.duration || ""}
 • 여행 인원: ${tripInfo.companion}
 • 예산: ${tripInfo.budget}
-• 교통수단: ${tripInfo.transportation.join(", ")}
+• 교통수단: ${tripInfo.transportation?.join(", ")}
 
 이 정보를 바탕으로 일정을 생성해드리겠습니다. 잠시만 기다려주세요... 🧞‍♂️`,
             isBot: true,
