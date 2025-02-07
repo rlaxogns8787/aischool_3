@@ -194,7 +194,7 @@ export default function ChatScreen() {
 
         const confirmMessage: Message = {
           id: Date.now().toString(),
-          text: `${formattedDate}부터 ${text} 여행을 계획하시는군요! 😊`,
+          text: `${formattedDate}부터 ${text} 여행을 계획하시는군요! `,
           isBot: true,
           timestamp: new Date().toISOString(),
         };
@@ -233,7 +233,7 @@ export default function ChatScreen() {
 
     const confirmMessage: Message = {
       id: Date.now().toString(),
-      text: `${formattedDate}에 출발하는 여행이군요! 😊`,
+      text: `${formattedDate}에 출발하는 여행이군요!`,
       isBot: true,
       timestamp: new Date().toISOString(),
     };
@@ -260,6 +260,50 @@ export default function ChatScreen() {
     try {
       setIsLoading(true);
 
+      // 예산 응답 처리
+      if (messages.some((msg) => msg.text.includes("여행 예산은 어느 정도"))) {
+        // AI 응답 메시지
+        const confirmMessage: Message = {
+          id: Date.now().toString(),
+          text: `예산을 ${text}로 설정하셨군요! 👍`,
+          isBot: true,
+          timestamp: new Date().toISOString(),
+        };
+
+        // 다음 질문 (교통수단) - 옵션 버튼으로 수정
+        const nextQuestion: Message = {
+          id: (Date.now() + 1).toString(),
+          text: "선호하는 교통수단을 선택해주세요 (다수 선택 가능):",
+          isBot: true,
+          timestamp: new Date().toISOString(),
+          styleOptions: [
+            { text: "대중교통", value: "public", selected: false },
+            { text: "자가용", value: "car", selected: false },
+            { text: "택시", value: "taxi", selected: false },
+            { text: "걷기", value: "walk", selected: false },
+          ],
+        };
+
+        // 이전 예산 질문 제거 후 새로운 메시지들 추가
+        setMessages((prev) =>
+          prev
+            .filter((msg) => !msg.text.includes("여행 예산은 어느 정도"))
+            .concat([
+              {
+                id: Date.now().toString(),
+                text,
+                isBot: false,
+                timestamp: new Date().toISOString(),
+              },
+              confirmMessage,
+              nextQuestion,
+            ])
+        );
+
+        setIsLoading(false);
+        return;
+      }
+
       // 옵션 선택된 경우는 사용자 메시지를 추가하지 않음
       if (!text.endsWith("_selected")) {
         const userMessage: Message = {
@@ -270,7 +314,6 @@ export default function ChatScreen() {
         };
         setMessages((prev) => [...prev, userMessage]);
       } else {
-        // _selected 제거
         text = text.replace("_selected", "");
       }
 
@@ -340,7 +383,7 @@ export default function ChatScreen() {
       ) {
         const confirmMessage: Message = {
           id: Date.now().toString(),
-          text: `${text}로 여행을 계획하시는군요! 도와드리겠습니다. 😊`,
+          text: `${text}로 여행을 계획하시는군요! 도와드리겠습니다.`,
           isBot: true,
           timestamp: new Date().toISOString(),
         };
@@ -360,34 +403,10 @@ export default function ChatScreen() {
         return;
       }
 
-      // 예산 응답 처리
-      if (messages.some((msg) => msg.text.includes("여행 예산은 어느 정도"))) {
-        const confirmMessage: Message = {
-          id: Date.now().toString(),
-          text: `예산 계획 확인했습니다. 👍`,
-          isBot: true,
-          timestamp: new Date().toISOString(),
-        };
-
-        // 다음 질문 (교통수단)
-        const nextQuestion: Message = {
-          id: (Date.now() + 1).toString(),
-          text: "선호하는 교통수단이 있으신가요?\n(예: 대중교통, 자가용, 택시 등)",
-          isBot: true,
-          timestamp: new Date().toISOString(),
-        };
-
-        updateMessages(
-          [confirmMessage, nextQuestion],
-          "여행 예산을 알려주셨습니다"
-        );
-        return;
-      }
-
       // 교통수단 응답 처리 (마지막 질문)
       if (
         messages.some((msg) =>
-          msg.text.includes("선호하는 교통수단이 있으신가요")
+          msg.text.includes("선호하는 교통수단을 선택해주세요")
         )
       ) {
         const confirmMessage: Message = {
@@ -491,7 +510,26 @@ export default function ChatScreen() {
       .map((opt) => opt.text);
 
     if (selectedStyles && selectedStyles.length > 0) {
-      // 선택 확인 메시지
+      // 교통수단 선택인 경우
+      if (
+        messages.some((msg) =>
+          msg.text.includes("선호하는 교통수단을 선택해주세요")
+        )
+      ) {
+        const confirmMessage: Message = {
+          id: Date.now().toString(),
+          text: `선호하시는 교통수단으로 ${selectedStyles.join(
+            ", "
+          )}을(를) 반영하여 일정을 만들어드리겠습니다. 잠시만 기다려주세요... 🚗`,
+          isBot: true,
+          timestamp: new Date().toISOString(),
+        };
+
+        updateMessages([confirmMessage], "선호하는 교통수단을 선택해주세요");
+        return;
+      }
+
+      // 기존 여행 스타일 선택 처리
       const confirmMessage: Message = {
         id: Date.now().toString(),
         text: `${selectedStyles.join(", ")}을(를) 선택하셨네요. 좋습니다!`,
@@ -499,7 +537,6 @@ export default function ChatScreen() {
         timestamp: new Date().toISOString(),
       };
 
-      // 다음 질문 메시지
       const nextQuestion: Message = {
         id: (Date.now() + 1).toString(),
         text: "희망하시는 국내 여행지가 있으신가요?",
