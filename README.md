@@ -16,53 +16,66 @@ AI 기반의 여행 가이드 애플리케이션입니다.
   - 상세 일정 설계
 - 여행 기록 저장
 
-## 기술 스택
-
-### Frontend (travel/)
-
-- React Native
-- Expo
-- TypeScript
-- React Navigation
-- Expo Speech (음성 인식)
-
-### Backend (myAzureBot/)
-
-- Node.js
-- Azure Bot Framework
-- Azure Speech Services
-- Express
-
-## 시작하기
-
-### 필수 조건
-
-- Node.js 14.0 이상
-- npm 또는 yarn
-- Expo CLI
-
-### 설치
-
 ## 프로젝트 구조
 
 ```
-TravelBot/
-├── travel/              # 모바일 앱 (Frontend)
-│   ├── assets/         # 이미지, 아이콘 등 리소스
-│   ├── components/     # 재사용 컴포넌트
-│   │   ├── MessageList.tsx
-│   │   └── MessageInput.tsx
-│   ├── navigation/     # 네비게이션 설정
-│   │   └── AppNavigator.tsx
-│   ├── screens/        # 화면 컴포넌트
-│   │   ├── HomeScreen.tsx
-│   │   ├── ChatScreen.tsx
-│   │   └── AuthScreen.tsx
-│   └── App.tsx         # 앱 진입점
+.
+├── server/                  # 백엔드 서버
+│   ├── app/
+│   │   ├── routes/         # API 라우트
+│   │   │   └── chat.py     # 채팅 API 엔드포인트
+│   │   └── services/       # 외부 서비스 연동
+│   │       └── azure_services.py  # Azure OpenAI 서비스
+│   ├── config/             # 서버 설정
+│   │   └── settings.py     # 환경 설정
+│   ├── app.py              # Flask 앱 진입점
+│   └── requirements.txt    # Python 의존성
 │
-└── myAzureBot/         # 챗봇 서버 (Backend)
-    ├── index.js        # 서버 엔트리포인트
-    └── ChatBot.js      # 챗봇 로직
+└── travel/                 # React Native 앱
+    ├── api/                # API 클라이언트
+    │   └── openai.ts       # OpenAI API 연동
+    ├── components/         # 재사용 가능한 컴포넌트
+    │   ├── MessageInput.tsx
+    │   └── MessageList.tsx
+    ├── screens/            # 화면 컴포넌트
+    │   └── ChatScreen.tsx
+    ├── types/              # 타입 정의
+    │   └── message.ts
+    └── App.tsx             # 앱 진입점
+```
+
+## 기술 스택
+
+### Backend
+
+- Python 3.9+
+- Flask
+- Azure OpenAI
+
+### Frontend
+
+- React Native
+- TypeScript
+- Expo
+
+## 시작하기
+
+### Backend 설정
+
+```bash
+cd server
+python -m venv venv
+source venv/bin/activate  # Windows: venv\Scripts\activate
+pip install -r requirements.txt
+python app.py
+```
+
+### Frontend 설정
+
+```bash
+cd travel
+npm install
+npx expo start
 ```
 
 ## 라이선스
