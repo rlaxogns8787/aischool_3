@@ -148,6 +148,151 @@ export default function ChatScreen() {
         return;
       }
 
+      // 여행지 응답 처리 추가
+      if (
+        messages.some(
+          (msg) => msg.text === "희망하시는 국내 여행지가 있으신가요?"
+        )
+      ) {
+        const confirmMessage: Message = {
+          id: Date.now().toString(),
+          text: `${text}로 여행을 계획하시는군요! 도와드리겠습니다. 😊`,
+          isBot: true,
+          timestamp: new Date().toISOString(),
+        };
+
+        // 다음 질문 (여행 일정)
+        const nextQuestion: Message = {
+          id: (Date.now() + 1).toString(),
+          text: "여행 출발 날짜와 기간을 알려주세요.\n(예: 2025-01-01 1박2일 또는 2025/01/01 1박2일)",
+          isBot: true,
+          timestamp: new Date().toISOString(),
+        };
+
+        setMessages((prev) =>
+          prev
+            .filter((msg) => msg.id !== "loading")
+            .concat([confirmMessage, nextQuestion])
+        );
+        return;
+      }
+
+      // 여행 일정 응답 처리
+      if (
+        messages.some((msg) =>
+          msg.text.includes("여행 출발 날짜와 기간을 알려주세요")
+        )
+      ) {
+        // 날짜와 기간 패턴 (더 유연하게)
+        const datePattern = /(\d{4})[-/](\d{2})[-/](\d{2})/;
+        const durationPattern = /(\d+)박(\d+)일/;
+
+        const dateMatch = text.match(datePattern);
+        const durationMatch = text.match(durationPattern);
+
+        // 날짜와 기간이 모두 포함되어 있으면 다음 질문으로
+        if (dateMatch && durationMatch) {
+          const [_, year, month, day] = dateMatch;
+          const [__, nights, days] = durationMatch;
+          const formattedDate = `${year}년 ${month}월 ${day}일`;
+
+          const confirmMessage: Message = {
+            id: Date.now().toString(),
+            text: `${formattedDate}부터 ${nights}박${days}일로 여행을 계획하시는군요! 도와드리겠습니다. 😊`,
+            isBot: true,
+            timestamp: new Date().toISOString(),
+          };
+
+          // 다음 질문 (여행 인원)
+          const nextQuestion: Message = {
+            id: (Date.now() + 1).toString(),
+            text: "여행 인원은 몇 명인가요?\n(동행이 있다면 관계도 함께 알려주세요)",
+            isBot: true,
+            timestamp: new Date().toISOString(),
+          };
+
+          setMessages((prev) =>
+            prev
+              .filter((msg) => msg.id !== "loading")
+              .concat([confirmMessage, nextQuestion])
+          );
+          return;
+        }
+      }
+
+      // 여행 인원 응답 처리
+      if (
+        messages.some((msg) => msg.text.includes("여행 인원은 몇 명인가요"))
+      ) {
+        const confirmMessage: Message = {
+          id: Date.now().toString(),
+          text: `네, ${text} 인원으로 여행을 준비하겠습니다. 😊`,
+          isBot: true,
+          timestamp: new Date().toISOString(),
+        };
+
+        // 다음 질문 (예산)
+        const nextQuestion: Message = {
+          id: (Date.now() + 1).toString(),
+          text: "여행 예산은 어느 정도로 생각하고 계신가요?",
+          isBot: true,
+          timestamp: new Date().toISOString(),
+        };
+
+        setMessages((prev) =>
+          prev
+            .filter((msg) => msg.id !== "loading")
+            .concat([confirmMessage, nextQuestion])
+        );
+        return;
+      }
+
+      // 예산 응답 처리
+      if (messages.some((msg) => msg.text.includes("여행 예산은 어느 정도"))) {
+        const confirmMessage: Message = {
+          id: Date.now().toString(),
+          text: `예산 계획 확인했습니다. 👍`,
+          isBot: true,
+          timestamp: new Date().toISOString(),
+        };
+
+        // 다음 질문 (교통수단)
+        const nextQuestion: Message = {
+          id: (Date.now() + 1).toString(),
+          text: "선호하는 교통수단이 있으신가요?\n(예: 대중교통, 자가용, 택시 등)",
+          isBot: true,
+          timestamp: new Date().toISOString(),
+        };
+
+        setMessages((prev) =>
+          prev
+            .filter((msg) => msg.id !== "loading")
+            .concat([confirmMessage, nextQuestion])
+        );
+        return;
+      }
+
+      // 교통수단 응답 처리 (마지막 질문)
+      if (
+        messages.some((msg) =>
+          msg.text.includes("선호하는 교통수단이 있으신가요")
+        )
+      ) {
+        const confirmMessage: Message = {
+          id: Date.now().toString(),
+          text: `선호하시는 교통수단으로 ${text}을(를) 반영하여 일정을 만들어드리겠습니다. 잠시만 기다려주세요... 🚗`,
+          isBot: true,
+          timestamp: new Date().toISOString(),
+        };
+
+        setMessages((prev) =>
+          prev.filter((msg) => msg.id !== "loading").concat([confirmMessage])
+        );
+
+        // 여기서 최종 일정 생성 로직 추가 예정
+        return;
+      }
+
       // 1번 옵션 선택 시 (기존 일정 등록)
       if (
         userText.includes("1") ||
