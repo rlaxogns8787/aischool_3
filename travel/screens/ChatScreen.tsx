@@ -12,7 +12,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { useNavigation } from "@react-navigation/native";
 import MessageList from "../components/MessageList";
 import MessageInput from "../components/MessageInput";
-import { chatWithAI } from "../api/openai";
+import { chatWithAI, generateTravelSchedule } from "../api/openai";
 import Icon from "react-native-vector-icons/Ionicons";
 import DateTimePicker, {
   DateTimePickerEvent,
@@ -141,7 +141,7 @@ export default function ChatScreen() {
       // 다음 질문 (예산)
       const nextQuestion: Message = {
         id: (Date.now() + 2).toString(),
-        text: "여행 예산은 어느 정도로 생각하고 계신가요?",
+        text: "여행 예산은 어느 정도로 생각하고 계신가요?(만원단위 - 숫자만 입력)",
         isBot: true,
         timestamp: new Date().toISOString(),
       };
@@ -262,15 +262,19 @@ export default function ChatScreen() {
 
       // 예산 응답 처리
       if (messages.some((msg) => msg.text.includes("여행 예산은 어느 정도"))) {
+        // 숫자만 추출하고 만원 단위로 변환
+        const budget = text.replace(/[^0-9]/g, "");
+        const formattedBudget = `${budget}만원`;
+
         // AI 응답 메시지
         const confirmMessage: Message = {
           id: Date.now().toString(),
-          text: `예산을 ${text}로 설정하셨군요! 👍`,
+          text: `예산을 ${formattedBudget}으로 설정하셨군요! 👍`,
           isBot: true,
           timestamp: new Date().toISOString(),
         };
 
-        // 다음 질문 (교통수단) - 옵션 버튼으로 수정
+        // 다음 질문 (교통수단)
         const nextQuestion: Message = {
           id: (Date.now() + 1).toString(),
           text: "선호하는 교통수단을 선택해주세요 (다수 선택 가능):",
@@ -291,7 +295,7 @@ export default function ChatScreen() {
             .concat([
               {
                 id: Date.now().toString(),
-                text,
+                text: formattedBudget,
                 isBot: false,
                 timestamp: new Date().toISOString(),
               },
@@ -403,25 +407,6 @@ export default function ChatScreen() {
         return;
       }
 
-      // 교통수단 응답 처리 (마지막 질문)
-      if (
-        messages.some((msg) =>
-          msg.text.includes("선호하는 교통수단을 선택해주세요")
-        )
-      ) {
-        const confirmMessage: Message = {
-          id: Date.now().toString(),
-          text: `선호하시는 교통수단으로 ${text}을(를) 반영하여 일정을 만들어드리겠습니다. 잠시만 기다려주세요... 🚗`,
-          isBot: true,
-          timestamp: new Date().toISOString(),
-        };
-
-        updateMessages([confirmMessage]);
-
-        // 여기서 최종 일정 생성 로직 추가 예정
-        return;
-      }
-
       // 1번 옵션 선택 시 (기존 일정 등록)
       if (
         text.includes("1") ||
@@ -502,8 +487,7 @@ export default function ChatScreen() {
   };
 
   // 스타일 선택 완료 처리
-  const handleStyleSelectComplete = () => {
-    // 선택된 스타일들 확인
+  const handleStyleSelectComplete = async () => {
     const selectedStyles = messages
       .find((msg) => msg.styleOptions)
       ?.styleOptions?.filter((opt) => opt.selected)
@@ -516,16 +500,108 @@ export default function ChatScreen() {
           msg.text.includes("선호하는 교통수단을 선택해주세요")
         )
       ) {
-        const confirmMessage: Message = {
-          id: Date.now().toString(),
-          text: `선호하시는 교통수단으로 ${selectedStyles.join(
-            ", "
-          )}을(를) 반영하여 일정을 만들어드리겠습니다. 잠시만 기다려주세요... 🚗`,
-          isBot: true,
-          timestamp: new Date().toISOString(),
-        };
+        try {
+          // 먼저 사용자의 모든 선택사항을 수집
+          const startDateMsg = messages
+            .find((msg) => msg.text.includes("에 출발하는 여행이군요"))
+            ?.text.match(/(\d{4}-\d{2}-\d{2})/)?.[0];
 
-        updateMessages([confirmMessage], "선호하는 교통수단을 선택해주세요");
+          const durationMsg = messages
+            .find((msg) => msg.text.includes("여행을 계획하시는군요"))
+            ?.text.match(/\d+박\d+일|\d+주일/)?.[0];
+
+          // 여행 기간 계산
+          const startDate = startDateMsg ? new Date(startDateMsg) : null;
+          const endDate =
+            startDate && durationMsg?.includes("박")
+              ? new Date(
+                  startDate.getTime() +
+                    parseInt(durationMsg[0]) * 24 * 60 * 60 * 1000
+                )
+              : startDate;
+
+          const tripInfo = {
+            styles: messages
+              .find((msg) => msg.text.includes("을(를) 선택하셨네요"))
+              ?.text.split("을(를) 선택하셨네요")[0]
+              .split(", "),
+            destination: messages
+              .find((msg) => msg.text.includes("로 여행을 계획하시는군요"))
+              ?.text.split("로 여행을")[0],
+            duration:
+              startDate && endDate
+                ? `${startDate.toLocaleDateString()} - ${endDate.toLocaleDateString()}`
+                : undefined,
+            companion: messages
+              .find((msg) => msg.text.includes("여행을 준비하겠습니다"))
+              ?.text.split(" 여행을")[0],
+            budget: messages
+              .find((msg) => msg.text.includes("예산을"))
+              ?.text.split("예산을 ")[1]
+              .split("으로 설정")[0],
+            transportation: selectedStyles,
+          };
+
+          // 수집된 정보로 확인 메시지 생성
+          const confirmMessage: Message = {
+            id: Date.now().toString(),
+            text: `지금까지 선택하신 여행 정보를 정리해드립니다:
+
+• 여행 스타일: ${tripInfo.styles?.join(", ")}
+• 여행 지역: ${tripInfo.destination}
+• 여행 기간: ${tripInfo.duration}
+• 여행 인원: ${tripInfo.companion}
+• 예산: ${tripInfo.budget}
+• 교통수단: ${tripInfo.transportation.join(", ")}
+
+이 정보를 바탕으로 일정을 생성해드리겠습니다. 잠시만 기다려주세요... 🧞‍♂️`,
+            isBot: true,
+            timestamp: new Date().toISOString(),
+          };
+
+          updateMessages([confirmMessage], "선호하는 교통수단을 선택해주세요");
+
+          // generateTravelSchedule 함수 호출 전에 모든 필수 정보가 있는지 확인
+          if (
+            !tripInfo.destination ||
+            !tripInfo.duration ||
+            !tripInfo.companion ||
+            !tripInfo.budget
+          ) {
+            throw new Error(
+              "필요한 여행 정보가 부족합니다. 다시 시도해주세요."
+            );
+          }
+
+          // AI 일정 생성 요청
+          const aiResponse = await generateTravelSchedule(tripInfo);
+          if (!aiResponse) {
+            throw new Error("일정 생성에 실패했습니다.");
+          }
+
+          // 생성된 일정을 일반 메시지로 표시
+          const scheduleMessage: Message = {
+            id: Date.now().toString(),
+            text: `여행 일정이 생성되었습니다!\n\n${aiResponse}`,
+            isBot: true,
+            timestamp: new Date().toISOString(),
+          };
+
+          updateMessages([scheduleMessage]);
+        } catch (error) {
+          console.error("Schedule generation error:", error);
+          const errorMessage: Message = {
+            id: Date.now().toString(),
+            text: `죄송합니다. ${
+              error.message ||
+              "일정 생성 중 오류가 발생했습니다. 다시 시도해주세요."
+            }`,
+            isBot: true,
+            timestamp: new Date().toISOString(),
+          };
+          updateMessages([errorMessage]);
+        }
+
         return;
       }
 
