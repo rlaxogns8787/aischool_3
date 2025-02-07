@@ -107,7 +107,7 @@ export default function ChatScreen() {
       setMessages((prev) => [...prev, loadingMessage]);
 
       let aiResponse;
-      // 1번 옵션 관련 다양한 입력 처리
+      // 1번 옵션 선택 시 (기존 일정 등록)
       if (
         userText.includes("1") ||
         userText.includes("일정") ||
@@ -117,10 +117,10 @@ export default function ChatScreen() {
         userText.includes("1번")
       ) {
         aiResponse = await chatWithAI(
-          "어떤 지역으로 여행을 계획하고 계신가요?"
+          "일정에 대해 말씀해 주시면 등록해드리겠습니다."
         );
       }
-      // 2번 옵션 관련 다양한 입력 처리
+      // 2번 옵션 선택 시 (맞춤 일정 추천)
       else if (
         userText.includes("2") ||
         userText.includes("처음") ||
@@ -128,10 +128,28 @@ export default function ChatScreen() {
         userText.includes("두번째") ||
         userText.includes("2번")
       ) {
-        aiResponse = await chatWithAI(
-          "좋습니다. 함께 여행 계획을 세워보아요. 먼저, 어떤 지역으로 여행을 가고 싶으신가요?"
-        );
-      } else {
+        // 첫 번째 질문: 여행 스타일 선택
+        const styleOptions = {
+          text: "선호하는 여행 스타일을 선택해주세요:",
+          options: [
+            { text: "1) 자연/힐링", value: 1 },
+            { text: "2) 문화/역사", value: 2 },
+            { text: "3) 맛집/쇼핑", value: 3 },
+            { text: "4) 액티비티/체험", value: 4 },
+          ],
+        };
+        aiResponse = styleOptions;
+      }
+      // 여행 스타일 선택 후
+      else if (
+        userText.includes("자연") ||
+        userText.includes("힐링") ||
+        userText.includes("1)")
+      ) {
+        aiResponse = await chatWithAI("희망하시는 국내 여행지가 있으신가요?");
+      }
+      // 일반 대화
+      else {
         aiResponse = await chatWithAI(text);
       }
 
@@ -141,17 +159,16 @@ export default function ChatScreen() {
       // AI 메시지 추가
       const botMessage: Message = {
         id: Date.now().toString(),
-        text: aiResponse,
+        text: typeof aiResponse === "string" ? aiResponse : aiResponse.text,
         isBot: true,
         timestamp: new Date().toISOString(),
+        options: aiResponse.options, // 옵션이 있는 경우에만 추가됨
       };
       setMessages((prev) => [...prev, botMessage]);
     } catch (error) {
       console.error("Chat error:", error);
-      // 로딩 메시지 제거
       setMessages((prev) => prev.filter((msg) => msg.id !== "loading"));
 
-      // 에러 메시지 추가
       const errorMessage: Message = {
         id: Date.now().toString(),
         text: "죄송합니다. 오류가 발생했습니다. 다시 시도해주세요.",
