@@ -197,7 +197,15 @@ export default function App() {
             />
             <Stack.Screen name="Onboarding" component={OnboardingScreen} />
             <Stack.Screen name="Main" component={MainDrawer} />
-            <Stack.Screen name="Chat" component={ChatScreen} />
+            <Stack.Screen
+              name="Chat"
+              component={ChatScreen}
+              options={{
+                headerTitle: "여행 플래너",
+                headerTitleAlign: "center",
+                headerShadowVisible: false,
+              }}
+            />
           </Stack.Navigator>
         </NavigationContainer>
       </AuthProvider>
