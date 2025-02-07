@@ -25,6 +25,11 @@ type Message = {
     value: number;
     selected?: boolean;
   }>;
+  styleOptions?: Array<{
+    text: string;
+    value: string;
+    selected: boolean;
+  }>;
 };
 
 // 옵션 버튼 컴포넌트
@@ -164,14 +169,18 @@ export default function ChatScreen() {
         userText.includes("두번째") ||
         userText.includes("2번")
       ) {
-        // 첫 번째 질문: 여행 스타일 선택
+        // 여행 스타일 선택 옵션
         const styleOptions = {
-          text: "선호하는 여행 스타일을 선택해주세요:",
-          options: [
-            { text: "1) 자연/힐링", value: 1 },
-            { text: "2) 문화/역사", value: 2 },
-            { text: "3) 맛집/쇼핑", value: 3 },
-            { text: "4) 액티비티/체험", value: 4 },
+          text: "선호하는 여행 스타일을 선택해주세요 (여러 개 선택 가능):",
+          styleOptions: [
+            { text: "자연", value: "nature", selected: false },
+            { text: "힐링", value: "healing", selected: false },
+            { text: "액티비티", value: "activity", selected: false },
+            { text: "문화", value: "culture", selected: false },
+            { text: "체험", value: "experience", selected: false },
+            { text: "역사", value: "history", selected: false },
+            { text: "쇼핑", value: "shopping", selected: false },
+            { text: "맛집", value: "food", selected: false },
           ],
         };
         aiResponse = styleOptions;
@@ -191,6 +200,7 @@ export default function ChatScreen() {
         isBot: true,
         timestamp: new Date().toISOString(),
         options: aiResponse.options, // 옵션이 있는 경우에만 추가됨
+        styleOptions: aiResponse.styleOptions, // 스타일 옵션이 있는 경우에만 추가됨
       };
       setMessages((prev) => [...prev, botMessage]);
     } catch (error) {
@@ -206,6 +216,54 @@ export default function ChatScreen() {
       setMessages((prev) => [...prev, errorMessage]);
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  // 스타일 토글 처리 함수 추가
+  const handleStyleToggle = (value: string) => {
+    setMessages((prev) => {
+      return prev.map((msg) => {
+        if (msg.styleOptions) {
+          return {
+            ...msg,
+            styleOptions: msg.styleOptions.map((option) => ({
+              ...option,
+              selected:
+                option.value === value ? !option.selected : option.selected,
+            })),
+          };
+        }
+        return msg;
+      });
+    });
+  };
+
+  // 스타일 선택 완료 처리
+  const handleStyleSelectComplete = () => {
+    // 선택된 스타일들 확인
+    const selectedStyles = messages
+      .find((msg) => msg.styleOptions)
+      ?.styleOptions?.filter((opt) => opt.selected)
+      .map((opt) => opt.text);
+
+    if (selectedStyles && selectedStyles.length > 0) {
+      // 선택 확인 메시지
+      const confirmMessage: Message = {
+        id: Date.now().toString(),
+        text: `${selectedStyles.join(", ")}을(를) 선택하셨네요. 좋습니다!`,
+        isBot: true,
+        timestamp: new Date().toISOString(),
+      };
+
+      // 다음 질문 메시지
+      const nextQuestion: Message = {
+        id: (Date.now() + 1).toString(),
+        text: "희망하시는 국내 여행지가 있으신가요?",
+        isBot: true,
+        timestamp: new Date().toISOString(),
+      };
+
+      setMessages((prev) => [...prev, confirmMessage, nextQuestion]);
     }
   };
 
@@ -231,6 +289,8 @@ export default function ChatScreen() {
           <MessageList
             messages={messages}
             onOptionSelect={handleOptionSelect}
+            onStyleToggle={handleStyleToggle}
+            onStyleSelectComplete={handleStyleSelectComplete}
           />
         </View>
         <View style={styles.inputContainer}>

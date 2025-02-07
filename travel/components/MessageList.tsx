@@ -12,12 +12,15 @@ import { Message } from "../types/message";
 import { SearchResult } from "../types/schedule";
 import Carousel from "react-native-snap-carousel";
 import OptionCard from "./OptionCard";
+import StyleToggleButton from "./StyleToggleButton";
 
 const { width: screenWidth } = Dimensions.get("window");
 
 type MessageListProps = {
   messages: Message[];
   onOptionSelect: (value: number) => void;
+  onStyleToggle: (value: string) => void;
+  onStyleSelectComplete: () => void;
   toggleModal: () => void;
 };
 
@@ -43,6 +46,8 @@ const OptionButton = ({
 export default function MessageList({
   messages,
   onOptionSelect,
+  onStyleToggle,
+  onStyleSelectComplete,
   toggleModal,
 }: MessageListProps) {
   const scrollViewRef = useRef<ScrollView>(null);
@@ -83,6 +88,26 @@ export default function MessageList({
               {message.text}
             </Text>
           </View>
+          {message.styleOptions && (
+            <View style={styles.styleOptionsWrapper}>
+              <View style={styles.styleOptionsContainer}>
+                {message.styleOptions.map((option, optionIndex) => (
+                  <StyleToggleButton
+                    key={`style-${message.id}-${option.value}-${optionIndex}`}
+                    text={option.text}
+                    selected={option.selected}
+                    onPress={() => onStyleToggle(option.value)}
+                  />
+                ))}
+              </View>
+              <TouchableOpacity
+                style={styles.completeButton}
+                onPress={onStyleSelectComplete}
+              >
+                <Text style={styles.completeButtonText}>선택 완료</Text>
+              </TouchableOpacity>
+            </View>
+          )}
           {message.options && (
             <View style={styles.optionsContainer}>
               {message.options.map((option, optionIndex) => (
@@ -159,5 +184,28 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     paddingBottom: 20, // 스크롤 여백
+  },
+  styleOptionsWrapper: {
+    marginTop: 8,
+    paddingHorizontal: 16,
+  },
+  styleOptionsContainer: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    alignItems: "flex-start",
+    marginBottom: 12,
+  },
+  completeButton: {
+    backgroundColor: "#007AFF",
+    borderRadius: 20,
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    alignSelf: "stretch",
+  },
+  completeButtonText: {
+    color: "#FFFFFF",
+    fontSize: 16,
+    fontWeight: "600",
+    textAlign: "center",
   },
 });
