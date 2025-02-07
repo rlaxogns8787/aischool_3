@@ -17,7 +17,7 @@ const { width: screenWidth } = Dimensions.get("window");
 
 type MessageListProps = {
   messages: Message[];
-  onOptionSelect: (option: string) => void;
+  onOptionSelect: (value: number) => void;
   toggleModal: () => void;
 };
 
@@ -45,62 +45,29 @@ export default function MessageList({
   onOptionSelect,
   toggleModal,
 }: MessageListProps) {
-  const flatListRef = useRef<FlatList>(null);
+  const scrollViewRef = useRef<ScrollView>(null);
 
   // 새 메시지가 추가될 때 자동 스크롤
   useEffect(() => {
-    if (flatListRef.current && messages.length > 0) {
-      flatListRef.current.scrollToEnd({ animated: true });
+    if (scrollViewRef.current && messages.length > 0) {
+      scrollViewRef.current.scrollToEnd({ animated: true });
     }
   }, [messages]);
 
-  const renderSearchResult = ({ item: result }: { item: SearchResult }) => (
-    <OptionCard
-      key={result.id}
-      image={result.imageUrl}
-      keyword={result.type}
-      title={result.name}
-      address={result.description}
-      onPress={toggleModal}
-    />
-  );
-
-  const renderMessage = ({ item, index }: { item: Message; index: number }) => (
-    <View style={styles.messageGroup}>
-      <View
-        style={[
-          styles.messageBubble,
-          item.isBot ? styles.botBubble : styles.userBubble,
-        ]}
-      >
-        <Text
-          style={[
-            styles.messageText,
-            item.isBot ? styles.botText : styles.userText,
-          ]}
-        >
-          {item.text}
-        </Text>
-      </View>
-      {item.options && (
-        <View style={styles.optionsContainer}>
-          {item.options.map((option) => (
-            <OptionButton
-              key={option.value}
-              text={option.text}
-              selected={option.selected}
-              onPress={() => onOptionSelect(option.value)}
-            />
-          ))}
-        </View>
-      )}
-    </View>
-  );
-
   return (
-    <ScrollView style={styles.container}>
-      {messages.map((message) => (
-        <View key={message.id} style={styles.messageGroup}>
+    <ScrollView
+      ref={scrollViewRef}
+      style={styles.container}
+      contentContainerStyle={styles.scrollContent}
+      onContentSizeChange={() =>
+        scrollViewRef.current?.scrollToEnd({ animated: true })
+      }
+    >
+      {messages.map((message, index) => (
+        <View
+          key={`message-${message.id}-${index}`}
+          style={styles.messageGroup}
+        >
           <View
             style={[
               styles.messageBubble,
@@ -118,9 +85,9 @@ export default function MessageList({
           </View>
           {message.options && (
             <View style={styles.optionsContainer}>
-              {message.options.map((option) => (
+              {message.options.map((option, optionIndex) => (
                 <OptionButton
-                  key={option.value}
+                  key={`option-${message.id}-${option.value}-${optionIndex}`}
                   text={option.text}
                   selected={option.selected}
                   onPress={() => onOptionSelect(option.value)}
@@ -189,5 +156,8 @@ const styles = StyleSheet.create({
   },
   optionTextSelected: {
     color: "#FFFFFF",
+  },
+  scrollContent: {
+    paddingBottom: 20, // 스크롤 여백
   },
 });

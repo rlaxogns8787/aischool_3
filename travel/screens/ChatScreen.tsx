@@ -107,6 +107,42 @@ export default function ChatScreen() {
       setMessages((prev) => [...prev, loadingMessage]);
 
       let aiResponse;
+      // 여행 스타일 선택 처리
+      if (
+        userText.includes("자연") ||
+        userText.includes("힐링") ||
+        userText.includes("문화") ||
+        userText.includes("역사") ||
+        userText.includes("맛집") ||
+        userText.includes("쇼핑") ||
+        userText.includes("액티비티") ||
+        userText.includes("체험") ||
+        userText.match(/[1-4][)]/)
+      ) {
+        // 선택한 스타일 확인 메시지 추가
+        const confirmMessage: Message = {
+          id: Date.now().toString(),
+          text: "알겠습니다. 선택하신 여행 스타일을 참고하겠습니다.",
+          isBot: true,
+          timestamp: new Date().toISOString(),
+        };
+
+        // 다음 질문 메시지
+        const nextQuestion: Message = {
+          id: (Date.now() + 1).toString(),
+          text: "희망하시는 국내 여행지가 있으신가요?",
+          isBot: true,
+          timestamp: new Date().toISOString(),
+        };
+
+        setMessages((prev) =>
+          prev
+            .filter((msg) => msg.id !== "loading")
+            .concat([confirmMessage, nextQuestion])
+        );
+        return;
+      }
+
       // 1번 옵션 선택 시 (기존 일정 등록)
       if (
         userText.includes("1") ||
@@ -139,14 +175,6 @@ export default function ChatScreen() {
           ],
         };
         aiResponse = styleOptions;
-      }
-      // 여행 스타일 선택 후
-      else if (
-        userText.includes("자연") ||
-        userText.includes("힐링") ||
-        userText.includes("1)")
-      ) {
-        aiResponse = await chatWithAI("희망하시는 국내 여행지가 있으신가요?");
       }
       // 일반 대화
       else {
