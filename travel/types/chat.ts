@@ -17,4 +17,5 @@ export type Message = {
   timestamp: string;
   options?: MessageOption[];
   styleOptions?: StyleOption[];
+  isLoading?: boolean;
 };

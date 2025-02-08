@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   Dimensions,
   ScrollView,
+  ActivityIndicator,
 } from "react-native";
 import { Message } from "../types/message";
 import { SearchResult } from "../types/schedule";
@@ -43,6 +44,17 @@ const OptionButton = ({
   </TouchableOpacity>
 );
 
+const LoadingBubble = () => (
+  <View style={styles.loadingContainer}>
+    <View style={styles.loadingBubble}>
+      <ActivityIndicator color="#007AFF" size="small" style={styles.spinner} />
+      <Text style={styles.loadingText}>
+        AI가 여행 일정을 생성하고 있습니다...
+      </Text>
+    </View>
+  </View>
+);
+
 export default function MessageList({
   messages,
   onOptionSelect,
@@ -68,60 +80,69 @@ export default function MessageList({
         scrollViewRef.current?.scrollToEnd({ animated: true })
       }
     >
-      {messages.map((message, index) => (
-        <View
-          key={`message-${message.id}-${index}`}
-          style={styles.messageGroup}
-        >
+      {messages.map((message, index) =>
+        !message.isLoading ? (
           <View
+            key={`message-${message.id}-${index}`}
             style={[
-              styles.messageBubble,
-              message.isBot ? styles.botBubble : styles.userBubble,
+              styles.messageGroup,
+              message.isBot ? styles.botGroup : styles.userGroup,
             ]}
           >
-            <Text
+            <View
               style={[
-                styles.messageText,
-                message.isBot ? styles.botText : styles.userText,
+                styles.messageBubble,
+                message.isBot ? styles.botBubble : styles.userBubble,
               ]}
             >
-              {message.text}
-            </Text>
-          </View>
-          {message.styleOptions && (
-            <View style={styles.styleOptionsWrapper}>
-              <View style={styles.styleOptionsContainer}>
-                {message.styleOptions.map((option, optionIndex) => (
-                  <StyleToggleButton
-                    key={`style-${message.id}-${option.value}-${optionIndex}`}
+              <Text
+                style={[
+                  styles.messageText,
+                  message.isBot ? styles.botText : styles.userText,
+                ]}
+              >
+                {message.text}
+              </Text>
+            </View>
+            {message.options && (
+              <View style={styles.optionsContainer}>
+                {message.options.map((option, optionIndex) => (
+                  <OptionButton
+                    key={`option-${message.id}-${option.value}-${optionIndex}`}
                     text={option.text}
                     selected={option.selected}
-                    onPress={() => onStyleToggle(option.value)}
+                    onPress={() => onOptionSelect(option.value)}
                   />
                 ))}
               </View>
-              <TouchableOpacity
-                style={styles.completeButton}
-                onPress={onStyleSelectComplete}
-              >
-                <Text style={styles.completeButtonText}>선택 완료</Text>
-              </TouchableOpacity>
-            </View>
-          )}
-          {message.options && (
-            <View style={styles.optionsContainer}>
-              {message.options.map((option, optionIndex) => (
-                <OptionButton
-                  key={`option-${message.id}-${option.value}-${optionIndex}`}
-                  text={option.text}
-                  selected={option.selected}
-                  onPress={() => onOptionSelect(option.value)}
-                />
-              ))}
-            </View>
-          )}
-        </View>
-      ))}
+            )}
+            {message.styleOptions && (
+              <View style={styles.styleOptionsWrapper}>
+                <View style={styles.styleOptionsContainer}>
+                  {message.styleOptions.map((option, optionIndex) => (
+                    <StyleToggleButton
+                      key={`style-${message.id}-${option.value}-${optionIndex}`}
+                      text={option.text}
+                      selected={option.selected}
+                      onPress={() => onStyleToggle(option.value)}
+                    />
+                  ))}
+                </View>
+                <TouchableOpacity
+                  style={styles.completeButton}
+                  onPress={onStyleSelectComplete}
+                >
+                  <Text style={styles.completeButtonText}>선택 완료</Text>
+                </TouchableOpacity>
+              </View>
+            )}
+          </View>
+        ) : null
+      )}
+      {messages.some((msg) => msg.isLoading) &&
+        !messages.some((msg) =>
+          msg.text.includes("여행 일정이 생성되었습니다")
+        ) && <LoadingBubble />}
     </ScrollView>
   );
 }
@@ -207,5 +228,24 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "600",
     textAlign: "center",
+  },
+  loadingContainer: {
+    padding: 16,
+    alignItems: "center",
+  },
+  loadingBubble: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#F2F2F7",
+    padding: 12,
+    borderRadius: 20,
+    maxWidth: "80%",
+  },
+  spinner: {
+    marginRight: 8,
+  },
+  loadingText: {
+    fontSize: 14,
+    color: "#666",
   },
 });

@@ -9,20 +9,16 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { ArrowLeft } from "lucide-react-native";
 import { Schedule } from "../types/schedule";
+import { useRoute, RouteProp } from "@react-navigation/native";
 
-type ScheduleDetailProps = {
-  navigation: any;
-  route: {
-    params: {
-      schedule: Schedule;
-    };
+type RouteParams = {
+  ScheduleDetail: {
+    schedule: Schedule;
   };
 };
 
-export default function ScheduleDetail({
-  navigation,
-  route,
-}: ScheduleDetailProps) {
+export default function ScheduleDetail() {
+  const route = useRoute<RouteProp<RouteParams, "ScheduleDetail">>();
   const { schedule } = route.params;
 
   return (

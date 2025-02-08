@@ -19,9 +19,11 @@ import { styles } from "../styles/chatScreen";
 import { Message, MessageOption } from "../types/chat";
 import { INITIAL_MESSAGE, COMPANION_OPTIONS } from "../constants/chat";
 import { formatDate, extractTripInfo } from "../utils/messageUtils";
+import { Schedule } from "../types/schedule";
 
 type RootStackParamList = {
   Chat: undefined;
+  Schedule: undefined;
   // 다른 스크린들도 필요하다면 여기에 추가
 };
 
@@ -533,7 +535,7 @@ export default function ChatScreen() {
                 .map((opt) => opt.text) || [],
           };
 
-          // 수집된 정보로 확인 메시지 생성
+          // 먼저 확인 메시지 표시
           const confirmMessage: Message = {
             id: Date.now().toString(),
             text: `지금까지 선택하신 여행 정보를 정리해드립니다:
@@ -545,32 +547,30 @@ export default function ChatScreen() {
 • 예산: ${tripInfo.budget}
 • 교통수단: ${tripInfo.transportation?.join(", ")}
 
-이 정보를 바탕으로 일정을 생성해드리겠습니다. 잠시만 기다려주세요... 🧞‍♂️`,
+이 정보를 바탕으로 일정을 생성해드리겠습니다.`,
             isBot: true,
             timestamp: new Date().toISOString(),
           };
 
-          updateMessages([confirmMessage], "선호하는 교통수단을 선택해주세요");
+          // 확인 메시지 표시
+          updateMessages([confirmMessage]);
 
-          // generateTravelSchedule 함수 호출 전에 모든 필수 정보가 있는지 확인
-          if (
-            !tripInfo.destination ||
-            !tripInfo.duration ||
-            !tripInfo.companion ||
-            !tripInfo.budget
-          ) {
-            throw new Error(
-              "필요한 여행 정보가 부족합니다. 다시 시도해주세요."
-            );
-          }
+          // 잠시 대기 후 로딩 메시지 추가
+          setTimeout(() => {
+            const loadingMessage: Message = {
+              id: `loading-${Date.now()}`,
+              isBot: true,
+              text: "",
+              timestamp: new Date().toISOString(),
+              isLoading: true,
+            };
+            updateMessages([loadingMessage]);
+          }, 1000);
 
-          // AI 일정 생성 요청
+          // AI 일정 생성
           const aiResponse = await generateTravelSchedule(tripInfo);
-          if (!aiResponse) {
-            throw new Error("일정 생성에 실패했습니다.");
-          }
 
-          // 생성된 일정을 일반 메시지로 표시
+          // 생성된 일정으로 메시지 교체
           const scheduleMessage: Message = {
             id: Date.now().toString(),
             text: `여행 일정이 생성되었습니다!\n\n${aiResponse}`,
@@ -579,6 +579,7 @@ export default function ChatScreen() {
           };
 
           updateMessages([scheduleMessage]);
+          navigation.navigate("Schedule");
         } catch (error) {
           console.error("Schedule generation error:", error);
           const errorMessage: Message = {

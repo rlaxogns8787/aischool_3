@@ -7,8 +7,8 @@ import { SafeAreaProvider } from "react-native-safe-area-context";
 import { enableScreens } from "react-native-screens";
 import { AuthProvider } from "./contexts/AuthContext";
 import HomeScreen from "./screens/HomeScreen";
-import ScheduleScreen from "./screens/ScheduleScreen";
-import TravelLogScreen from "./screens/TravelLogScreen";
+import ScheduleScreen from "./screens/ScheduleScreen.tsx";
+import TravelLogScreen from "./screens/TravelLogScreen.tsx";
 import OnboardingScreen from "./screens/OnboardingScreen";
 import AuthScreen from "./screens/AuthScreen";
 import AgreementScreen from "./screens/AgreementScreen";
@@ -19,7 +19,7 @@ import CalendarIcon from "./assets/calendar.svg";
 import GalleryIcon from "./assets/gallery.svg";
 import "react-native-gesture-handler";
 import ChatScreen from "./screens/ChatScreen";
-import TourScreen from "./screens/TourScreen";
+import TourScreen from "./screens/TourScreen.tsx";
 import { MessageCircle } from "lucide-react-native";
 
 export type RootStackParamList = {

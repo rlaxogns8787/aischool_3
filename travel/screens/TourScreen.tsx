@@ -9,13 +9,14 @@ import {
   Platform,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { ChevronLeft, Mic } from "lucide-react-native";
+import { ChevronLeft, Mic, ArrowLeft, Map } from "lucide-react-native";
 import MapIcon from "../assets/map.svg";
 import * as Speech from "expo-speech";
 import * as sdk from "microsoft-cognitiveservices-speech-sdk";
 import { Audio } from "expo-av";
 import "react-native-get-random-values";
 import { useAzureBot } from "../src/hooks/useAzureBot";
+import { useNavigation } from "@react-navigation/native";
 
 type TourScreenProps = {
   navigation: any;
@@ -26,7 +27,15 @@ const SPEECH_KEY =
   "9ot6vDP41TrM6i1MRWbtsyZrOFlXDy4UunpzMcZbT5QrzyLvEHDYJQQJ99BAACYeBjFXJ3w3AAAYACOGvVzj";
 const SPEECH_REGION = "eastus";
 
-export default function TourScreen({ navigation }: TourScreenProps) {
+const AZURE_OPENAI_ENDPOINT = "https://ssapy-openai.openai.azure.com/";
+const AZURE_OPENAI_KEY =
+  "65fEqo2qsGl8oJPg7lzs8ZJk7pUgdTEgEhUx2tvUsD2e07hbowbCJQQJ99BBACfhMk5XJ3w3AAABACOGr7S4";
+const DEPLOYMENT_NAME = "gpt-4o";
+
+type Interest = "건축" | "역사" | "문화" | "요리" | "자연";
+
+export default function TourScreen() {
+  const navigation = useNavigation();
   const [displayedText, setDisplayedText] = useState("");
   const [isRecording, setIsRecording] = useState(false);
   const [userInput, setUserInput] = useState("");
@@ -35,6 +44,13 @@ export default function TourScreen({ navigation }: TourScreenProps) {
   const recognizer = useRef<sdk.SpeechRecognizer | null>(null);
   const synthesizer = useRef<sdk.SpeechSynthesizer | null>(null);
   const { processQuery, isProcessing } = useAzureBot();
+  const [selectedInterest, setSelectedInterest] = useState<Interest | null>(
+    null
+  );
+  const [tourGuide, setTourGuide] = useState<string>("");
+  const [isLoading, setIsLoading] = useState(false);
+
+  const interests: Interest[] = ["건축", "역사", "문화", "요리", "자연"];
 
   // Azure Speech 관련 함수 수정
   const startSpeaking = async (text: string) => {
@@ -248,6 +264,59 @@ export default function TourScreen({ navigation }: TourScreenProps) {
     navigation.navigate("Map");
   };
 
+  const generateTourGuide = async (location: string, interest: Interest) => {
+    setIsLoading(true);
+    try {
+      const messages = [
+        {
+          role: "system",
+          content: `당신은 전문 도슨트입니다. ${interest} 분야에 관심이 많은 관광객을 위해 ${location}에 대한 전문적이고 흥미로운 설명을 제공해주세요.
+          
+          특히 ${interest}와 관련된 내용을 상세히 다루되, 다음 사항을 포함해주세요:
+          - ${interest} 관점에서 본 ${location}만의 특별한 점
+          - 관련된 전문적인 용어와 설명
+          - 일반 관광 가이드에서는 접할 수 없는 심층적인 정보
+          - ${interest} 애호가들이 특히 관심을 가질 만한 세부사항`,
+        },
+        {
+          role: "user",
+          content: `${location}에 대해 설명해주세요. 나는 ${interest}에 관심이 많습니다.`,
+        },
+      ];
+
+      const response = await fetch(
+        `${AZURE_OPENAI_ENDPOINT}/openai/deployments/${DEPLOYMENT_NAME}/chat/completions?api-version=2024-02-15-preview`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "api-key": AZURE_OPENAI_KEY,
+          },
+          body: JSON.stringify({
+            messages,
+            max_tokens: 2000,
+            temperature: 0.7,
+            top_p: 0.95,
+            frequency_penalty: 0,
+            presence_penalty: 0,
+          }),
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error("Failed to generate tour guide");
+      }
+
+      const data = await response.json();
+      setTourGuide(data.choices[0].message.content);
+    } catch (error) {
+      console.error("Error generating tour guide:", error);
+      setTourGuide("죄송합니다. 설명을 불러오는데 실패했습니다.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   if (!isAudioReady) {
     return (
       <View style={styles.loadingContainer}>
@@ -260,19 +329,54 @@ export default function TourScreen({ navigation }: TourScreenProps) {
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()}>
-          <ChevronLeft size={24} color="#000" />
+        <TouchableOpacity
+          style={styles.backButton}
+          onPress={() => navigation.goBack()}
+        >
+          <ArrowLeft size={24} color="#000" />
         </TouchableOpacity>
-        <TouchableOpacity onPress={handleMapPress}>
-          <MapIcon width={24} height={24} />
+        <Text style={styles.title}>도슨트 설명</Text>
+        <TouchableOpacity style={styles.mapButton} onPress={handleMapPress}>
+          <Map size={24} color="#000" />
         </TouchableOpacity>
       </View>
 
+      <View style={styles.interestsContainer}>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+          {interests.map((interest) => (
+            <TouchableOpacity
+              key={interest}
+              style={[
+                styles.interestButton,
+                selectedInterest === interest && styles.selectedInterest,
+              ]}
+              onPress={() => {
+                setSelectedInterest(interest);
+                generateTourGuide("경복궁", interest);
+              }}
+            >
+              <Text
+                style={[
+                  styles.interestText,
+                  selectedInterest === interest && styles.selectedInterestText,
+                ]}
+              >
+                {interest}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
+      </View>
+
       <ScrollView
-        style={styles.contentContainer}
-        contentContainerStyle={styles.content}
+        style={styles.guideContainer}
+        contentContainerStyle={styles.guideContent}
       >
-        <Text style={styles.mainText}>{displayedText}</Text>
+        {isLoading ? (
+          <ActivityIndicator size="large" color="#007AFF" />
+        ) : (
+          <Text style={styles.guideText}>{tourGuide}</Text>
+        )}
       </ScrollView>
 
       <View style={styles.footer}>
@@ -299,27 +403,53 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    paddingHorizontal: 20,
-    paddingVertical: 16,
+    padding: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: "#E5E5EA",
   },
-  contentContainer: {
+  backButton: {
+    padding: 8,
+  },
+  mapButton: {
+    padding: 8,
+  },
+  title: {
+    fontSize: 18,
+    fontWeight: "600",
+  },
+  interestsContainer: {
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: "#E5E5EA",
+  },
+  interestButton: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: "#007AFF",
+    marginHorizontal: 6,
+  },
+  selectedInterest: {
+    backgroundColor: "#007AFF",
+  },
+  interestText: {
+    color: "#007AFF",
+    fontSize: 16,
+  },
+  selectedInterestText: {
+    color: "#fff",
+  },
+  guideContainer: {
     flex: 1,
   },
-  content: {
-    padding: 20,
+  guideContent: {
+    padding: 16,
   },
-  mainText: {
-    fontSize: 24,
-    lineHeight: 39,
-    fontFamily: "System",
-  },
-  char: {
-    color: "rgba(67, 77, 86, 0.5)",
-    fontWeight: "400",
-  },
-  highlightedChar: {
-    color: "rgb(67, 77, 86)",
-    fontWeight: "600",
+  guideText: {
+    fontSize: 16,
+    lineHeight: 24,
+    color: "#1F2024",
   },
   footer: {
     padding: 20,
