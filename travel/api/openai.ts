@@ -142,88 +142,57 @@ const searchTravelInfo = async (searchQuery: string) => {
 };
 
 // 일정 생성을 위한 함수 수정
-export const generateTravelSchedule = async (
-  tripInfo: {
-    destination: string;
-    duration: string;
-    companion: string;
-    budget: string;
-    transportation: string[];
-  },
-  retries = 3
-): Promise<string> => {
-  for (let i = 0; i < retries; i++) {
-    try {
-      // 1. Azure Search로 여행지 관련 정보 검색
-      const searchResults = await searchTravelInfo(
-        `${tripInfo.destination} 관광지 맛집 숙소`
-      );
+import { TripInfo } from "../types/chat";
 
-      // 2. 검색 결과를 프롬프트에 포함
-      const searchContext =
-        searchResults
-          ?.map(
-            (result: any) =>
-              `[${result.category}] ${result.title}\n${result.content}\n`
-          )
-          .join("\n") || "";
+export const generateTravelSchedule = async (tripInfo: TripInfo) => {
+  const messages = [
+    {
+      role: "system",
+      content:
+        "당신은 여행 일정을 생성해주는 AI 어시스턴트입니다. 사용자의 선호도와 조건에 맞는 상세한 여행 일정을 생성해주세요.",
+    },
+    {
+      role: "user",
+      content: `
+여행 스타일: ${tripInfo.styles?.join(", ")}
+여행 지역: ${tripInfo.destination}
+여행 기간: ${tripInfo.duration}
+여행 인원: ${tripInfo.companion}
+예산: ${tripInfo.budget}
+교통수단: ${tripInfo.transportation?.join(", ")}
 
-      // 3. OpenAI에 일정 생성 요청
-      const prompt = `다음 여행 조건과 수집된 정보를 바탕으로 매력적인 일정을 생성해주세요:
+위 조건에 맞는 여행 일정을 생성해주세요. 각 장소마다 예상 소요 시간, 입장료, 설명을 포함해주세요.`,
+    },
+  ];
 
-[여행 조건]
-- 여행지: ${tripInfo.destination}
-- 기간: ${tripInfo.duration}
-- 인원: ${tripInfo.companion}
-- 예산: ${tripInfo.budget}
-- 교통수단: ${tripInfo.transportation.join(", ")}
-
-[수집된 여행지 정보]
-${searchContext}
-
-위 정보를 바탕으로 아래 형식에 맞춰 구체적이고 실용적인 일정을 작성해주세요:
-
-[제목]
-${tripInfo.destination}에서 즐기는 ${tripInfo.duration} 여행
-
-[특징]
-- 예산: ${tripInfo.budget} 기준
-- 교통: ${tripInfo.transportation.join(", ")} 이용
-- 여행 컨셉: (이 일정만의 특별한 점을 설명해주세요)
-
-[세부일정]
-1일차:
-- 오전 (10:00~12:00): 
-  • 장소: (방문할 곳)
-  • 활동: (할 일과 예상 비용)
-  • 이동수단: (교통수단과 소요시간)
-
-- 오후 (12:00~17:00):
-  • 점심: (식당과 예상 비용)
-  • 장소: (방문할 곳들)
-  • 활동: (할 일과 예상 비용)
-  • 이동수단: (교통수단과 소요시간)
-
-- 저녁 (17:00~):
-  • 저녁: (식당과 예상 비용)
-  • 숙소: (숙소 정보와 예상 비용)
-
-2일차:
-...
-
-※ 각 일정은 선택한 교통수단을 고려하여 현실적인 동선으로 구성해주세요.
-※ 예산 범위 내에서 식사, 입장료, 교통비 등 예상 비용을 포함해주세요.
-※ ${tripInfo.companion} 여행에 적합한 장소와 활동을 추천해주세요.`;
-
-      const response = await chatWithAI(prompt);
-      return response;
-    } catch (error) {
-      console.error(`Schedule generation attempt ${i + 1} failed:`, error);
-      if (i === retries - 1) {
-        throw new Error("일정 생성에 실패했습니다. 잠시 후 다시 시도해주세요.");
+  try {
+    const response = await fetch(
+      `${AZURE_OPENAI_ENDPOINT}/openai/deployments/${DEPLOYMENT_NAME}/chat/completions?api-version=2024-02-15-preview`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "api-key": AZURE_OPENAI_KEY,
+        },
+        body: JSON.stringify({
+          messages,
+          max_tokens: 2000,
+          temperature: 0.7,
+          top_p: 0.95,
+          frequency_penalty: 0,
+          presence_penalty: 0,
+        }),
       }
-      await new Promise((resolve) => setTimeout(resolve, 2000 * (i + 1)));
+    );
+
+    if (!response.ok) {
+      throw new Error("Failed to generate schedule");
     }
+
+    const data = await response.json();
+    return data.choices[0].message.content;
+  } catch (error) {
+    console.error("Error generating schedule:", error);
+    throw error;
   }
-  throw new Error("서버 연결에 실패했습니다.");
 };
