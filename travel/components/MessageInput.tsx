@@ -13,7 +13,7 @@ type MessageInputProps = {
   onSend: (text: string) => Promise<void>;
   onVoiceStart: () => void;
   isListening: boolean;
-  disabled?: boolean;
+  disabled: boolean;
 };
 
 export default function MessageInput({

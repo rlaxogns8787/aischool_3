@@ -1,15 +1,13 @@
 import React, { useState, useEffect } from "react";
 import {
   View,
-  StyleSheet,
   KeyboardAvoidingView,
   Platform,
   TouchableOpacity,
   Text,
-  ScrollView,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { useNavigation } from "@react-navigation/native";
+import { useNavigation, NavigationProp } from "@react-navigation/native";
 import MessageList from "../components/MessageList";
 import MessageInput from "../components/MessageInput";
 import { chatWithAI, generateTravelSchedule } from "../api/openai";
@@ -17,22 +15,14 @@ import Icon from "react-native-vector-icons/Ionicons";
 import DateTimePicker, {
   DateTimePickerEvent,
 } from "@react-native-community/datetimepicker";
+import { styles } from "../styles/chatScreen";
+import { Message, MessageOption } from "../types/chat";
+import { INITIAL_MESSAGE, COMPANION_OPTIONS } from "../constants/chat";
+import { formatDate, extractTripInfo } from "../utils/messageUtils";
 
-type Message = {
-  id: string;
-  text: string;
-  isBot: boolean;
-  timestamp: string;
-  options?: Array<{
-    text: string;
-    value: number;
-    selected?: boolean;
-  }>;
-  styleOptions?: Array<{
-    text: string;
-    value: string;
-    selected: boolean;
-  }>;
+type RootStackParamList = {
+  Chat: undefined;
+  // 다른 스크린들도 필요하다면 여기에 추가
 };
 
 // 옵션 버튼 컴포넌트
@@ -56,29 +46,35 @@ const OptionButton = ({
 );
 
 export default function ChatScreen() {
-  const navigation = useNavigation();
+  const navigation = useNavigation<NavigationProp<RootStackParamList>>();
   const [messages, setMessages] = useState<Message[]>([]);
   const [isLoading, setIsLoading] = useState(false);
-  const [showOptions, setShowOptions] = useState(true); // 옵션 표시 여부
-  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+  const [showOptions, setShowOptions] = useState(true);
+  const [startDate, setStartDate] = useState<Date>(new Date());
+  const [endDate, setEndDate] = useState<Date>(new Date());
+  const [datePickerMode, setDatePickerMode] = useState<"start" | "end">(
+    "start"
+  );
   const [isDatePickerVisible, setDatePickerVisible] = useState(false);
+  const [selectedStartDate, setSelectedStartDate] = useState<Date | null>(null);
+  const [selectedEndDate, setSelectedEndDate] = useState<Date | null>(null);
+  const [isSelectingEndDate, setIsSelectingEndDate] = useState(false);
 
   // 초기 메시지 설정
   useEffect(() => {
-    const initialMessage: Message = {
-      id: "1",
-      text: `안녕하세요! 저는 여행 계획을 도와주는 AI 어시스턴트입니다.
-
-먼저 진행하기전에 아래 두 옵션 중 하나를 선택을 해주세요. 이미 어느정도 정해진 일정이 있다면 1번, 여행을 염두하고 계시지만 어떻게 시작해야할 지 몰라 저와 함께 처음부터 같이 진행하고 싶다면 2번을 선택해주세요.`,
-      isBot: true,
-      timestamp: new Date().toISOString(),
-      options: [
-        { text: "1. 저는 이미 생각한 여행일정 있어요.", value: 1 },
-        { text: "2. 여행은 가고싶지만 처음부터 도와주세요", value: 2 },
-      ],
-    };
-    setMessages([initialMessage]);
+    setMessages([INITIAL_MESSAGE]);
   }, []);
+
+  // 메시지 업데이트 헬퍼 함수
+  const updateMessages = (newMessages: Message[], removePattern?: string) => {
+    setMessages((prev) => {
+      let filtered = removePattern
+        ? prev.filter((msg) => !msg.text.includes(removePattern))
+        : prev;
+      filtered = filtered.filter((msg) => msg.id !== "loading");
+      return filtered.concat(newMessages);
+    });
+  };
 
   // 옵션 선택 처리
   const handleOptionSelect = async (option: number) => {
@@ -161,21 +157,6 @@ export default function ChatScreen() {
     }
   };
 
-  // 메시지 업데이트 헬퍼 함수
-  const updateMessages = (newMessages: Message[], removePattern?: string) => {
-    setMessages((prev) => {
-      // 이전 질문 제거 (있는 경우)
-      let filtered = removePattern
-        ? prev.filter((msg) => !msg.text.includes(removePattern))
-        : prev;
-
-      // 로딩 메시지 제거
-      filtered = filtered.filter((msg) => msg.id !== "loading");
-
-      return filtered.concat(newMessages);
-    });
-  };
-
   // 여행 기간 처리 함수 수정
   const handleTripDuration = (text: string) => {
     const lastDateMessage = messages
@@ -205,13 +186,7 @@ export default function ChatScreen() {
           text: "누구와 함께 여행하시나요?",
           isBot: true,
           timestamp: new Date().toISOString(),
-          options: [
-            { text: "1. 혼자", value: 1 },
-            { text: "2. 친구와 함께", value: 2 },
-            { text: "3. 가족과 함께", value: 3 },
-            { text: "4. 부모님과 함께", value: 4 },
-            { text: "5. 연인과 함께", value: 5 },
-          ],
+          options: COMPANION_OPTIONS,
         };
 
         updateMessages(
@@ -224,31 +199,42 @@ export default function ChatScreen() {
     return false;
   };
 
-  // 날짜 선택 처리 함수
-  const handleConfirm = (date: Date) => {
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, "0");
-    const day = String(date.getDate()).padStart(2, "0");
-    const formattedDate = `${year}-${month}-${day}`;
+  // 날짜 선택 처리 함수 수정
+  const handleConfirm = () => {
+    const formattedStartDate = startDate.toLocaleDateString("ko-KR", {
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+    });
+    const formattedEndDate = endDate.toLocaleDateString("ko-KR", {
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+    });
+
+    // 여행 기간 계산
+    const days = Math.ceil(
+      (endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)
+    );
+    const nights = days - 1;
+    const duration = `${nights}박${days}일`;
 
     const confirmMessage: Message = {
       id: Date.now().toString(),
-      text: `${formattedDate}에 출발하는 여행이군요!`,
+      text: `${formattedStartDate}부터 ${formattedEndDate}까지 ${duration} 여행을 계획하시는군요!`,
       isBot: true,
       timestamp: new Date().toISOString(),
     };
 
     const nextQuestion: Message = {
       id: (Date.now() + 1).toString(),
-      text: "여행 기간은 어떻게 되나요?\n(예: 1박2일, 2박3일, 1주일 등)",
+      text: "누구와 함께 여행하시나요?",
       isBot: true,
       timestamp: new Date().toISOString(),
+      options: COMPANION_OPTIONS,
     };
 
-    updateMessages(
-      [confirmMessage, nextQuestion],
-      "여행 출발 날짜를 알려주세요"
-    );
+    updateMessages([confirmMessage, nextQuestion], "여행 날짜를 선택해주세요");
 
     setDatePickerVisible(false);
   };
@@ -323,9 +309,7 @@ export default function ChatScreen() {
 
       // 날짜 입력 처리 (예산 질문 이전에만 실행)
       if (
-        messages.some((msg) =>
-          msg.text.includes("여행 출발 날짜를 알려주세요")
-        ) &&
+        messages.some((msg) => msg.text.includes("여행 날짜를 선택해주세요")) &&
         !messages.some((msg) => msg.text.includes("여행 기간은 어떻게 되나요"))
       ) {
         showDatePicker();
@@ -395,7 +379,7 @@ export default function ChatScreen() {
         // 첫 번째 질문 (여행 날짜)
         const nextQuestion: Message = {
           id: (Date.now() + 1).toString(),
-          text: "여행 출발 날짜를 알려주세요.\n(예: 2025-01-01)",
+          text: "여행 날짜를 선택해주세요.\n(예: 2025-01-01 - 2025-01-03)",
           isBot: true,
           timestamp: new Date().toISOString(),
         };
@@ -419,7 +403,13 @@ export default function ChatScreen() {
         const aiResponse = await chatWithAI(
           "일정에 대해 말씀해 주시면 등록해드리겠습니다."
         );
-        updateMessages([aiResponse]);
+        const aiMessage: Message = {
+          id: Date.now().toString(),
+          text: aiResponse,
+          isBot: true,
+          timestamp: new Date().toISOString(),
+        };
+        updateMessages([aiMessage]);
       }
       // 2번 옵션 선택 시 (맞춤 일정 추천)
       else if (
@@ -451,7 +441,13 @@ export default function ChatScreen() {
       // 일반 대화
       else {
         const aiResponse = await chatWithAI(text);
-        updateMessages([aiResponse]);
+        const aiMessage: Message = {
+          id: Date.now().toString(),
+          text: aiResponse,
+          isBot: true,
+          timestamp: new Date().toISOString(),
+        };
+        updateMessages([aiMessage]);
       }
     } catch (error) {
       console.error("Chat error:", error);
@@ -502,14 +498,6 @@ export default function ChatScreen() {
       ) {
         try {
           // 먼저 사용자의 모든 선택사항을 수집
-          const startDateMsg = messages
-            .find((msg) => msg.text.includes("에 출발하는 여행이군요"))
-            ?.text.match(/(\d{4}-\d{2}-\d{2})/)?.[0];
-
-          const durationMsg = messages
-            .find((msg) => msg.text.includes("여행을 계획하시는군요"))
-            ?.text.match(/\d+박\d+일|\d+주일/)?.[0];
-
           const tripInfo = {
             styles: messages
               .find((msg) => msg.text.includes("을(를) 선택하셨네요"))
@@ -518,8 +506,17 @@ export default function ChatScreen() {
             destination: messages
               .find((msg) => msg.text.includes("로 여행을 계획하시는군요"))
               ?.text.split("로 여행을")[0],
-            startDate: startDateMsg,
-            duration: durationMsg,
+            startDate: selectedStartDate,
+            endDate: selectedEndDate,
+            duration: `${startDate.toLocaleDateString("ko-KR", {
+              year: "numeric",
+              month: "long",
+              day: "numeric",
+            })}부터 ${endDate.toLocaleDateString("ko-KR", {
+              year: "numeric",
+              month: "long",
+              day: "numeric",
+            })}까지`,
             companion: messages
               .find((msg) => msg.text.includes("여행을 준비하겠습니다"))
               ?.text.split(" 여행을")[0],
@@ -543,15 +540,7 @@ export default function ChatScreen() {
 
 • 여행 스타일: ${tripInfo.styles?.join(", ")}
 • 여행 지역: ${tripInfo.destination}
-• 여행 기간: ${
-              tripInfo.startDate
-                ? new Date(tripInfo.startDate).toLocaleDateString("ko-KR", {
-                    year: "numeric",
-                    month: "long",
-                    day: "numeric",
-                  })
-                : ""
-            } 부터 ${tripInfo.duration || ""}
+• 여행 기간: ${tripInfo.duration}
 • 여행 인원: ${tripInfo.companion}
 • 예산: ${tripInfo.budget}
 • 교통수단: ${tripInfo.transportation?.join(", ")}
@@ -667,37 +656,51 @@ export default function ChatScreen() {
 
         {/* DatePicker를 항상 표시 */}
         {messages.some((msg) =>
-          msg.text.includes("여행 출발 날짜를 알려주세요")
+          msg.text.includes("여행 날짜를 선택해주세요")
         ) && (
           <View style={styles.datePickerContainer}>
             <View style={styles.datePickerHeader}>
               <TouchableOpacity onPress={hideDatePicker}>
                 <Text style={styles.datePickerButton}>취소</Text>
               </TouchableOpacity>
+              <Text style={styles.datePickerTitle}>
+                {datePickerMode === "start" ? "출발일" : "도착일"} 선택
+              </Text>
               <TouchableOpacity
                 onPress={() => {
-                  if (selectedDate) {
-                    handleConfirm(selectedDate);
+                  if (datePickerMode === "start") {
+                    setDatePickerMode("end");
+                    setEndDate(
+                      new Date(startDate.getTime() + 24 * 60 * 60 * 1000)
+                    ); // 다음날로 설정
+                  } else {
+                    handleConfirm();
                   }
                 }}
               >
-                <Text style={styles.datePickerButton}>선택</Text>
+                <Text style={styles.datePickerButton}>
+                  {datePickerMode === "start" ? "다음" : "완료"}
+                </Text>
               </TouchableOpacity>
             </View>
             <DateTimePicker
               testID="dateTimePicker"
-              value={selectedDate}
+              value={datePickerMode === "start" ? startDate : endDate}
               mode="date"
               is24Hour={true}
-              display="spinner"
+              display="inline"
               onChange={(event: DateTimePickerEvent, date?: Date) => {
                 if (date) {
-                  setSelectedDate(date);
+                  if (datePickerMode === "start") {
+                    setStartDate(date);
+                  } else {
+                    setEndDate(date);
+                  }
                 }
               }}
-              minimumDate={new Date()}
+              minimumDate={datePickerMode === "start" ? new Date() : startDate}
               locale="ko-KR"
-              style={styles.datePicker}
+              style={[styles.datePicker, { height: 350 }]}
             />
           </View>
         )}
@@ -709,102 +712,3 @@ export default function ChatScreen() {
     </SafeAreaView>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#fff",
-  },
-  navbar: {
-    flexDirection: "row",
-    alignItems: "center",
-    padding: 10,
-    borderBottomWidth: 1,
-    borderBottomColor: "#E5E5EA",
-  },
-  backButton: {
-    padding: 10,
-  },
-  navTitle: {
-    fontSize: 17,
-    fontWeight: "600",
-    flex: 1,
-    textAlign: "center",
-    marginRight: 44, // backButton의 너비만큼 오프셋
-  },
-  keyboardAvoid: {
-    flex: 1,
-  },
-  messageList: {
-    flex: 1,
-  },
-  inputContainer: {
-    borderTopWidth: 1,
-    borderTopColor: "#E5E5EA",
-  },
-  messageGroup: {
-    marginBottom: 16,
-  },
-  messageBubble: {
-    maxWidth: "80%",
-    padding: 12,
-    borderRadius: 20,
-    marginHorizontal: 16,
-  },
-  botBubble: {
-    backgroundColor: "#F2F2F7",
-    alignSelf: "flex-start",
-    borderBottomLeftRadius: 4,
-  },
-  userBubble: {
-    backgroundColor: "#007AFF",
-    alignSelf: "flex-end",
-    borderBottomRightRadius: 4,
-  },
-  messageText: {
-    fontSize: 16,
-  },
-  optionsContainer: {
-    marginTop: 8,
-    paddingHorizontal: 16,
-  },
-  optionButton: {
-    borderRadius: 20,
-    marginVertical: 4,
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    borderWidth: 1,
-    borderColor: "#007AFF",
-  },
-  optionButtonSelected: {
-    backgroundColor: "#007AFF",
-  },
-  optionText: {
-    fontSize: 16,
-    color: "#007AFF",
-    textAlign: "left",
-  },
-  optionTextSelected: {
-    color: "#FFFFFF",
-  },
-  datePickerContainer: {
-    backgroundColor: "#f8f8f8",
-    borderTopWidth: 1,
-    borderTopColor: "#E5E5EA",
-  },
-  datePickerHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    padding: 10,
-    borderBottomWidth: 1,
-    borderBottomColor: "#E5E5EA",
-  },
-  datePickerButton: {
-    color: "#007AFF",
-    fontSize: 16,
-    paddingHorizontal: 20,
-  },
-  datePicker: {
-    height: 200,
-  },
-});
