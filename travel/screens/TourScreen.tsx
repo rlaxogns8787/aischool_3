@@ -17,6 +17,7 @@ import { Audio } from "expo-av";
 import "react-native-get-random-values";
 import { useAzureBot } from "../src/hooks/useAzureBot";
 import { useNavigation } from "@react-navigation/native";
+import * as azureSpeech from "microsoft-cognitiveservices-speech-sdk";
 
 type TourScreenProps = {
   navigation: any;
@@ -37,20 +38,41 @@ type Interest = "건축" | "역사" | "문화" | "요리" | "자연";
 export default function TourScreen() {
   const navigation = useNavigation();
   const [displayedText, setDisplayedText] = useState("");
+  const [fullText, setFullText] = useState("");
   const [isRecording, setIsRecording] = useState(false);
   const [userInput, setUserInput] = useState("");
   const [isAudioReady, setIsAudioReady] = useState(false);
   const scrollViewRef = useRef<ScrollView>(null);
   const recognizer = useRef<sdk.SpeechRecognizer | null>(null);
-  const synthesizer = useRef<sdk.SpeechSynthesizer | null>(null);
+  const synthesizer = useRef<azureSpeech.SpeechSynthesizer | null>(null);
   const { processQuery, isProcessing } = useAzureBot();
   const [selectedInterest, setSelectedInterest] = useState<Interest | null>(
     null
   );
   const [tourGuide, setTourGuide] = useState<string>("");
   const [isLoading, setIsLoading] = useState(false);
+  const [isSpeaking, setIsSpeaking] = useState(false);
+  const textTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const characterDelay = 50; // 글자당 50ms 딜레이
 
   const interests: Interest[] = ["건축", "역사", "문화", "요리", "자연"];
+
+  // 텍스트를 점진적으로 표시하는 함수
+  const animateText = (text: string) => {
+    let currentIndex = 0;
+    setDisplayedText("");
+    setFullText(text);
+
+    const showNextCharacter = () => {
+      if (currentIndex < text.length) {
+        setDisplayedText((prev) => prev + text[currentIndex]);
+        currentIndex++;
+        textTimeoutRef.current = setTimeout(showNextCharacter, characterDelay);
+      }
+    };
+
+    showNextCharacter();
+  };
 
   // Azure Speech 관련 함수 수정
   const startSpeaking = async (text: string) => {
@@ -63,15 +85,15 @@ export default function TourScreen() {
       }
 
       // Azure Speech 설정
-      const speechConfig = sdk.SpeechConfig.fromSubscription(
+      const speechConfig = azureSpeech.SpeechConfig.fromSubscription(
         SPEECH_KEY,
         SPEECH_REGION
       );
-      speechConfig.speechSynthesisVoiceName = "ko-KR-SunHiNeural";
+      speechConfig.speechSynthesisVoiceName = "ko-KR-HyunsuMultilingualNeural";
 
       // 오디오 출력 설정
-      const audioConfig = sdk.AudioConfig.fromDefaultSpeakerOutput();
-      synthesizer.current = new sdk.SpeechSynthesizer(
+      const audioConfig = azureSpeech.AudioConfig.fromDefaultSpeakerOutput();
+      synthesizer.current = new azureSpeech.SpeechSynthesizer(
         speechConfig,
         audioConfig
       );
@@ -80,7 +102,10 @@ export default function TourScreen() {
         synthesizer.current!.speakTextAsync(
           text,
           (result) => {
-            if (result.reason === sdk.ResultReason.SynthesizingAudioCompleted) {
+            if (
+              result.reason ===
+              azureSpeech.ResultReason.SynthesizingAudioCompleted
+            ) {
               console.log("Azure TTS completed successfully");
               resolve(result);
             } else {
@@ -317,6 +342,83 @@ export default function TourScreen() {
     }
   };
 
+  useEffect(() => {
+    // Azure Speech 설정
+    const speechConfig = azureSpeech.SpeechConfig.fromSubscription(
+      SPEECH_KEY,
+      SPEECH_REGION
+    );
+
+    // 한국어 Hyunsu 음성 설정
+    speechConfig.speechSynthesisVoiceName = "ko-KR-HyunsuMultilingualNeural";
+
+    // 음성 합성기 생성
+    const synth = new azureSpeech.SpeechSynthesizer(speechConfig);
+    synthesizer.current = synth;
+
+    return () => {
+      if (synth) {
+        synth.close();
+      }
+    };
+  }, []);
+
+  // 음성 합성 및 텍스트 표시 함수 수정
+  const speakText = async (text: string) => {
+    if (!synthesizer.current || isSpeaking) return;
+
+    try {
+      setIsSpeaking(true);
+
+      // 텍스트 애니메이션 시작
+      animateText(text);
+
+      // 음성 합성 시작
+      const result = await synthesizer.current.speakTextAsync(text);
+
+      if (
+        result.reason === azureSpeech.ResultReason.SynthesizingAudioCompleted
+      ) {
+        console.log("음성 합성 완료");
+      } else {
+        console.error("음성 합성 실패:", result.errorDetails);
+        // 실패 시 전체 텍스트 표시
+        setDisplayedText(text);
+      }
+    } catch (error) {
+      console.error("음성 합성 오류:", error);
+      setDisplayedText(text);
+    } finally {
+      setIsSpeaking(false);
+    }
+  };
+
+  // 음성 및 텍스트 표시 중지
+  const stopSpeaking = () => {
+    if (synthesizer.current) {
+      synthesizer.current.close();
+      setIsSpeaking(false);
+
+      // 애니메이션 중지 및 전체 텍스트 표시
+      if (textTimeoutRef.current) {
+        clearTimeout(textTimeoutRef.current);
+      }
+      setDisplayedText(fullText);
+    }
+  };
+
+  // 컴포넌트 언마운트 시 정리
+  useEffect(() => {
+    return () => {
+      if (textTimeoutRef.current) {
+        clearTimeout(textTimeoutRef.current);
+      }
+      if (synthesizer.current) {
+        synthesizer.current.close();
+      }
+    };
+  }, []);
+
   if (!isAudioReady) {
     return (
       <View style={styles.loadingContainer}>
@@ -335,7 +437,7 @@ export default function TourScreen() {
         >
           <ArrowLeft size={24} color="#000" />
         </TouchableOpacity>
-        <Text style={styles.title}>도슨트 설명</Text>
+        <Text style={styles.title}>여행 도슨트</Text>
         <TouchableOpacity style={styles.mapButton} onPress={handleMapPress}>
           <Map size={24} color="#000" />
         </TouchableOpacity>
@@ -375,7 +477,7 @@ export default function TourScreen() {
         {isLoading ? (
           <ActivityIndicator size="large" color="#007AFF" />
         ) : (
-          <Text style={styles.guideText}>{tourGuide}</Text>
+          <Text style={styles.guideText}>{displayedText}</Text>
         )}
       </ScrollView>
 
@@ -390,6 +492,23 @@ export default function TourScreen() {
           <Mic color={isRecording ? "#fff" : "#007AFF"} size={24} />
         </TouchableOpacity>
       </View>
+
+      {isSpeaking ? (
+        <TouchableOpacity
+          style={[styles.speakButton, styles.stopButton]}
+          onPress={stopSpeaking}
+        >
+          <Text style={styles.buttonText}>중지</Text>
+        </TouchableOpacity>
+      ) : (
+        <TouchableOpacity
+          style={styles.speakButton}
+          onPress={() => speakText(tourGuide)}
+          disabled={!tourGuide}
+        >
+          <Text style={styles.buttonText}>음성으로 들기</Text>
+        </TouchableOpacity>
+      )}
     </SafeAreaView>
   );
 }
@@ -494,5 +613,20 @@ const styles = StyleSheet.create({
     marginBottom: 16,
     fontWeight: "500",
     textAlign: "center",
+  },
+  speakButton: {
+    backgroundColor: "#007AFF",
+    padding: 16,
+    margin: 16,
+    borderRadius: 8,
+    alignItems: "center",
+  },
+  stopButton: {
+    backgroundColor: "#FF3B30",
+  },
+  buttonText: {
+    color: "#fff",
+    fontSize: 16,
+    fontWeight: "600",
   },
 });

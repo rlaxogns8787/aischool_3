@@ -4,151 +4,114 @@ import {
   Text,
   StyleSheet,
   TouchableOpacity,
-  Image,
   Dimensions,
+  StatusBar,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { LinearGradient } from "expo-linear-gradient";
 import MenuIcon from "../assets/menu.svg";
-import SearchIcon from "../assets/search.svg";
-import CircularCarouselBannerView from "../components/CircularCarouselBannerView";
+import CalendarIcon from "../assets/calendar.svg";
 
-type TravelLogScreenProps = {
-  navigation: any;
-};
+const { width: SCREEN_WIDTH } = Dimensions.get("window");
 
-export default function TravelLogScreen({ navigation }: TravelLogScreenProps) {
+export default function TravelLogScreen({ navigation }) {
   return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.openDrawer()}>
-          <MenuIcon width={24} height={24} />
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.searchButton}>
-          <SearchIcon width={24} height={24} />
-        </TouchableOpacity>
-      </View>
+    <LinearGradient
+      colors={["#414B57", "#7987A5", "rgba(154, 173, 196, 1)"]}
+      locations={[0.2, 0.715, 0.9237]}
+      style={styles.container}
+    >
+      <StatusBar barStyle="light-content" />
+      <SafeAreaView style={styles.safeArea}>
+        <View style={styles.header}>
+          <TouchableOpacity onPress={() => navigation.openDrawer()}>
+            <MenuIcon width={24} height={24} color="#FFFFFF" />
+          </TouchableOpacity>
+          <TouchableOpacity onPress={() => navigation.navigate("Schedule")}>
+            <CalendarIcon width={24} height={24} color="#FFFFFF" />
+          </TouchableOpacity>
+        </View>
 
-      <View style={styles.adContainer}>
-        <CircularCarouselBannerView
-          onBannerPress={(index) => {
-            console.log("Banner pressed:", index);
-          }}
-        />
-      </View>
+        <View style={styles.content}>
+          <View style={styles.emptyStateContainer}>
+            <Text style={styles.emptyTitle}>여행 기록이 아직 없네요</Text>
+            <Text style={styles.emptySubtitle}>
+              어디론가 떠나보는게 어떨까요?
+            </Text>
+          </View>
+        </View>
 
-      <View style={styles.content}>
-        <Image
-          source={require("../assets/empty.png")}
-          style={styles.emptyImage}
-        />
-        <Text style={styles.emptyTitle}>여행 기록이 아직 없네요</Text>
-        <Text style={styles.emptySubtitle}>어디론가 떠나보는게 어떨까요?</Text>
-      </View>
-
-      <TouchableOpacity
-        style={styles.registerButton}
-        onPress={() => {
-          navigation.navigate("Chat");
-        }}
-      >
-        <Text style={styles.buttonText}>일정 등록</Text>
-      </TouchableOpacity>
-    </SafeAreaView>
+        <View style={styles.buttonContainer}>
+          <TouchableOpacity
+            style={styles.registerButton}
+            onPress={() => navigation.navigate("Chat")}
+          >
+            <Text style={styles.buttonText}>일정 등록</Text>
+          </TouchableOpacity>
+        </View>
+      </SafeAreaView>
+    </LinearGradient>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#fff",
+    width: SCREEN_WIDTH,
+    opacity: 0.8,
+  },
+  safeArea: {
+    flex: 1,
   },
   header: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    padding: 20,
-  },
-  searchButton: {
-    padding: 4,
-  },
-  adContainer: {
-    width: "100%",
-    height: 88,
-    backgroundColor: "#F8F9FF",
-  },
-  adContent: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  adImage: {
-    width: 60,
-    height: 60,
-    marginBottom: 8,
-  },
-  adText: {
-    position: "absolute",
-    top: 16,
-    right: 16,
-    fontSize: 14,
-    color: "#000",
-  },
-  paginationContainer: {
-    flexDirection: "row",
-    justifyContent: "center",
-    alignItems: "center",
-    paddingBottom: 16,
-    gap: 8,
-  },
-  dot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-  },
-  activeDot: {
-    backgroundColor: "#007AFF",
-  },
-  inactiveDot: {
-    backgroundColor: "#D1D1D6",
+    padding: 16,
+    height: 44,
   },
   content: {
     flex: 1,
-    alignItems: "center",
     justifyContent: "center",
-    paddingHorizontal: 20,
+    alignItems: "center",
   },
-  emptyImage: {
-    width: 120,
-    height: 120,
-    marginBottom: 24,
-    backgroundColor: "#EAF2FF",
-    borderRadius: 24,
+  emptyStateContainer: {
+    alignItems: "center",
   },
   emptyTitle: {
+    fontFamily: "Inter",
     fontSize: 18,
     fontWeight: "800",
-    color: "#1F2024",
-    marginBottom: 8,
+    lineHeight: 22,
     letterSpacing: 0.005 * 18,
+    textAlign: "center",
+    color: "#FFFFFF",
+    marginBottom: 8,
   },
   emptySubtitle: {
+    fontFamily: "Inter",
     fontSize: 14,
-    color: "#71727A",
-    marginBottom: 32,
+    lineHeight: 20,
+    textAlign: "center",
+    color: "rgba(255, 255, 255, 0.8)",
+  },
+  buttonContainer: {
+    paddingHorizontal: 40,
+    paddingBottom: 72,
   },
   registerButton: {
-    backgroundColor: "#007AFF",
-    marginHorizontal: 40,
-    marginBottom: 90,
-    height: 47,
-    borderRadius: 56,
+    height: 48,
+    backgroundColor: "rgba(255, 255, 255, 0.2)",
+    borderRadius: 300,
     justifyContent: "center",
     alignItems: "center",
   },
   buttonText: {
-    color: "#fff",
-    fontSize: 14,
-    fontWeight: "600",
-    lineHeight: 15,
+    fontFamily: "SF Pro Text",
+    fontSize: 13,
+    fontWeight: "500",
+    lineHeight: 13,
+    textAlign: "center",
+    color: "#FFFFFF",
   },
 });

@@ -15,8 +15,8 @@ import AgreementScreen from "./screens/AgreementScreen";
 import TermsDetailScreen from "./screens/TermsDetailScreen";
 import CustomDrawerContent from "./screens/CustomDrawerContent";
 import HomeIcon from "./assets/home.svg";
-import CalendarIcon from "./assets/calendar.svg";
-import GalleryIcon from "./assets/gallery.svg";
+import CalendarIcon from "./assets/schedule.svg";
+import GalleryIcon from "./assets/travellog.svg";
 import "react-native-gesture-handler";
 import ChatScreen from "./screens/ChatScreen";
 import TourScreen from "./screens/TourScreen.tsx";
@@ -36,6 +36,7 @@ export type RootStackParamList = {
   Onboarding: undefined;
   Main: undefined;
   Chat: undefined;
+  Tour: undefined;
 };
 
 enableScreens();
@@ -51,9 +52,7 @@ function MainTabs() {
         headerShown: false,
         tabBarStyle: {
           height: 82,
-          backgroundColor: "#FFFFFF",
-          borderTopWidth: 0.5,
-          borderTopColor: "#E0E0E0",
+          backgroundColor: "rgba(255, 255, 255, 0.2)",
           position: "absolute",
           bottom: 0,
           left: 0,
@@ -77,8 +76,8 @@ function MainTabs() {
           lineHeight: 16,
           fontWeight: "400",
         },
-        tabBarActiveTintColor: "#006FFD",
-        tabBarInactiveTintColor: "#616161",
+        tabBarActiveTintColor: "#ffffff",
+        tabBarInactiveTintColor: "rgba(255, 255, 255, 0.6)",
       })}
     >
       <Tab.Screen
@@ -89,7 +88,7 @@ function MainTabs() {
             <HomeIcon
               width={24}
               height={24}
-              color={focused ? "#006FFD" : "#71727A"}
+              color={focused ? "#ffffff" : "rgba(255, 255, 255, 0.6)"}
             />
           ),
         }}
@@ -102,7 +101,7 @@ function MainTabs() {
             <MessageCircle
               width={24}
               height={24}
-              color={focused ? "#006FFD" : "#71727A"}
+              color={focused ? "#ffffff" : "rgba(255, 255, 255, 0.6)"}
             />
           ),
         }}
@@ -115,7 +114,7 @@ function MainTabs() {
             <CalendarIcon
               width={24}
               height={24}
-              color={focused ? "#006FFD" : "#71727A"}
+              color={focused ? "#ffffff" : "rgba(255, 255, 255, 0.6)"}
             />
           ),
         }}
@@ -128,7 +127,7 @@ function MainTabs() {
             <GalleryIcon
               width={24}
               height={24}
-              color={focused ? "#006FFD" : "#71727A"}
+              color={focused ? "#ffffff" : "rgba(255, 255, 255, 0.6)"}
             />
           ),
         }}
@@ -205,6 +204,11 @@ export default function App() {
                 headerTitleAlign: "center",
                 headerShadowVisible: false,
               }}
+            />
+            <Stack.Screen
+              name="Tour"
+              component={TourScreen}
+              options={{ headerShown: false }}
             />
           </Stack.Navigator>
         </NavigationContainer>

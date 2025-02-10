@@ -381,7 +381,7 @@ export default function ChatScreen() {
         // 첫 번째 질문 (여행 날짜)
         const nextQuestion: Message = {
           id: (Date.now() + 1).toString(),
-          text: "여행 날짜를 선택해주세요.\n(예: 2025-01-01 - 2025-01-03)",
+          text: "여행 날짜를 선택해주세요.\n시작날짜 먼저 선택후 다음 버튼을 눌러 종료날짜를 선택해주세요.",
           isBot: true,
           timestamp: new Date().toISOString(),
         };
@@ -665,7 +665,7 @@ export default function ChatScreen() {
                 <Text style={styles.datePickerButton}>취소</Text>
               </TouchableOpacity>
               <Text style={styles.datePickerTitle}>
-                {datePickerMode === "start" ? "출발일" : "도착일"} 선택
+                {datePickerMode === "start" ? "시작일" : "종료일"} 선택
               </Text>
               <TouchableOpacity
                 onPress={() => {
