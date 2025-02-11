@@ -281,7 +281,7 @@ export default function HomeScreen() {
             <MenuIcon width={24} height={24} color="#FFFFFF" />
           </TouchableOpacity>
           <TouchableOpacity
-            onPress={() => navigation.navigate("Schedule")}
+            onPress={() => navigation.navigate("Chat")}
             style={styles.headerIcon}
           >
             <CalendarIcon width={24} height={24} color="#FFFFFF" />

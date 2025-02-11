@@ -410,11 +410,11 @@ export default function ScheduleScreen({ navigation }: ScheduleScreenProps) {
       <SafeAreaView style={{ flex: 1 }}>
         {/* Header */}
         <View style={styles.header}>
-          <TouchableOpacity style={styles.headerIcon}>
+          <TouchableOpacity onPress={() => navigation.openDrawer()}>
             <MenuIcon width={24} height={24} color="#FFFFFF" />
           </TouchableOpacity>
-          <TouchableOpacity style={styles.headerIcon}>
-            <CalendarIcon wideth={24} height={24} color="#FFFFFF" />
+          <TouchableOpacity onPress={() => navigation.navigate("Chat")}>
+            <CalendarIcon width={24} height={24} color="#FFFFFF" />
           </TouchableOpacity>
         </View>
 

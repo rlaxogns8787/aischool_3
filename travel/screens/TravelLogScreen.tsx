@@ -27,7 +27,7 @@ export default function TravelLogScreen({ navigation }) {
           <TouchableOpacity onPress={() => navigation.openDrawer()}>
             <MenuIcon width={24} height={24} color="#FFFFFF" />
           </TouchableOpacity>
-          <TouchableOpacity onPress={() => navigation.navigate("Schedule")}>
+          <TouchableOpacity onPress={() => navigation.navigate("Chat")}>
             <CalendarIcon width={24} height={24} color="#FFFFFF" />
           </TouchableOpacity>
         </View>
