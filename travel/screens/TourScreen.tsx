@@ -13,11 +13,20 @@ import { ChevronLeft, Mic, ArrowLeft, Map } from "lucide-react-native";
 import MapIcon from "../assets/map.svg";
 import * as Speech from "expo-speech";
 import * as sdk from "microsoft-cognitiveservices-speech-sdk";
-import { Audio } from "expo-av";
 import "react-native-get-random-values";
 import { useAzureBot } from "../src/hooks/useAzureBot";
 import { useNavigation } from "@react-navigation/native";
-import * as azureSpeech from "microsoft-cognitiveservices-speech-sdk";
+// import * as azureSpeech from "microsoft-cognitiveservices-speech-sdk";
+import { LinearGradient } from "expo-linear-gradient";
+import BackToStoryIcon from "../assets/backtostory.svg";
+import { AudioService } from "../services/audioService";
+import MicIcon from "../assets/mic.svg";
+import Animated, {
+  useAnimatedStyle,
+  withRepeat,
+  withTiming,
+  useSharedValue,
+} from "react-native-reanimated";
 
 type TourScreenProps = {
   navigation: any;
@@ -41,10 +50,9 @@ export default function TourScreen() {
   const [fullText, setFullText] = useState("");
   const [isRecording, setIsRecording] = useState(false);
   const [userInput, setUserInput] = useState("");
-  const [isAudioReady, setIsAudioReady] = useState(false);
+  const [isAudioReady, setIsAudioReady] = useState(true);
   const scrollViewRef = useRef<ScrollView>(null);
   const recognizer = useRef<sdk.SpeechRecognizer | null>(null);
-  const synthesizer = useRef<azureSpeech.SpeechSynthesizer | null>(null);
   const { processQuery, isProcessing } = useAzureBot();
   const [selectedInterest, setSelectedInterest] = useState<Interest | null>(
     null
@@ -54,6 +62,8 @@ export default function TourScreen() {
   const [isSpeaking, setIsSpeaking] = useState(false);
   const textTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const characterDelay = 50; // 글자당 50ms 딜레이
+  const audioService = useRef(new AudioService());
+  const rotation = useSharedValue(0);
 
   const interests: Interest[] = ["건축", "역사", "문화", "요리", "자연"];
 
@@ -80,46 +90,50 @@ export default function TourScreen() {
       console.log("Starting Azure TTS with text:", text);
 
       // 기존 synthesizer가 있다면 정리
-      if (synthesizer.current) {
-        synthesizer.current.close();
-      }
+      // if (synthesizer.current) {
+      //   synthesizer.current.close();
+      // }
 
       // Azure Speech 설정
-      const speechConfig = azureSpeech.SpeechConfig.fromSubscription(
+      const speechConfig = sdk.SpeechConfig.fromSubscription(
         SPEECH_KEY,
         SPEECH_REGION
       );
       speechConfig.speechSynthesisVoiceName = "ko-KR-HyunsuMultilingualNeural";
 
       // 오디오 출력 설정
-      const audioConfig = azureSpeech.AudioConfig.fromDefaultSpeakerOutput();
-      synthesizer.current = new azureSpeech.SpeechSynthesizer(
-        speechConfig,
-        audioConfig
-      );
+      // const audioConfig = azureSpeech.AudioConfig.fromDefaultSpeakerOutput();
+      // synthesizer.current = new azureSpeech.SpeechSynthesizer(
+      //   speechConfig,
+      //   audioConfig
+      // );
 
       return new Promise((resolve, reject) => {
-        synthesizer.current!.speakTextAsync(
-          text,
-          (result) => {
-            if (
-              result.reason ===
-              azureSpeech.ResultReason.SynthesizingAudioCompleted
-            ) {
-              console.log("Azure TTS completed successfully");
-              resolve(result);
-            } else {
-              console.error("Azure TTS failed:", result.errorDetails);
-              reject(new Error(result.errorDetails));
-            }
-            synthesizer.current?.close();
-          },
-          (error) => {
-            console.error("Azure TTS error:", error);
-            synthesizer.current?.close();
-            reject(error);
-          }
-        );
+        // if (!synthesizer.current) {
+        //   reject(new Error("Synthesizer not initialized"));
+        //   return;
+        // }
+        // synthesizer.current!.speakTextAsync(
+        //   text,
+        //   (result) => {
+        //     if (
+        //       result.reason ===
+        //       azureSpeech.ResultReason.SynthesizingAudioCompleted
+        //     ) {
+        //       console.log("Azure TTS completed successfully");
+        //       resolve(result);
+        //     } else {
+        //       console.error("Azure TTS failed:", result.errorDetails);
+        //       reject(new Error(result.errorDetails));
+        //     }
+        //     synthesizer.current?.close();
+        //   },
+        //   (error) => {
+        //     console.error("Azure TTS error:", error);
+        //     synthesizer.current?.close();
+        //     reject(error);
+        //   }
+        // );
       });
     } catch (error) {
       console.error("Azure TTS setup error:", error);
@@ -129,43 +143,40 @@ export default function TourScreen() {
 
   // Audio 권한 관리를 위한 초기 설정
   useEffect(() => {
-    const initializeAudioPermission = async () => {
-      try {
-        const { granted } = await Audio.requestPermissionsAsync();
-        if (!granted) {
-          console.error("Audio permission is required");
-          return;
-        }
-
-        await Audio.setAudioModeAsync({
-          playsInSilentModeIOS: true,
-          allowsRecordingIOS: true,
-          interruptionModeIOS: 2,
-          interruptionModeAndroid: 1,
-          shouldDuckAndroid: true,
-          playThroughEarpieceAndroid: false,
-        });
-
-        setIsAudioReady(true);
-      } catch (error) {
-        console.error("Failed to initialize audio:", error);
-      }
-    };
-
-    initializeAudioPermission();
+    // const initializeAudioPermission = async () => {
+    //   try {
+    //     const { granted } = await Speech.requestPermissionsAsync();
+    //     if (!granted) {
+    //       console.error("Audio permission is required");
+    //       return;
+    //     }
+    //     await Speech.setAudioModeAsync({
+    //       playsInSilentModeIOS: true,
+    //       allowsRecordingIOS: true,
+    //       interruptionModeIOS: 2,
+    //       interruptionModeAndroid: 1,
+    //       shouldDuckAndroid: true,
+    //       playThroughEarpieceAndroid: false,
+    //     });
+    //     setIsAudioReady(true);
+    //   } catch (error) {
+    //     console.error("Failed to initialize audio:", error);
+    //   }
+    // };
+    // initializeAudioPermission();
   }, []);
 
   // Azure STT(Speech-to-Text) 함수 수정
   const startAzureSTT = async () => {
     try {
       // 1. 마이크 권한 확인
-      const permission = await Audio.requestPermissionsAsync();
+      const permission = await Speech.requestPermissionsAsync();
       if (!permission.granted) {
         throw new Error("Microphone permission not granted");
       }
 
       // 2. Audio 세션 설정 - 숫자로 직접 지정
-      await Audio.setAudioModeAsync({
+      await Speech.setAudioModeAsync({
         allowsRecordingIOS: true,
         playsInSilentModeIOS: true,
         // iOS: 1=MixWithOthers, 2=DuckOthers, 3=DoNotMix
@@ -248,41 +259,8 @@ export default function TourScreen() {
   };
 
   // 마이크 버튼 핸들러 수정
-  const handleMicPress = async () => {
-    try {
-      if (synthesizer.current) {
-        synthesizer.current.close();
-      }
-
-      setIsRecording(true);
-      setUserInput("듣고 있습니다...");
-
-      // 1. 음성 인식 시작
-      const recognizedText = await startAzureSTT();
-      console.log("인식된 텍스트:", recognizedText);
-      setUserInput(recognizedText);
-
-      // 2. AI 검색 및 답변 생성
-      const response = await processQuery(recognizedText);
-      console.log("AI 답변:", response.text);
-
-      // 3. 답변 표시 및 음성 출력
-      setDisplayedText(response.text);
-      setUserInput("");
-      await startSpeaking(response.text);
-
-      // 4. 지도 정보가 있다면 지도 화면으로 이동
-      if (response.additionalData?.coordinates) {
-        navigation.navigate("Map", {
-          coordinates: response.additionalData.coordinates,
-        });
-      }
-    } catch (error) {
-      console.error("Voice interaction failed:", error);
-      setUserInput("죄송합니다. 다시 말씀해 주세요.");
-    } finally {
-      setIsRecording(false);
-    }
+  const handleMicPress = () => {
+    setIsRecording(!isRecording);
   };
 
   const handleMapPress = () => {
@@ -342,69 +320,24 @@ export default function TourScreen() {
     }
   };
 
-  useEffect(() => {
-    // Azure Speech 설정
-    const speechConfig = azureSpeech.SpeechConfig.fromSubscription(
-      SPEECH_KEY,
-      SPEECH_REGION
-    );
-
-    // 한국어 Hyunsu 음성 설정
-    speechConfig.speechSynthesisVoiceName = "ko-KR-HyunsuMultilingualNeural";
-
-    // 음성 합성기 생성
-    const synth = new azureSpeech.SpeechSynthesizer(speechConfig);
-    synthesizer.current = synth;
-
-    return () => {
-      if (synth) {
-        synth.close();
-      }
-    };
-  }, []);
-
-  // 음성 합성 및 텍스트 표시 함수 수정
-  const speakText = async (text: string) => {
-    if (!synthesizer.current || isSpeaking) return;
-
-    try {
-      setIsSpeaking(true);
-
-      // 텍스트 애니메이션 시작
-      animateText(text);
-
-      // 음성 합성 시작
-      const result = await synthesizer.current.speakTextAsync(text);
-
-      if (
-        result.reason === azureSpeech.ResultReason.SynthesizingAudioCompleted
-      ) {
-        console.log("음성 합성 완료");
-      } else {
-        console.error("음성 합성 실패:", result.errorDetails);
-        // 실패 시 전체 텍스트 표시
-        setDisplayedText(text);
-      }
-    } catch (error) {
-      console.error("음성 합성 오류:", error);
-      setDisplayedText(text);
-    } finally {
-      setIsSpeaking(false);
-    }
+  // speakText 함수 수정
+  const speakText = (text: string) => {
+    setIsSpeaking(!isSpeaking);
+    // TODO: 실제 음성 기능 구현 시 audioService 연동
   };
 
   // 음성 및 텍스트 표시 중지
   const stopSpeaking = () => {
-    if (synthesizer.current) {
-      synthesizer.current.close();
-      setIsSpeaking(false);
-
-      // 애니메이션 중지 및 전체 텍스트 표시
-      if (textTimeoutRef.current) {
-        clearTimeout(textTimeoutRef.current);
-      }
-      setDisplayedText(fullText);
-    }
+    // if (synthesizer.current) {
+    //   synthesizer.current.close();
+    //   setIsSpeaking(false);
+    //
+    //   // 애니메이션 중지 및 전체 텍스트 표시
+    //   if (textTimeoutRef.current) {
+    //     clearTimeout(textTimeoutRef.current);
+    //   }
+    //   setDisplayedText(fullText);
+    // }
   };
 
   // 컴포넌트 언마운트 시 정리
@@ -413,11 +346,42 @@ export default function TourScreen() {
       if (textTimeoutRef.current) {
         clearTimeout(textTimeoutRef.current);
       }
-      if (synthesizer.current) {
-        synthesizer.current.close();
-      }
+      // if (synthesizer.current) {
+      //   synthesizer.current.close();
+      // }
     };
   }, []);
+
+  useEffect(() => {
+    // 오디오 서비스 초기화
+    audioService.current.initialize();
+
+    return () => {
+      audioService.current.cleanup();
+    };
+  }, []);
+
+  // 녹음 시작시 애니메이션 시작
+  useEffect(() => {
+    if (isRecording) {
+      rotation.value = withRepeat(
+        withTiming(360, {
+          duration: 3000, // 3초에 한바퀴 (더 천천히)
+        }),
+        -1, // 무한 반복
+        false // 역방향 없음
+      );
+    } else {
+      rotation.value = withTiming(0, { duration: 300 }); // 부드럽게 멈춤
+    }
+  }, [isRecording]);
+
+  // 회전 애니메이션 스타일
+  const animatedStyle = useAnimatedStyle(() => {
+    return {
+      transform: [{ rotate: `${rotation.value}deg` }],
+    };
+  });
 
   if (!isAudioReady) {
     return (
@@ -430,16 +394,20 @@ export default function TourScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
+      <LinearGradient
+        colors={["#4E7EB8", "#89BBEC", "#9AADC4"]}
+        style={styles.gradient}
+      />
       <View style={styles.header}>
         <TouchableOpacity
           style={styles.backButton}
           onPress={() => navigation.goBack()}
         >
-          <ArrowLeft size={24} color="#000" />
+          <ArrowLeft size={24} color="#fff" />
         </TouchableOpacity>
-        <Text style={styles.title}>여행 도슨트</Text>
+        <Text style={[styles.title, { color: "#fff" }]}>여행 도슨트</Text>
         <TouchableOpacity style={styles.mapButton} onPress={handleMapPress}>
-          <Map size={24} color="#000" />
+          <Map size={24} color="#fff" />
         </TouchableOpacity>
       </View>
 
@@ -481,34 +449,65 @@ export default function TourScreen() {
         )}
       </ScrollView>
 
-      <View style={styles.footer}>
-        {userInput ? (
-          <Text style={styles.recordingStatus}>{userInput}</Text>
-        ) : null}
-        <TouchableOpacity
-          style={[styles.micButton, isRecording && styles.micButtonActive]}
-          onPress={handleMicPress}
-        >
-          <Mic color={isRecording ? "#fff" : "#007AFF"} size={24} />
-        </TouchableOpacity>
+      {/* 음성 시각화 및 텍스트 영역 */}
+      <View style={styles.voiceVisualizerContainer}>
+        {isRecording && (
+          <Text style={styles.listeningText}>듣고 있습니다...</Text>
+        )}
+        {/* 나중에 여기에 voice wave 컴포넌트가 들어갈 예정 */}
       </View>
 
-      {isSpeaking ? (
-        <TouchableOpacity
-          style={[styles.speakButton, styles.stopButton]}
-          onPress={stopSpeaking}
-        >
-          <Text style={styles.buttonText}>중지</Text>
-        </TouchableOpacity>
-      ) : (
-        <TouchableOpacity
-          style={styles.speakButton}
-          onPress={() => speakText(tourGuide)}
-          disabled={!tourGuide}
-        >
-          <Text style={styles.buttonText}>음성으로 들기</Text>
-        </TouchableOpacity>
-      )}
+      <View style={styles.footer}>
+        <View style={styles.tabBar}>
+          <View style={styles.actions}>
+            {/* 왼쪽 버튼 (임시) */}
+            <TouchableOpacity style={styles.squareButton}>
+              <View style={styles.square} />
+            </TouchableOpacity>
+
+            {/* 중앙 마이크 버튼 */}
+            <View style={styles.micButtonContainer}>
+              <TouchableOpacity
+                style={[
+                  styles.micButton,
+                  isRecording && styles.micButtonActive,
+                ]}
+                onPress={handleMicPress}
+              >
+                {isRecording ? (
+                  <>
+                    {/* 바깥쪽 원 (고정) */}
+                    <View style={styles.micButtonBorderOuter} />
+                    {/* 안쪽 원 (회전) */}
+                    <Animated.View
+                      style={[styles.micButtonBorderInner, animatedStyle]}
+                    />
+                    <View style={styles.stopIconNew} />
+                  </>
+                ) : (
+                  <MicIcon width={24} height={24} style={styles.micIcon} />
+                )}
+              </TouchableOpacity>
+            </View>
+
+            {/* 오른쪽 버튼 - 녹음 중일 때만 표시 */}
+            <View style={styles.rightButtonContainer}>
+              {isRecording ? (
+                <TouchableOpacity
+                  style={styles.backToStoryButton}
+                  onPress={() => {
+                    /* 뒤로가기 처리 */
+                  }}
+                >
+                  <BackToStoryIcon width={54} height={18} />
+                </TouchableOpacity>
+              ) : (
+                <View style={styles.emptySpace} />
+              )}
+            </View>
+          </View>
+        </View>
+      </View>
     </SafeAreaView>
   );
 }
@@ -516,7 +515,13 @@ export default function TourScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#fff",
+  },
+  gradient: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    top: 0,
+    bottom: 0,
   },
   header: {
     flexDirection: "row",
@@ -571,26 +576,95 @@ const styles = StyleSheet.create({
     color: "#1F2024",
   },
   footer: {
-    padding: 20,
+    position: "absolute",
+    bottom: 20,
+    left: 0,
+    right: 0,
     alignItems: "center",
+    flexDirection: "row",
+    justifyContent: "center",
   },
-  micButton: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    backgroundColor: "#fff",
+  voiceVisualizerContainer: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    bottom: 140, // tabBar 위쪽에 위치
+    height: 100,
     justifyContent: "center",
     alignItems: "center",
-    borderWidth: 1,
-    borderColor: "#007AFF",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+  },
+  listeningText: {
+    color: "#FFFFFF",
+    fontSize: 14,
+    opacity: 0.8,
+    marginTop: 8,
+  },
+  tabBar: {
+    position: "absolute",
+    bottom: 0,
+    left: 0,
+    right: 0,
+    height: 106,
+    paddingTop: 8,
+    alignItems: "center",
+  },
+  actions: {
+    width: 375,
+    height: 64,
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    padding: 0,
+    isolation: "isolate",
+    alignSelf: "stretch",
+  },
+  micButtonContainer: {
+    width: 64,
+    height: 64,
+    position: "relative",
+  },
+  micButton: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: "#FFFFFF",
+    justifyContent: "center",
+    alignItems: "center",
+    position: "relative",
+  },
+  micButtonBorderOuter: {
+    position: "absolute",
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    borderWidth: 5.33,
+    borderColor: "#FFFFFF",
+    opacity: 0.5,
+  },
+  micButtonBorderInner: {
+    position: "absolute",
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    borderWidth: 5.33,
+    borderColor: "#FFFFFF",
+  },
+  stopIconNew: {
+    position: "absolute",
+    width: 25.14,
+    height: 25.14,
+    left: 19.43,
+    top: 19.43,
+    backgroundColor: "#FFFFFF",
+    borderRadius: 7.11,
+  },
+  micIcon: {
+    position: "absolute",
+    left: "31%",
+    top: "31%",
   },
   micButtonActive: {
-    backgroundColor: "#007AFF",
+    backgroundColor: "transparent",
   },
   userInput: {
     fontSize: 18,
@@ -615,10 +689,11 @@ const styles = StyleSheet.create({
     textAlign: "center",
   },
   speakButton: {
-    backgroundColor: "#007AFF",
-    padding: 16,
-    margin: 16,
+    width: 36,
+    height: 36,
     borderRadius: 8,
+    backgroundColor: "#007AFF",
+    justifyContent: "center",
     alignItems: "center",
   },
   stopButton: {
@@ -628,5 +703,54 @@ const styles = StyleSheet.create({
     color: "#fff",
     fontSize: 16,
     fontWeight: "600",
+  },
+  backToStoryButton: {
+    width: 54,
+    height: 40,
+    backgroundColor: "rgba(255, 255, 255, 0.3)",
+    borderRadius: 40,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  speakButtonIcon: {
+    color: "#fff",
+    fontSize: 16,
+  },
+  squareButton: {
+    width: 64,
+    height: 64,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  square: {
+    width: 40,
+    height: 40,
+    backgroundColor: "rgba(255, 255, 255, 0.3)",
+    borderRadius: 8,
+  },
+  playButton: {
+    width: 54,
+    height: 40,
+    backgroundColor: "rgba(255, 255, 255, 0.3)",
+    borderRadius: 40,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  playButtonText: {
+    fontFamily: Platform.OS === "ios" ? "SF Pro Text" : "normal",
+    fontSize: 18,
+    fontWeight: "500",
+    color: "#FFFFFF",
+    lineHeight: 18,
+  },
+  rightButtonContainer: {
+    width: 64,
+    height: 64,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  emptySpace: {
+    width: 64,
+    height: 64,
   },
 });
