@@ -245,8 +245,7 @@ export default function AuthScreen({ navigation, route }: AuthScreenProps) {
       });
     }
     // 2단계(사용자 정보)로 이동
-    else if (step === 2 && step === "preference") {
-      // 현재 3단계에 있을 때만 2단계로 이동 가능
+    else if (step === 2) {
       setStep("info");
     }
   };
