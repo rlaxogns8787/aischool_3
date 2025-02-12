@@ -11,6 +11,8 @@ import MapScreen from "../screens/MapScreen";
 import TourScreen from "../screens/TourScreen";
 import CustomDrawerContent from "../screens/CustomDrawerContent";
 import ScheduleDetail from "../screens/ScheduleDetail";
+import TermsDetailScreen from "../screens/TermsDetailScreen";
+import AgreementScreen from "../screens/AgreementScreen";
 
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -79,6 +81,22 @@ export default function RootNavigator() {
         name="ScheduleDetail"
         component={ScheduleDetail}
         options={{
+          headerShown: false,
+        }}
+      />
+      <Stack.Screen
+        name="TermsDetail"
+        component={TermsDetailScreen}
+        options={{
+          presentation: "modal",
+          headerShown: false,
+        }}
+      />
+      <Stack.Screen
+        name="Agreement"
+        component={AgreementScreen}
+        options={{
+          presentation: "modal",
           headerShown: false,
         }}
       />

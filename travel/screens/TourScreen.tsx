@@ -75,7 +75,7 @@ export default function TourScreen() {
 
     const showNextCharacter = () => {
       if (currentIndex < text.length) {
-        setDisplayedText((prev) => prev + text[currentIndex]);
+        setTourGuide((prev) => prev + text[currentIndex]);
         currentIndex++;
         textTimeoutRef.current = setTimeout(showNextCharacter, characterDelay);
       }
@@ -311,7 +311,11 @@ export default function TourScreen() {
       }
 
       const data = await response.json();
-      setTourGuide(data.choices[0].message.content);
+      const content = data.choices[0].message.content;
+
+      // 텍스트를 바로 설정하지 않고 animateText 함수 호출
+      setTourGuide(""); // 초기화
+      animateText(content);
     } catch (error) {
       console.error("Error generating tour guide:", error);
       setTourGuide("죄송합니다. 설명을 불러오는데 실패했습니다.");
@@ -443,9 +447,15 @@ export default function TourScreen() {
         contentContainerStyle={styles.guideContent}
       >
         {isLoading ? (
-          <ActivityIndicator size="large" color="#007AFF" />
+          <ActivityIndicator size="large" color="#fff" />
+        ) : tourGuide ? (
+          <View style={styles.textContainer}>
+            <Text style={styles.guideText}>{tourGuide}</Text>
+          </View>
         ) : (
-          <Text style={styles.guideText}>{displayedText}</Text>
+          <Text style={styles.guideText}>
+            관심사를 선택하시면 맞춤형 설명을 들려드립니다.
+          </Text>
         )}
       </ScrollView>
 
@@ -566,14 +576,26 @@ const styles = StyleSheet.create({
   },
   guideContainer: {
     flex: 1,
+    marginBottom: 120, // 하단 버튼들을 가리지 않도록
   },
   guideContent: {
-    padding: 16,
+    padding: 20,
+  },
+  textContainer: {
+    width: 319,
+    minHeight: 378,
+    flexDirection: "column",
+    alignItems: "flex-start",
+    gap: 4,
   },
   guideText: {
-    fontSize: 16,
-    lineHeight: 24,
-    color: "#1F2024",
+    fontFamily: Platform.OS === "ios" ? "Inter" : "normal",
+    fontSize: 32,
+    lineHeight: 42,
+    color: "#FFFFFF",
+    letterSpacing: -0.3,
+    alignSelf: "stretch",
+    flexGrow: 0,
   },
   footer: {
     position: "absolute",
