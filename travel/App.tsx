@@ -29,10 +29,7 @@ export type RootStackParamList = {
     isSignUp?: boolean;
     direction?: "back";
   };
-  TermsDetail: {
-    title?: string;
-    content?: string;
-  };
+
   Onboarding: undefined;
   Main: undefined;
   Chat: undefined;
