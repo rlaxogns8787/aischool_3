@@ -579,7 +579,6 @@ export default function ChatScreen() {
           };
 
           updateMessages([scheduleMessage]);
-          navigation.navigate("Schedule");
         } catch (error) {
           console.error("Schedule generation error:", error);
           const errorMessage: Message = {
@@ -626,6 +625,62 @@ export default function ChatScreen() {
 
   const hideDatePicker = () => {
     setDatePickerVisible(false);
+  };
+
+  const renderMessage = ({ item }: { item: Message }) => {
+    const isAI = item.role === "assistant";
+    const isScheduleGenerated =
+      item.content.includes("일정 등록이 완료되었습니다");
+
+    return (
+      <>
+        <View
+          style={[
+            styles.messageContainer,
+            isAI ? styles.aiMessage : styles.userMessage,
+          ]}
+        >
+          {/* ... 기존 메시지 렌더링 코드 유지 */}
+        </View>
+
+        {/* 일정 생성 완료 메시지 다음에 버튼들 표시 */}
+        {isScheduleGenerated && (
+          <View style={styles.buttonContainer}>
+            <TouchableOpacity
+              style={styles.regenerateButton}
+              onPress={() => {
+                // 마지막 사용자 입력을 기반으로 일정 재생성
+                const lastUserMessage = messages
+                  .filter((msg) => msg.role === "user")
+                  .pop();
+                if (lastUserMessage) {
+                  handleSendMessage(lastUserMessage.content);
+                }
+              }}
+            >
+              <Text style={styles.buttonText}>일정 재생성</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.endButton}
+              onPress={() => {
+                // 채팅 종료 처리
+                setMessages([
+                  ...messages,
+                  {
+                    role: "assistant",
+                    content:
+                      "채팅이 종료되었습니다. 새로운 대화를 시작하시려면 메시지를 입력해주세요.",
+                  },
+                ]);
+              }}
+            >
+              <Text style={styles.buttonText}>대화 종료</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+      </>
+    );
   };
 
   return (

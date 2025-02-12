@@ -18,6 +18,7 @@ import * as Location from "expo-location";
 import MenuIcon from "../assets/menu.svg";
 import CalendarIcon from "../assets/calendar.svg";
 import FlyArrowIcon from "../assets/flyarrow.svg";
+import LocationIcon from "../assets/location.svg";
 import {
   getCurrentWeather,
   type WeatherData,
@@ -127,10 +128,17 @@ export default function HomeScreen() {
     weatherInfo: {
       marginTop: 20,
     },
+    locationContainer: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 4,
+    },
     location: {
-      fontSize: 16,
-      color: "#fff",
-      opacity: 0.8,
+      fontFamily: "SF Pro Text",
+      fontSize: 15,
+      fontWeight: "500",
+      lineHeight: 18,
+      color: "#FFFFFF",
     },
     temperature: {
       fontSize: 72,
@@ -169,7 +177,7 @@ export default function HomeScreen() {
       width: CARD_WIDTH,
       height: CARD_HEIGHT,
       alignSelf: "center",
-      marginBottom: 24 + BOTTOM_TAB_HEIGHT, // 하단 탭으로부터 24px 위로
+      marginBottom: 114,
     },
     cardHeader: {
       flexDirection: "row",
@@ -262,6 +270,20 @@ export default function HomeScreen() {
       fontSize: 16,
       textAlign: "center",
     },
+    travelCardContainer: {
+      paddingHorizontal: 20,
+      position: "absolute",
+      bottom: 0,
+      left: 0,
+      right: 0,
+    },
+    card: {
+      width: CARD_WIDTH,
+      height: CARD_HEIGHT,
+      backgroundColor: "rgba(255, 255, 255, 0.2)",
+      borderRadius: 16,
+      padding: 16,
+    },
   });
 
   return (
@@ -289,7 +311,7 @@ export default function HomeScreen() {
         </View>
 
         {/* Main Content */}
-        <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+        <View style={styles.content}>
           <Text style={styles.title}>
             미세먼지 가득한,{"\n"}오늘은 어디로 떠나{"\n"}볼까요?
           </Text>
@@ -302,40 +324,18 @@ export default function HomeScreen() {
               <Text style={styles.errorText}>{error}</Text>
             ) : weather ? (
               <>
-                <Text style={styles.location}>{weather.location}</Text>
+                <View style={styles.locationContainer}>
+                  <LocationIcon width={16} height={16} color="#FFFFFF" />
+                  <Text style={styles.location}>{weather.location}</Text>
+                </View>
                 <Text style={styles.temperature}>{weather.temperature}°</Text>
-                <Text style={styles.weatherPhrase}>{weather.phrase}</Text>
               </>
             ) : null}
           </View>
+        </View>
 
-          {/* Filter Tabs */}
-          {/* <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            style={styles.filterContainer}
-          >
-            {["맛집", "힐링", "역사"].map((filter, index) => (
-              <TouchableOpacity
-                key={index}
-                style={[
-                  styles.filterTab,
-                  index === 0 && styles.activeFilterTab,
-                ]}
-              >
-                <Text
-                  style={[
-                    styles.filterText,
-                    index === 0 && styles.activeFilterText,
-                  ]}
-                >
-                  {filter}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </ScrollView> */}
-
-          {/* Travel Card */}
+        {/* Travel Card - 하단에 고정 */}
+        <View style={styles.travelCardContainer}>
           <View style={styles.travelCard}>
             <View style={styles.cardHeader}>
               <Text style={styles.timeLabel}>
@@ -363,29 +363,7 @@ export default function HomeScreen() {
               </TouchableOpacity>
             </View>
           </View>
-        </ScrollView>
-
-        {/* Bottom Navigation */}
-        {/* <View style={styles.bottomNav}>
-          <TouchableOpacity style={styles.navItem}>
-            <HomeIcon width={24} height={24} color="#fff" />
-            <Text style={styles.navText}>홈</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.navItem}
-            onPress={() => navigation.navigate("Schedule")}
-          >
-            <ScheduleIcon width={24} height={24} color="#fff" />
-            <Text style={styles.navText}>내일정</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.navItem}
-            onPress={() => navigation.navigate("Tour")}
-          >
-            <GuideIcon width={24} height={24} color="#fff" />
-            <Text style={styles.navText}>여행가이드</Text>
-          </TouchableOpacity>
-        </View> */}
+        </View>
       </SafeAreaView>
     </ImageBackground>
   );

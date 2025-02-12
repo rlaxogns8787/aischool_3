@@ -17,8 +17,12 @@ import SearchIcon from "../assets/search.svg";
 import CalendarIcon from "../assets/calendar.svg";
 import SunIcon from "../assets/sun.svg";
 import CloudIcon from "../assets/cloud.svg";
+import LocationIcon from "../assets/location.svg";
 import { Schedule } from "../types/schedule";
-import { getCurrentWeather } from "../services/weatherService";
+import {
+  getCurrentWeather,
+  getHourlyForecast,
+} from "../services/weatherService";
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 const HEADER_HEIGHT = 44;
@@ -59,6 +63,7 @@ export default function ScheduleScreen({ navigation }: ScheduleScreenProps) {
   const [weather, setWeather] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [weatherForecast, setWeatherForecast] = useState<any[]>([]);
 
   useEffect(() => {
     const fetchWeather = async () => {
@@ -93,6 +98,26 @@ export default function ScheduleScreen({ navigation }: ScheduleScreenProps) {
     fetchWeather();
   }, []);
 
+  useEffect(() => {
+    const loadWeatherForecast = async () => {
+      if (schedules.length > 0) {
+        const nextSchedule = schedules[0]; // 가장 가까운 일정
+        try {
+          // 여행지의 위도/경도 정보가 필요합니다
+          const forecast = await getHourlyForecast(
+            nextSchedule.latitude,
+            nextSchedule.longitude
+          );
+          setWeatherForecast(forecast);
+        } catch (error) {
+          console.error("Forecast error:", error);
+        }
+      }
+    };
+
+    loadWeatherForecast();
+  }, [schedules]);
+
   const styles = StyleSheet.create({
     container: {
       flex: 1,
@@ -117,114 +142,62 @@ export default function ScheduleScreen({ navigation }: ScheduleScreenProps) {
     },
     weatherContainer: {
       flexDirection: "column",
-      justifyContent: "center",
-      alignItems: "center",
-      padding: 16,
-      paddingHorizontal: 24,
-      gap: 24,
-      height: 166,
-      width: "100%",
+      padding: 20,
+      paddingBottom: 16,
       backgroundColor: "rgba(0, 0, 0, 0.1)",
       backdropFilter: "blur(45px)",
     },
     weatherHeader: {
       flexDirection: "row",
       justifyContent: "space-between",
-      alignItems: "center",
-      padding: 0,
-      gap: 54,
-      width: 306,
-      height: 55,
+      alignItems: "flex-start",
+      marginBottom: 8,
     },
     locationContainer: {
       flexDirection: "row",
       alignItems: "center",
-      padding: 0,
-      gap: 9,
-      minWidth: 126,
-      height: "auto",
+      gap: 4,
     },
     location: {
-      fontFamily: "SF Pro Text",
-      fontSize: 15,
+      fontSize: 14,
       fontWeight: "500",
-      lineHeight: 18,
       color: "#FFFFFF",
-      minWidth: 42,
     },
     temperature: {
-      fontFamily: "SF Pro Display",
-      fontSize: 45,
+      fontSize: 40,
       fontWeight: "300",
-      lineHeight: 54,
       color: "#FFFFFF",
-      minWidth: 126,
-      marginTop: 4,
+      lineHeight: 56,
     },
     weatherInfo: {
-      flexDirection: "column",
       alignItems: "flex-end",
-      paddingTop: 3,
-      gap: 8,
-      minWidth: 126,
-      height: "auto",
-    },
-    condition: {
-      fontFamily: "SF Pro Text",
-      fontSize: 13,
-      fontWeight: "500",
-      lineHeight: 16,
-      textAlign: "right",
-      color: "#FFFFFF",
-      minWidth: 126,
     },
     highLow: {
-      fontFamily: "SF Pro Text",
-      fontSize: 13,
-      fontWeight: "500",
-      lineHeight: 16,
-      textAlign: "right",
+      fontSize: 15,
       color: "#FFFFFF",
-      minWidth: 126,
+      opacity: 0.8,
     },
-    hourlyForecast: {
-      flexDirection: "row",
-      justifyContent: "space-between",
-      alignItems: "center",
-      padding: 0,
-      gap: 32,
-      width: 306,
-      height: 55,
+    hourlyWeather: {
+      marginTop: 8,
     },
     hourlyItem: {
-      flexDirection: "column",
       alignItems: "center",
-      padding: 0,
-      gap: 6,
-      width: 24,
-      height: 55,
+      width: 60,
+      marginRight: 12,
     },
     hourlyTime: {
-      fontFamily: "SF Pro Text",
-      fontSize: 11,
-      fontWeight: "500",
-      lineHeight: 13,
-      textAlign: "center",
-      textTransform: "uppercase",
       color: "#FFFFFF",
-      opacity: 0.72,
-      width: 30,
-      height: 13,
-      numberOfLines: 1,
+      fontSize: 12,
+      fontWeight: "500",
+      marginBottom: 4,
+      width: "100%",
+      textAlign: "center",
     },
     hourlyTemp: {
-      fontFamily: "SF Pro Text",
-      fontSize: 12,
-      fontWeight: "600",
-      lineHeight: 15,
-      textAlign: "center",
       color: "#FFFFFF",
-      minWidth: 24,
+      fontSize: 14,
+      fontWeight: "500",
+      marginTop: 4,
     },
     content: {
       flex: 1,
@@ -387,6 +360,11 @@ export default function ScheduleScreen({ navigation }: ScheduleScreenProps) {
       backgroundColor: "rgba(255, 255, 255, 0.2)",
       borderRadius: 300,
     },
+    bottomButtonContainer: {
+      paddingHorizontal: 40,
+      paddingBottom: 72,
+      backgroundColor: "transparent",
+    },
   });
 
   const renderEmptyState = () => (
@@ -423,43 +401,35 @@ export default function ScheduleScreen({ navigation }: ScheduleScreenProps) {
           <View style={styles.weatherHeader}>
             <View>
               <View style={styles.locationContainer}>
-                <Text style={styles.location}>후암동</Text>
+                <LocationIcon width={16} height={16} color="#FFFFFF" />
+                <Text style={styles.location}>{weather?.location}</Text>
               </View>
-              <Text style={styles.temperature}>
-                {isLoading ? "--" : `${weather?.temperature ?? 21}°`}
-              </Text>
+              <Text style={styles.temperature}>{weather?.temperature}°</Text>
             </View>
             <View style={styles.weatherInfo}>
-              <Text style={styles.condition}>
-                {isLoading ? "--" : weather?.condition ?? "맑음"}
-              </Text>
               <Text style={styles.highLow}>
-                {isLoading
-                  ? "--"
-                  : `H:${weather?.high ?? 24}° L:${weather?.low ?? 13}°`}
+                H:{weather?.high}° L:{weather?.low}°
               </Text>
             </View>
           </View>
 
-          {/* Hourly Forecast */}
+          {/* Hourly Weather */}
           <ScrollView
             horizontal
             showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.hourlyForecast}
+            style={styles.hourlyWeather}
           >
-            {(isLoading ? [] : weather?.hourly ?? []).map(
-              (item: any, index: number) => (
-                <View key={index} style={styles.hourlyItem}>
-                  <Text style={styles.hourlyTime}>{item.time}</Text>
-                  {item.condition === "sunny" ? (
-                    <SunIcon width={18} height={18} color="#FFD409" />
-                  ) : (
-                    <CloudIcon width={18} height={18} color="#FFFFFF" />
-                  )}
-                  <Text style={styles.hourlyTemp}>{item.temp}°</Text>
-                </View>
-              )
-            )}
+            {weather?.hourly.map((item, index) => (
+              <View key={index} style={styles.hourlyItem}>
+                <Text style={styles.hourlyTime}>{item.time}</Text>
+                {item.condition === "sunny" ? (
+                  <SunIcon width={24} height={24} color="#FFD409" />
+                ) : (
+                  <CloudIcon width={24} height={24} color="#FFFFFF" />
+                )}
+                <Text style={styles.hourlyTemp}>{item.temp}°</Text>
+              </View>
+            ))}
           </ScrollView>
         </View>
 
@@ -469,11 +439,8 @@ export default function ScheduleScreen({ navigation }: ScheduleScreenProps) {
           contentContainerStyle={styles.contentContainer}
           showsVerticalScrollIndicator={false}
         >
-          {schedules.length === 0 ? (
-            renderEmptyState()
-          ) : (
-            <>
-              {schedules.map((schedule) => (
+          {schedules.length > 0
+            ? schedules.map((schedule) => (
                 <TouchableOpacity
                   key={schedule.id}
                   style={styles.scheduleCard}
@@ -503,17 +470,19 @@ export default function ScheduleScreen({ navigation }: ScheduleScreenProps) {
                     </TouchableOpacity>
                   </View>
                 </TouchableOpacity>
-              ))}
-            </>
-          )}
+              ))
+            : renderEmptyState()}
+        </ScrollView>
 
+        {/* 하단 고정 버튼 */}
+        <View style={styles.bottomButtonContainer}>
           <TouchableOpacity
-            style={styles.registerButton}
-            onPress={() => navigation.navigate("Tour")}
+            style={styles.detailButton}
+            onPress={() => navigation.navigate("Chat")}
           >
             <Text style={styles.buttonText}>일정 등록</Text>
           </TouchableOpacity>
-        </ScrollView>
+        </View>
       </SafeAreaView>
     </View>
   );

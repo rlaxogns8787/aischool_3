@@ -102,4 +102,30 @@ export const styles = StyleSheet.create({
     fontWeight: "600",
     color: "#000",
   },
+  buttonContainer: {
+    flexDirection: "column",
+    gap: 8,
+    paddingHorizontal: 16,
+    marginTop: 8,
+    marginBottom: 16,
+  },
+  regenerateButton: {
+    height: 48,
+    backgroundColor: "#007AFF",
+    borderRadius: 12,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  endButton: {
+    height: 48,
+    backgroundColor: "#FF3B30",
+    borderRadius: 12,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  buttonText: {
+    color: "#FFFFFF",
+    fontSize: 16,
+    fontWeight: "600",
+  },
 });
