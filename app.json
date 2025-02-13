@@ -18,13 +18,21 @@
         {
           "microphonePermission": "마이크를 사용하여 음성 인식을 진행합니다."
         }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "앱에서 사진을 선택하기 위해 사진 라이브러리 접근 권한이 필요합니다."
+        }
       ]
     ],
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.anonymous.travel",
       "infoPlist": {
-        "NSMicrophoneUsageDescription": "음성 인식을 위해 마이크 접근 권한이 필요합니다."
+        "NSMicrophoneUsageDescription": "음성 인식을 위해 마이크 접근 권한이 필요합니다.",
+        "NSPhotoLibraryUsageDescription": "앱에서 사진을 선택하기 위해 사진 라이브러리 접근 권한이 필요합니다.",
+        "NSCameraUsageDescription": "프로필 사진 촬영을 위해 카메라 접근 권한이 필요합니다."
       }
     },
     "android": {
