@@ -1,4 +1,4 @@
-import React from 'react';
+import React from "react";
 import {
   View,
   Text,
@@ -6,13 +6,16 @@ import {
   TouchableOpacity,
   Image,
   Alert,
-} from 'react-native';
-import { DrawerContentComponentProps } from '@react-navigation/drawer';
-import { ChevronRight, X } from 'lucide-react-native';
-import { useAuth } from '../contexts/AuthContext';
-import { CommonActions } from '@react-navigation/native';
+} from "react-native";
+import { DrawerContentComponentProps } from "@react-navigation/drawer";
+import { ChevronRight, X } from "lucide-react-native";
+import { useAuth } from "../contexts/AuthContext";
+import { CommonActions } from "@react-navigation/native";
+import { TERMS_CONTENT } from "../screens/AgreementScreen";
 
-export default function CustomDrawerContent(props: DrawerContentComponentProps) {
+export default function CustomDrawerContent(
+  props: DrawerContentComponentProps
+) {
   const { navigation } = props;
   const { signOut } = useAuth();
 
@@ -22,27 +25,37 @@ export default function CustomDrawerContent(props: DrawerContentComponentProps) 
       navigation.dispatch(
         CommonActions.reset({
           index: 0,
-          routes: [{ name: 'Auth' }],
+          routes: [{ name: "Auth" }],
         })
       );
     } catch (error) {
-      Alert.alert('오류', '로그아웃 중 문제가 발생했습니다.');
+      Alert.alert("오류", "로그아웃 중 문제가 발생했습니다.");
     }
   };
 
   const menuItems = [
-    { label: '알림 설정', onPress: () => {} },
-    { label: '문의하기', onPress: () => {} },
-    { label: '공지사항', onPress: () => {} },
-    { label: '이용약관', onPress: () => {} },
-    { label: '개인정보 처리 방침', onPress: () => {} },
-    { label: '사용 가이드', onPress: () => {} },
+    { label: "알림 설정", onPress: () => {} },
+    { label: "문의하기", onPress: () => {} },
+    { label: "공지사항", onPress: () => {} },
+    {
+      label: "이용약관",
+      onPress: () => {
+        Alert.alert("이용약관", TERMS_CONTENT.service);
+      },
+    },
+    {
+      label: "개인정보 처리방침",
+      onPress: () => {
+        Alert.alert("개인정보 처리방침", TERMS_CONTENT.privacy);
+      },
+    },
+    { label: "사용 가이드", onPress: () => {} },
   ];
 
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <TouchableOpacity 
+        <TouchableOpacity
           style={styles.closeButton}
           onPress={() => navigation.closeDrawer()}
         >
@@ -56,7 +69,7 @@ export default function CustomDrawerContent(props: DrawerContentComponentProps) 
             <View style={styles.avatar} />
           </View>
           <View style={styles.profileInfo}>
-            <Text style={styles.nickname}>{'{nickname}'}</Text>
+            <Text style={styles.nickname}>{"{nickname}"}</Text>
             <Text style={styles.editProfile}>프로필 편집</Text>
           </View>
           <ChevronRight size={32} color="#C5C6CC" />
@@ -78,14 +91,9 @@ export default function CustomDrawerContent(props: DrawerContentComponentProps) 
       </View>
 
       <View style={styles.bottomSection}>
-        <TouchableOpacity 
-          style={styles.logoutButton}
-          onPress={handleLogout}
-        >
+        <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
           <Text style={styles.logoutText}>로그아웃</Text>
         </TouchableOpacity>
-
-        
       </View>
     </View>
   );
@@ -95,28 +103,28 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     width: 305,
-    backgroundColor: '#F7F7F7',
+    backgroundColor: "#F7F7F7",
   },
   header: {
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "flex-end",
+    alignItems: "center",
     paddingTop: 54,
     paddingRight: 16,
     paddingBottom: 10,
     paddingLeft: 10,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: "#FFFFFF",
   },
   closeButton: {
     padding: 4,
   },
   profileSection: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: "#FFFFFF",
     paddingBottom: 24,
   },
   profileContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     padding: 8,
     paddingHorizontal: 16,
     gap: 8,
@@ -125,14 +133,14 @@ const styles = StyleSheet.create({
     width: 64,
     height: 64,
     borderRadius: 32,
-    backgroundColor: '#EAF2FF',
-    justifyContent: 'center',
-    alignItems: 'center',
+    backgroundColor: "#EAF2FF",
+    justifyContent: "center",
+    alignItems: "center",
   },
   avatar: {
     width: 48,
     height: 48,
-    backgroundColor: '#B4DBFF',
+    backgroundColor: "#B4DBFF",
     borderRadius: 24,
   },
   profileInfo: {
@@ -141,82 +149,82 @@ const styles = StyleSheet.create({
   },
   nickname: {
     fontSize: 18,
-    fontWeight: '600',
-    color: '#000000',
+    fontWeight: "600",
+    color: "#000000",
   },
   editProfile: {
     fontSize: 12,
-    color: '#A4A4A4',
+    color: "#A4A4A4",
   },
   menuSection: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: "#FFFFFF",
     marginTop: 8,
   },
   menuList: {
     borderTopWidth: 1,
-    borderTopColor: '#EEEEEE',
+    borderTopColor: "#EEEEEE",
   },
   menuItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     padding: 22,
     paddingHorizontal: 25,
     borderBottomWidth: 1,
-    borderBottomColor: '#EEEEEE',
+    borderBottomColor: "#EEEEEE",
   },
   menuText: {
     fontSize: 16,
-    fontWeight: '500',
-    color: '#000000',
+    fontWeight: "500",
+    color: "#000000",
   },
   bottomSection: {
-    marginTop: 'auto',
-    backgroundColor: '#FFFFFF',
+    marginTop: "auto",
+    backgroundColor: "#FFFFFF",
   },
   logoutButton: {
     padding: 22,
     paddingHorizontal: 25,
-    alignItems: 'center',
+    alignItems: "center",
     borderTopWidth: 1,
-    borderTopColor: '#EEEEEE',
+    borderTopColor: "#EEEEEE",
   },
   logoutText: {
     fontSize: 16,
-    fontWeight: '500',
-    color: '#FF0000',
+    fontWeight: "500",
+    color: "#FF0000",
   },
   bannerSection: {
     height: 94,
-    backgroundColor: '#EAF2FF',
-    justifyContent: 'flex-end',
-    alignItems: 'center',
+    backgroundColor: "#EAF2FF",
+    justifyContent: "flex-end",
+    alignItems: "center",
     padding: 15,
   },
   banner: {
     flex: 1,
-    width: '100%',
+    width: "100%",
   },
   adLabel: {
-    position: 'absolute',
+    position: "absolute",
     right: 16,
     top: 16,
     fontSize: 12,
-    fontWeight: '600',
-    color: '#000000',
+    fontWeight: "600",
+    color: "#000000",
   },
   pagination: {
-    flexDirection: 'row',
+    flexDirection: "row",
     gap: 8,
   },
   dot: {
     width: 8,
     height: 8,
     borderRadius: 4,
-    backgroundColor: '#1F2024',
+    backgroundColor: "#1F2024",
     opacity: 0.1,
   },
   activeDot: {
-    backgroundColor: '#006FFD',
+    backgroundColor: "#006FFD",
     opacity: 1,
   },
-}); 
+});

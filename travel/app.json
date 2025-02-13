@@ -14,17 +14,24 @@
       "infoPlist": {
         "NSMicrophoneUsageDescription": "음성으로 대화하기 위해 마이크 권한이 필요합니다.",
         "NSCameraUsageDescription": "화상 통화를 위해 카메라 권한이 필요합니다.",
-        "NSPhotoLibraryUsageDescription": "사진을 공유하기 위해 갤러리 접근 권한이 필요합니다."
+        "NSPhotoLibraryUsageDescription": "사진을 공유하기 위해 갤러리 접근 권한이 필요합니다.",
+        "NSSpeechRecognitionUsageDescription": "Allow $(PRODUCT_NAME) to use speech recognition."
       }
     },
     "android": {
       "package": "com.travelchat.app",
       "permissions": [
-        "RECORD_AUDIO"
+        "RECORD_AUDIO",
+        "android.permission.RECORD_AUDIO"
       ]
     },
     "plugins": [
       "expo-speech-recognition"
-    ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "56de60ac-41bf-45e4-abd9-7ae933b896f3"
+      }
+    }
   }
 }
