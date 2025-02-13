@@ -21,6 +21,8 @@ import FacebookIcon from "../assets/facebook.svg";
 import AppleIcon from "../assets/apple.svg";
 import { useAuth } from "../contexts/AuthContext";
 import { Picker } from "@react-native-picker/picker";
+import { registerUser, loginUser } from "../api/loginapi";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 type AuthScreenProps = {
   navigation: any;
@@ -176,6 +178,41 @@ export default function AuthScreen({ navigation, route }: AuthScreenProps) {
 
   const handleSignUp = async () => {
     try {
+      // 1. 기본 정보 유효성 검사
+      if (!email || !password || !nickname || !birthYear || !gender) {
+        Alert.alert("오류", "모든 필수 정보를 입력해주세요.");
+        return;
+      }
+
+      // 서버로 전송할 데이터 로깅
+      const signUpData = {
+        username: email,
+        password,
+        nickname,
+        birthyear: parseInt(birthYear),
+        gender: gender.charAt(0).toUpperCase() + gender.slice(1),
+        marketing_consent: route.params?.agreements?.marketing ? 1 : 0,
+      };
+      console.log("회원가입 요청 데이터:", signUpData);
+
+      // 2. 회원가입 API 호출
+      const response = await registerUser(signUpData);
+      console.log("회원가입 응답:", response);
+
+      // 3. 회원가입 성공 시 사용자 정보 로컬 저장
+      await AsyncStorage.setItem(
+        "userData",
+        JSON.stringify({
+          username: email,
+          nickname,
+          birthyear: parseInt(birthYear),
+          gender,
+          marketing_consent: route.params?.agreements?.marketing ? 1 : 0,
+          preferences: selectedPreferences,
+        })
+      );
+
+      // 4. Context API를 통한 로컬 상태 업데이트
       await signUp(email, password, {
         nickname,
         birthYear,
@@ -184,11 +221,17 @@ export default function AuthScreen({ navigation, route }: AuthScreenProps) {
         preferences: selectedPreferences,
       });
 
-      // 온보딩 화면으로 이동
+      // 5. 회원가입 완료 후 온보딩 화면으로 이동
       navigation.replace("Onboarding");
     } catch (error) {
-      Alert.alert("오류", "회원가입에 실패했습니다.");
-      console.error(error);
+      console.error("상세 에러 정보:", error);
+      if (error instanceof Error) {
+        Alert.alert("오류", error.message || "회원가입에 실패했습니다.");
+        console.error("회원가입 에러:", error);
+      } else {
+        Alert.alert("오류", "회원가입에 실패했습니다.");
+        console.error("회원가입 에러:", error);
+      }
     }
   };
 
@@ -199,11 +242,33 @@ export default function AuthScreen({ navigation, route }: AuthScreenProps) {
         return;
       }
 
-      await signIn(email, password);
-      navigation.replace("Main");
+      // API 호출
+      const response = await loginUser({
+        username: email,
+        password,
+      });
+
+      if (response.message === "Logged in successfully") {
+        // 사용자 정보 저장
+        await AsyncStorage.setItem(
+          "userData",
+          JSON.stringify(response.user_info)
+        );
+
+        // 로그인 처리
+        await signIn(email, password);
+
+        // 메인 화면으로 이동
+        navigation.replace("Main");
+      }
     } catch (error) {
-      Alert.alert("오류", "로그인에 실패했습니다.");
-      console.error(error);
+      if (error instanceof Error) {
+        Alert.alert("오류", error.message || "로그인에 실패했습니다.");
+        console.error(error);
+      } else {
+        Alert.alert("오류", "로그인에 실패했습니다.");
+        console.error(error);
+      }
     }
   };
 
@@ -245,8 +310,7 @@ export default function AuthScreen({ navigation, route }: AuthScreenProps) {
       });
     }
     // 2단계(사용자 정보)로 이동
-    else if (step === 2 && step === "preference") {
-      // 현재 3단계에 있을 때만 2단계로 이동 가능
+    else if (step === 2) {
       setStep("info");
     }
   };
