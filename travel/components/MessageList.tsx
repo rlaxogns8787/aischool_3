@@ -136,6 +136,21 @@ export default function MessageList({
                 </TouchableOpacity>
               </View>
             )}
+            {/* OptionCard 렌더링 */}
+            {message.isBot &&
+              message.text.includes("여행 일정이 생성되었습니다") && (
+                <OptionCard
+                  image="https://png.pngtree.com/png-vector/20231215/ourmid/pngtree-star-icon-png-image_11363937.png" // 실제 이미지 URL로 변경
+                  people="2명"
+                  title="여행 일정"
+                  date="3박 4일"
+                  info="여행 일정이 생성되었습니다. 자세한 내용은 나중에 DB에서 가져올 예정입니다."
+                  onPress={() => {
+                    // 상세보기 버튼 클릭 시 동작 정의
+                    console.log("상세보기 버튼 클릭됨");
+                  }}
+                />
+              )}
           </View>
         ) : null
       )}
