@@ -3,31 +3,34 @@ import { View, Text, TouchableOpacity, StyleSheet, Image } from "react-native";
 
 type OptionCardProps = {
   image: string;
-  keyword: string;
-  title: string;
-  address: string;
+  people: string; // 여행인원
+  title: string; // 여행제목
+  date: string; // 여행 기간
+  info: string; // 정보
   onPress: () => void;
 };
 
 const OptionCard: React.FC<OptionCardProps> = ({
   image,
-  keyword,
+  people,
   title,
-  address,
+  date,
+  info,
   onPress,
 }) => {
   return (
     <View style={styles.card}>
       <Image source={{ uri: image }} style={styles.image} />
-      <View style={styles.keywordContainer}>
-        <Text style={styles.keyword}>{keyword}</Text>
+      <View style={styles.peopleContainer}>
+        <Text style={styles.people}>{people}</Text>
       </View>
       <View style={styles.content}>
         <Text style={styles.title}>{title}</Text>
-        <Text style={styles.address}>{address}</Text>
+        <Text style={styles.date}>{date}</Text>
+        <Text style={styles.info}>{info}</Text>
       </View>
       <TouchableOpacity style={styles.button} onPress={onPress}>
-        <Text style={styles.buttonText}>일정 선택</Text>
+        <Text style={styles.buttonText}>상세보기</Text>
       </TouchableOpacity>
     </View>
   );
@@ -49,7 +52,7 @@ const styles = StyleSheet.create({
     width: "100%",
     height: 150,
   },
-  keywordContainer: {
+  peopleContainer: {
     position: "absolute",
     top: 10,
     right: 10,
@@ -57,7 +60,7 @@ const styles = StyleSheet.create({
     borderRadius: 5,
     padding: 5,
   },
-  keyword: {
+  people: {
     color: "#fff",
     fontSize: 12,
   },
@@ -68,7 +71,11 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "bold",
   },
-  address: {
+  date: {
+    fontSize: 14,
+    color: "#666",
+  },
+  info: {
     fontSize: 14,
     color: "#666",
   },
