@@ -178,97 +178,118 @@ export default function AuthScreen({ navigation, route }: AuthScreenProps) {
 
   const handleSignUp = async () => {
     try {
+      console.log("회원가입 요청 시작");
+
       // 1. 기본 정보 유효성 검사
       if (!email || !password || !nickname || !birthYear || !gender) {
+        console.log("회원가입 실패: 필수 정보 미입력");
         Alert.alert("오류", "모든 필수 정보를 입력해주세요.");
         return;
       }
 
-      // 서버로 전송할 데이터 로깅
+      if (password !== confirmPassword) {
+        console.log("회원가입 실패: 비밀번호 불일치");
+        Alert.alert("오류", "비밀번호가 일치하지 않습니다.");
+        return;
+      }
+
+      // 이메일 형식 검사
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(email)) {
+        console.log("회원가입 실패: 잘못된 이메일 형식");
+        Alert.alert("오류", "올바른 이메일 형식이 아닙니다.");
+        return;
+      }
+
+      // API 요청 데이터 구조를 백엔드 스펙에 맞게 수정
       const signUpData = {
         username: email,
-        password,
-        nickname,
+        password: password,
+        nickname: nickname,
         birthyear: parseInt(birthYear),
         gender: gender.charAt(0).toUpperCase() + gender.slice(1),
         marketing_consent: route.params?.agreements?.marketing ? 1 : 0,
       };
-      console.log("회원가입 요청 데이터:", signUpData);
+
+      console.log("회원가입 API 요청 데이터:", signUpData);
 
       // 2. 회원가입 API 호출
       const response = await registerUser(signUpData);
       console.log("회원가입 응답:", response);
 
-      // 3. 회원가입 성공 시 사용자 정보 로컬 저장
-      await AsyncStorage.setItem(
-        "userData",
-        JSON.stringify({
+      if (response.message === "User created successfully") {
+        console.log("회원가입 성공: 로그인 시도");
+
+        // 3. 회원가입 성공 시 자동 로그인
+        const loginData = {
           username: email,
-          nickname,
-          birthyear: parseInt(birthYear),
-          gender,
-          marketing_consent: route.params?.agreements?.marketing ? 1 : 0,
-          preferences: selectedPreferences,
-        })
-      );
+          password: password,
+        };
 
-      // 4. Context API를 통한 로컬 상태 업데이트
-      await signUp(email, password, {
-        nickname,
-        birthYear,
-        gender: gender as "male" | "female",
-        marketing: route.params?.agreements?.marketing || false,
-        preferences: selectedPreferences,
-      });
+        const loginResponse = await loginUser(loginData);
+        console.log("로그인 응답:", loginResponse);
 
-      // 5. 회원가입 완료 후 온보딩 화면으로 이동
-      navigation.replace("Onboarding");
-    } catch (error) {
-      console.error("상세 에러 정보:", error);
-      if (error instanceof Error) {
-        Alert.alert("오류", error.message || "회원가입에 실패했습니다.");
-        console.error("회원가입 에러:", error);
-      } else {
-        Alert.alert("오류", "회원가입에 실패했습니다.");
-        console.error("회원가입 에러:", error);
+        if (loginResponse.message === "Logged in successfully") {
+          // 4. 로그인 성공 시 사용자 정보 저장
+          await AsyncStorage.setItem(
+            "userData",
+            JSON.stringify(loginResponse.user_info)
+          );
+
+          // 5. Context API를 통한 로컬 상태 업데이트
+          await signUp(email, password, {
+            nickname: loginResponse.user_info.nickname,
+            birthYear: loginResponse.user_info.birthyear.toString(),
+            gender: loginResponse.user_info.gender.toLowerCase() as
+              | "male"
+              | "female",
+            marketing: loginResponse.user_info.marketing_consent,
+            preferences: selectedPreferences,
+          });
+
+          // 6. 온보딩 화면으로 이동
+          navigation.replace("Onboarding");
+        }
       }
+    } catch (error: any) {
+      console.error("회원가입 에러:", error);
+      Alert.alert("오류", error.message || "회원가입에 실패했습니다.");
     }
   };
 
   const handleLogin = async () => {
     try {
+      console.log("로그인 요청 시작");
+
       if (!email || !password) {
+        console.log("로그인 실패: 이메일 또는 비밀번호 미입력");
         Alert.alert("오류", "이메일과 비밀번호를 입력해주세요.");
         return;
       }
 
-      // API 호출
-      const response = await loginUser({
+      const loginData = {
         username: email,
-        password,
-      });
+        password: password,
+      };
+      console.log("로그인 요청 데이터:", loginData);
+
+      const response = await loginUser(loginData);
+      console.log("로그인 응답:", response);
 
       if (response.message === "Logged in successfully") {
-        // 사용자 정보 저장
+        console.log("로그인 성공: 사용자 정보 저장");
+
         await AsyncStorage.setItem(
           "userData",
           JSON.stringify(response.user_info)
         );
 
-        // 로그인 처리
         await signIn(email, password);
-
-        // 메인 화면으로 이동
         navigation.replace("Main");
       }
-    } catch (error) {
-      if (error instanceof Error) {
-        Alert.alert("오류", error.message || "로그인에 실패했습니다.");
-        console.error(error);
-      } else {
-        Alert.alert("오류", "로그인에 실패했습니다.");
-        console.error(error);
-      }
+    } catch (error: any) {
+      console.error("로그인 에러:", error);
+      Alert.alert("오류", error.message || "로그인에 실패했습니다.");
     }
   };
 
@@ -337,19 +358,55 @@ export default function AuthScreen({ navigation, route }: AuthScreenProps) {
 
   const handleSkipPreferences = async () => {
     try {
-      // 취향 정보 없이 회원가입 진행
-      await signUp(email, password, {
-        nickname,
-        birthYear,
-        gender: gender as "male" | "female",
-        marketing: route.params?.agreements?.marketing || false,
-        preferences: [], // 빈 배열로 전달
-      });
+      console.log("회원가입 요청 시작 (취향 선택 건너뛰기)");
 
-      navigation.replace("Onboarding");
-    } catch (error) {
-      Alert.alert("오류", "회원가입에 실패했습니다.");
-      console.error(error);
+      // API 스펙에 맞게 데이터 구조화
+      const signUpData = {
+        username: email, // email -> username
+        password: password,
+        nickname: nickname,
+        birthyear: parseInt(birthYear), // birthYear -> birthyear (문자열을 숫자로 변환)
+        gender: gender.charAt(0).toUpperCase() + gender.slice(1), // 첫 글자 대문자로
+        marketing_consent: route.params?.agreements?.marketing ? 1 : 0, // boolean -> number
+      };
+
+      console.log("회원가입 API 요청 데이터:", signUpData);
+
+      // 회원가입 API 호출
+      const response = await registerUser(signUpData);
+      console.log("회원가입 응답:", response);
+
+      if (response.message === "User created successfully") {
+        // 자동 로그인
+        const loginData = {
+          username: email,
+          password: password,
+        };
+
+        const loginResponse = await loginUser(loginData);
+
+        if (loginResponse.message === "Logged in successfully") {
+          await AsyncStorage.setItem(
+            "userData",
+            JSON.stringify(loginResponse.user_info)
+          );
+
+          await signUp(email, password, {
+            nickname: loginResponse.user_info.nickname,
+            birthYear: loginResponse.user_info.birthyear.toString(),
+            gender: loginResponse.user_info.gender.toLowerCase() as
+              | "male"
+              | "female",
+            marketing: loginResponse.user_info.marketing_consent,
+            preferences: [],
+          });
+
+          navigation.replace("Onboarding");
+        }
+      }
+    } catch (error: any) {
+      console.error("회원가입 요청 실패:", error);
+      Alert.alert("오류", error.message || "회원가입에 실패했습니다.");
     }
   };
 
@@ -360,19 +417,51 @@ export default function AuthScreen({ navigation, route }: AuthScreenProps) {
         return;
       }
 
-      // TODO: DB 연결 후 취향 정보 저장 로직 구현
-      await signUp(email, password, {
-        nickname,
-        birthYear,
-        gender: gender as "male" | "female",
-        marketing: route.params?.agreements?.marketing || false,
-        preferences: selectedPreferences,
-      });
+      // API 요청 데이터 구조화
+      const signUpData = {
+        username: email,
+        password: password,
+        nickname: nickname,
+        birthyear: parseInt(birthYear),
+        gender: gender.charAt(0).toUpperCase() + gender.slice(1),
+        marketing_consent: route.params?.agreements?.marketing ? 1 : 0,
+        preferences: selectedPreferences, // 취향 정보 포함
+      };
 
-      navigation.replace("Onboarding");
+      // 회원가입 API 호출
+      const response = await registerUser(signUpData);
+
+      if (response.message === "User created successfully") {
+        // 자동 로그인 처리
+        const loginData = {
+          username: email,
+          password: password,
+        };
+
+        const loginResponse = await loginUser(loginData);
+
+        if (loginResponse.message === "Logged in successfully") {
+          await AsyncStorage.setItem(
+            "userData",
+            JSON.stringify(loginResponse.user_info)
+          );
+
+          await signUp(email, password, {
+            nickname: loginResponse.user_info.nickname,
+            birthYear: loginResponse.user_info.birthyear.toString(),
+            gender: loginResponse.user_info.gender.toLowerCase() as
+              | "male"
+              | "female",
+            marketing: loginResponse.user_info.marketing_consent,
+            preferences: selectedPreferences,
+          });
+
+          navigation.replace("Onboarding");
+        }
+      }
     } catch (error) {
+      console.error("회원가입 요청 실패:", error);
       Alert.alert("오류", "회원가입에 실패했습니다.");
-      console.error(error);
     }
   };
 

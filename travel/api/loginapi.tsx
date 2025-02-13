@@ -25,16 +25,18 @@ interface LoginResponse {
  * @property {number} birthyear - 사용자 출생연도
  * @property {string} gender - 사용자 성별
  * @property {number} marketing_consent - 마케팅 수신 동의 여부 (1: 동의, 0: 미동의)
+ * @property {string[]} preferences - 선호 카테고리 배열
  * @returns {Promise} - 서버 응답 데이터
  * @throws {Error} - API 요청 실패 시 에러
  */
 export const registerUser = async (userData: {
-  username: string; // email -> username
+  username: string;
   password: string;
   nickname: string;
-  birthyear: number; // birthYear -> birthyear
-  gender: string; // 'male' | 'female' -> string
-  marketing_consent: number; // marketing -> marketing_consent, boolean -> number
+  birthyear: number;
+  gender: string;
+  marketing_consent: number;
+  preferences?: string[]; // preferences를 선택적 파라미터로 변경
 }) => {
   try {
     const response = await axios.post(`${BASE_URL}/register`, userData);
