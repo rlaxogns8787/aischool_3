@@ -9,10 +9,11 @@ import ScheduleScreen from "../screens/ScheduleScreen";
 import TravelLogScreen from "../screens/TravelLogScreen";
 import MapScreen from "../screens/MapScreen";
 import TourScreen from "../screens/TourScreen";
-import CustomDrawerContent from "../screens/CustomDrawerContent";
+import CustomDrawerContent from "../components/CustomDrawerContent";
 import ScheduleDetail from "../screens/ScheduleDetail";
 import TermsDetailScreen from "../screens/TermsDetailScreen";
 import AgreementScreen from "../screens/AgreementScreen";
+import MyProfileScreen from "../screens/MyProfileScreen";
 
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -98,6 +99,14 @@ export default function RootNavigator() {
         options={{
           presentation: "modal",
           headerShown: false,
+        }}
+      />
+      <Stack.Screen
+        name="MyProfile"
+        component={MyProfileScreen}
+        options={{
+          headerShown: false,
+          presentation: "card",
         }}
       />
     </Stack.Navigator>

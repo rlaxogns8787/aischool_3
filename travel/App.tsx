@@ -13,7 +13,7 @@ import OnboardingScreen from "./screens/OnboardingScreen";
 import AuthScreen from "./screens/AuthScreen";
 import AgreementScreen from "./screens/AgreementScreen";
 // import TermsDetailScreen from "./screens/TermsDetailScreen";
-import CustomDrawerContent from "./screens/CustomDrawerContent";
+import CustomDrawerContent from "./components/CustomDrawerContent";
 import HomeIcon from "./assets/home.svg";
 import CalendarIcon from "./assets/schedule.svg";
 import GalleryIcon from "./assets/travellog.svg";
@@ -21,6 +21,8 @@ import "react-native-gesture-handler";
 import ChatScreen from "./screens/ChatScreen";
 import TourScreen from "./screens/TourScreen.tsx";
 import { MessageCircle } from "lucide-react-native";
+import MyProfileScreen from "./screens/MyProfileScreen";
+import EditProfileScreen from "./screens/EditProfileScreen";
 
 export type RootStackParamList = {
   Auth: undefined;
@@ -28,12 +30,21 @@ export type RootStackParamList = {
     email?: string;
     isSignUp?: boolean;
     direction?: "back";
+    showHeader?: boolean;
   };
-
+  TermsDetail: {
+    title: string;
+    content: string;
+  };
+  EditProfile: {
+    field: string;
+    currentValue?: string;
+  };
   Onboarding: undefined;
   Main: undefined;
   Chat: undefined;
   Tour: undefined;
+  MyProfile: undefined;
 };
 
 enableScreens();
@@ -143,13 +154,17 @@ function MainDrawer() {
           backgroundColor: "#F7F7F7",
         },
         headerShown: false,
-        drawerType: "front",
-        overlayColor: "rgba(0, 0, 0, 0.5)",
-        swipeEnabled: true,
-        swipeEdgeWidth: 50,
       }}
     >
       <Drawer.Screen name="MainTabs" component={MainTabs} />
+      <Drawer.Screen
+        name="MyProfile"
+        component={MyProfileScreen}
+        options={{
+          headerShown: false,
+          drawerItemStyle: { display: "none" },
+        }}
+      />
     </Drawer.Navigator>
   );
 }
@@ -199,6 +214,14 @@ export default function App() {
               name="Tour"
               component={TourScreen}
               options={{ headerShown: false }}
+            />
+            <Stack.Screen
+              name="EditProfile"
+              component={EditProfileScreen}
+              options={{
+                headerShown: false,
+                presentation: "modal",
+              }}
             />
           </Stack.Navigator>
         </NavigationContainer>

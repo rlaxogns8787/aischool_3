@@ -1,16 +1,42 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { View, Text, StyleSheet, TouchableOpacity, Alert } from "react-native";
 import { X, ChevronRight } from "lucide-react-native";
 import { DrawerContentComponentProps } from "@react-navigation/drawer";
 import { CommonActions } from "@react-navigation/native";
 import { useAuth } from "../contexts/AuthContext";
 import { TERMS_CONTENT } from "../screens/AgreementScreen";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+
+interface UserInfo {
+  nickname: string;
+  username: string;
+  birthyear: number;
+  gender: string;
+  marketing_consent: boolean;
+}
 
 export default function CustomDrawerContent(
   props: DrawerContentComponentProps
 ) {
   const { navigation } = props;
   const { signOut } = useAuth();
+  const [userInfo, setUserInfo] = useState<UserInfo | null>(null);
+
+  // 컴포넌트 마운트 시 사용자 정보 로드
+  useEffect(() => {
+    const loadUserInfo = async () => {
+      try {
+        const userData = await AsyncStorage.getItem("userData");
+        if (userData) {
+          setUserInfo(JSON.parse(userData));
+        }
+      } catch (error) {
+        console.error("Error loading user info:", error);
+      }
+    };
+
+    loadUserInfo();
+  }, []);
 
   const handleLogout = async () => {
     try {
@@ -65,14 +91,24 @@ export default function CustomDrawerContent(
 
       <View style={styles.profileSection}>
         <View style={styles.profileContent}>
-          <View style={styles.avatarContainer}>
-            <View style={styles.avatar} />
-          </View>
-          <View style={styles.profileInfo}>
-            <Text style={styles.nickname}>{"{nickname}"}</Text>
-            <Text style={styles.editProfile}>프로필 편집</Text>
-          </View>
-          <ChevronRight size={32} color="#C5C6CC" />
+          <TouchableOpacity
+            style={styles.profileContent}
+            onPress={() => {
+              navigation.closeDrawer();
+              navigation.navigate("MyProfile");
+            }}
+          >
+            <View style={styles.avatarContainer}>
+              <View style={styles.avatar} />
+            </View>
+            <View style={styles.profileInfo}>
+              <Text style={styles.nickname}>
+                {userInfo?.nickname || "{nickname}"}
+              </Text>
+              <Text style={styles.editProfile}>프로필 편집</Text>
+            </View>
+            <ChevronRight size={32} color="#C5C6CC" />
+          </TouchableOpacity>
         </View>
       </View>
 
@@ -151,10 +187,11 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: "600",
     color: "#000000",
+    marginBottom: 4,
   },
   editProfile: {
-    fontSize: 12,
-    color: "#A4A4A4",
+    fontSize: 14,
+    color: "#8E8E93",
   },
   menuSection: {
     backgroundColor: "#FFFFFF",
