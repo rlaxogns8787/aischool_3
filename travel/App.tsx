@@ -12,7 +12,7 @@ import TravelLogScreen from "./screens/TravelLogScreen.tsx";
 import OnboardingScreen from "./screens/OnboardingScreen";
 import AuthScreen from "./screens/AuthScreen";
 import AgreementScreen from "./screens/AgreementScreen";
-import TermsDetailScreen from "./screens/TermsDetailScreen";
+// import TermsDetailScreen from "./screens/TermsDetailScreen";
 import CustomDrawerContent from "./screens/CustomDrawerContent";
 import HomeIcon from "./assets/home.svg";
 import CalendarIcon from "./assets/schedule.svg";
@@ -183,14 +183,7 @@ export default function App() {
                 gestureDirection: "horizontal",
               })}
             />
-            <Stack.Screen
-              name="TermsDetail"
-              component={TermsDetailScreen}
-              options={{
-                animation: "slide_from_right",
-                gestureDirection: "horizontal",
-              }}
-            />
+
             <Stack.Screen name="Onboarding" component={OnboardingScreen} />
             <Stack.Screen name="Main" component={MainDrawer} />
             <Stack.Screen

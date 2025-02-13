@@ -202,13 +202,17 @@ export default function ChatScreen() {
   };
 
   // 날짜 선택 처리 함수 수정
-  const handleConfirm = () => {
+
+  const handleConfirm = (finalEndDate: Date) => {
+    // console.log("handleConfirm 호출됨");
+    // console.log("startDate:", startDate);
+    // console.log("endDate:", endDate);
     const formattedStartDate = startDate.toLocaleDateString("ko-KR", {
       year: "numeric",
       month: "long",
       day: "numeric",
     });
-    const formattedEndDate = endDate.toLocaleDateString("ko-KR", {
+    const formattedEndDate = finalEndDate.toLocaleDateString("ko-KR", {
       year: "numeric",
       month: "long",
       day: "numeric",
@@ -724,6 +728,8 @@ export default function ChatScreen() {
               </Text>
               <TouchableOpacity
                 onPress={() => {
+                  // console.log("DatePicker mode:", datePickerMode);
+                  // console.log("다음버튼");
                   if (datePickerMode === "start") {
                     setDatePickerMode("end");
                     setEndDate(
@@ -746,11 +752,17 @@ export default function ChatScreen() {
               is24Hour={true}
               display="inline"
               onChange={(event: DateTimePickerEvent, date?: Date) => {
-                if (date) {
+                // console.log("Selected date:", date);
+                // console.log("DatePicker mode:", datePickerMode);
+                if (event.type === "set" && date) {
                   if (datePickerMode === "start") {
                     setStartDate(date);
+                    setDatePickerMode("end");
+                    setEndDate(new Date(date.getTime() + 24 * 60 * 60 * 1000));
                   } else {
                     setEndDate(date);
+                    handleConfirm(date);
+                    // console.log(date);
                   }
                 }
               }}

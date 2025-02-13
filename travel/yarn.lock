@@ -2345,6 +2345,13 @@
   dependencies:
     invariant "^2.2.4"
 
+"@react-native-community/voice@^1.1.9":
+  version "1.1.9"
+  resolved "https://registry.yarnpkg.com/@react-native-community/voice/-/voice-1.1.9.tgz#461f5d82fe9708b42bec0fe2ebded66d5f08780e"
+  integrity sha512-6QC51lIxdtPyIWyJEG7qsZ0nyRQFV7wUREcnvlQD3+xyk3p5na9LELR+rkIGdxVbLb3WJ73rhgjrc/ywyUh10Q==
+  dependencies:
+    invariant "^2.2.4"
+
 "@react-native-picker/picker@2.9.0":
   version "2.9.0"
   resolved "https://registry.yarnpkg.com/@react-native-picker/picker/-/picker-2.9.0.tgz#0a7053ca174ec697388cb79032fb4c1445554e07"
@@ -5651,6 +5658,11 @@ expo-av@~15.0.2:
   resolved "https://registry.yarnpkg.com/expo-av/-/expo-av-15.0.2.tgz#65bb08658a7fe3a67aa47da614abbfae9adb684e"
   integrity sha512-AHIHXdqLgK1dfHZF0JzX3YSVySGMrWn9QtPzaVjw54FAzvXfMt4sIoq4qRL/9XWCP9+ICcCs/u3EcvmxQjrfcA==
 
+expo-blur@^14.0.3:
+  version "14.0.3"
+  resolved "https://registry.yarnpkg.com/expo-blur/-/expo-blur-14.0.3.tgz#656d6b2442bfbbfb2a6608c6bc1151b29bce6698"
+  integrity sha512-BL3xnqBJbYm3Hg9t/HjNjdeY7N/q8eK5tsLYxswWG1yElISWZmMvrXYekl7XaVCPfyFyz8vQeaxd7q74ZY3Wrw==
+
 expo-camera@^16.0.15:
   version "16.0.15"
   resolved "https://registry.yarnpkg.com/expo-camera/-/expo-camera-16.0.15.tgz#398837551f71619c4e0f936cf6e92b6e330c1c0b"
@@ -5723,10 +5735,15 @@ expo-keep-awake@~14.0.2:
   resolved "https://registry.yarnpkg.com/expo-keep-awake/-/expo-keep-awake-14.0.2.tgz#124a729df43c87994631f51d5b1b5093d58e6c80"
   integrity sha512-71XAMnoWjKZrN8J7Q3+u0l9Ytp4OfhNAYz8BCWF1/9aFUw09J3I7Z5DuI3MUsVMa/KWi+XhG+eDUFP8cVA19Uw==
 
-expo-location@~18.0.5:
-  version "18.0.5"
-  resolved "https://registry.yarnpkg.com/expo-location/-/expo-location-18.0.5.tgz#d9421119a0ae5b91112d24168b57607a70b45686"
-  integrity sha512-fcTtHseRUBh3XiATs2ghycjUJOYEl78lWUuaKRKPZMt+pLhqCX7OstbsySySCHHfz2MudvWaq2yXpe5cDmENzg==
+expo-linear-gradient@^14.0.2:
+  version "14.0.2"
+  resolved "https://registry.yarnpkg.com/expo-linear-gradient/-/expo-linear-gradient-14.0.2.tgz#51fb266d1c7a38349077d243e383cc3d69d4356b"
+  integrity sha512-nvac1sPUfFFJ4mY25UkvubpUV/olrBH+uQw5k+beqSvQaVQiUfFtYzfRr+6HhYBNb4AEsOtpsCRkpDww3M2iGQ==
+
+expo-location@^18.0.5:
+  version "18.0.6"
+  resolved "https://registry.yarnpkg.com/expo-location/-/expo-location-18.0.6.tgz#3134d2c72210ba3168f383f9a91af0fabb0ce237"
+  integrity sha512-+yQsrvkKCCKwy3Xy5v1xcrx7hkIOclJO03itbYF4V6QOrCM6F3xHWbb8ncYOFTgz927mfo6r3Mu7RYykiMDs/g==
 
 expo-manifests@~0.15.5:
   version "0.15.5"
@@ -5772,7 +5789,7 @@ expo-speech-recognition@^1.1.1:
   resolved "https://registry.yarnpkg.com/expo-speech-recognition/-/expo-speech-recognition-1.1.1.tgz#e6172b16898d47983116cff058ee806de91680d5"
   integrity sha512-snQ1rsmQOXUIkkvwW3eCxSZ1FHYQ0lNLeguDTGX0Xg0xOug7zhQDk0/HppAvagfennQBYvQfAHvzUe936aK2LQ==
 
-expo-speech@~13.0.1:
+expo-speech@^13.0.1:
   version "13.0.1"
   resolved "https://registry.yarnpkg.com/expo-speech/-/expo-speech-13.0.1.tgz#f49fc2c8a73f9bada030e52fc86a235cd3963f4a"
   integrity sha512-J7tvFzORsFpIKihMnayeY5lCPc15giDrlN+ws2uUNo0MvLv1HCYEu/5p3+aMmZXXsY5I1QlconD4CwRWw3JFig==
@@ -9383,10 +9400,10 @@ react-native-svg-transformer@^1.5.0:
     "@svgr/plugin-svgo" "^8.1.0"
     path-dirname "^1.0.2"
 
-react-native-svg@15.8.0:
-  version "15.8.0"
-  resolved "https://registry.yarnpkg.com/react-native-svg/-/react-native-svg-15.8.0.tgz#9b5fd4f5cf5675197b3f4cbfcc77c215de2b9502"
-  integrity sha512-KHJzKpgOjwj1qeZzsBjxNdoIgv2zNCO9fVcoq2TEhTRsVV5DGTZ9JzUZwybd7q4giT/H3RdtqC3u44dWdO0Ffw==
+react-native-svg@^15.11.1:
+  version "15.11.1"
+  resolved "https://registry.yarnpkg.com/react-native-svg/-/react-native-svg-15.11.1.tgz#8152459a7a4d40b02e9ac8270f9b0692b3216715"
+  integrity sha512-Qmwx/yJKt+AHUr4zjxx/Q69qwKtRfr1+uIfFMQoq3WFRhqU76aL9db1DyvPiY632DAsVGba1pHf92OZPkpjrdQ==
   dependencies:
     css-select "^5.1.0"
     css-tree "^1.1.3"
