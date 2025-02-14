@@ -77,6 +77,7 @@ cd travel
 npm install
 npx expo start
 yarn add react-native-snap-carousel@4.0.0-beta.6 # carousel 사용에 필요
+npx expo install expo-linear-gradient #새로운 안드로이드 모델 생성시 설치 필요 혹은 오류나면 설치해볼것
 ```
 
 ## 라이선스
