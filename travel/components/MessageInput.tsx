@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 import {
   View,
   TextInput,
@@ -6,30 +6,23 @@ import {
   StyleSheet,
   KeyboardAvoidingView,
   Platform,
+  Keyboard,
 } from "react-native";
 import { Send, Mic } from "lucide-react-native";
 
-type MessageInputProps = {
-  onSend: (text: string) => Promise<void>;
-  onVoiceStart: () => void;
-  isListening: boolean;
-  disabled: boolean;
-};
+interface MessageInputProps {
+  onSend: (message: string) => void;
+  disabled?: boolean;
+  autoFocus?: boolean;
+}
 
 export default function MessageInput({
   onSend,
-  onVoiceStart,
-  isListening,
   disabled,
+  autoFocus,
 }: MessageInputProps) {
-  const [text, setText] = useState("");
-
-  const handleSend = async () => {
-    if (text.trim() && !disabled) {
-      await onSend(text.trim());
-      setText("");
-    }
-  };
+  const [message, setMessage] = useState("");
+  const inputRef = useRef<TextInput>(null);
 
   return (
     <KeyboardAvoidingView
@@ -38,18 +31,36 @@ export default function MessageInput({
     >
       <View style={styles.container}>
         <TextInput
+          ref={inputRef}
           style={[styles.input, disabled && styles.inputDisabled]}
-          value={text}
-          onChangeText={setText}
           placeholder="메시지를 입력하세요..."
+          value={message}
+          onChangeText={setMessage}
           multiline
-          autoFocus={false}
-          editable={!disabled}
+          autoFocus={autoFocus}
+          autoCorrect={false}
+          autoCapitalize="none"
+          enablesReturnKeyAutomatically
+          keyboardType="default"
+          returnKeyType="send"
+          onSubmitEditing={() => {
+            if (message.trim() && !disabled) {
+              onSend(message.trim());
+              setMessage("");
+              Keyboard.dismiss();
+            }
+          }}
         />
         <TouchableOpacity
           style={[styles.button, disabled && styles.buttonDisabled]}
-          onPress={handleSend}
-          disabled={disabled || !text.trim()}
+          onPress={() => {
+            if (message.trim() && !disabled) {
+              onSend(message.trim());
+              setMessage("");
+              Keyboard.dismiss();
+            }
+          }}
+          disabled={!message.trim() || disabled}
         >
           <Send size={24} color={disabled ? "#ccc" : "#007AFF"} />
         </TouchableOpacity>

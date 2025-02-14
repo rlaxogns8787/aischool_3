@@ -14,6 +14,7 @@ export interface WeatherData {
     temp: number;
     condition: string;
   }>;
+  location: string;
 }
 
 export async function getCurrentWeather(
@@ -50,6 +51,7 @@ export async function getCurrentWeather(
       condition: result.phrase || "맑음",
       high: Math.round(result.temperature?.maximum || 24),
       low: Math.round(result.temperature?.minimum || 13),
+      location: location,
       hourly: [
         { time: "9AM", temp: 22, condition: "sunny" },
         { time: "10AM", temp: 23, condition: "sunny" },
@@ -63,17 +65,18 @@ export async function getCurrentWeather(
     console.error("Error fetching weather:", error);
     // 에러 발생 시 기본 날씨 데이터 반환
     return {
-      temperature: 21,
+      temperature: 24,
       condition: "맑음",
-      high: 24,
-      low: 13,
+      high: 27,
+      low: 19,
+      location: "서울 잠실동",
       hourly: [
         { time: "9AM", temp: 22, condition: "sunny" },
         { time: "10AM", temp: 23, condition: "sunny" },
-        { time: "11AM", temp: 18, condition: "sunny" },
-        { time: "12PM", temp: 19, condition: "cloudy" },
-        { time: "1PM", temp: 21, condition: "cloudy" },
-        { time: "2PM", temp: 22, condition: "cloudy" },
+        { time: "11AM", temp: 24, condition: "sunny" },
+        { time: "12PM", temp: 25, condition: "sunny" },
+        { time: "1PM", temp: 26, condition: "sunny" },
+        { time: "2PM", temp: 27, condition: "sunny" },
       ],
     };
   }

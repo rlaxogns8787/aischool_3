@@ -846,6 +846,7 @@ export default function ChatScreen() {
         style={styles.keyboardAvoid}
         behavior={Platform.OS === "ios" ? "padding" : "height"}
         keyboardVerticalOffset={Platform.OS === "ios" ? 90 : 0}
+        enabled
       >
         <View style={styles.messageList}>
           <MessageList
@@ -918,7 +919,11 @@ export default function ChatScreen() {
         )}
 
         <View style={styles.inputContainer}>
-          <MessageInput onSend={handleSendMessage} disabled={isLoading} />
+          <MessageInput
+            onSend={handleSendMessage}
+            disabled={isLoading}
+            autoFocus={false}
+          />
         </View>
       </KeyboardAvoidingView>
     </SafeAreaView>

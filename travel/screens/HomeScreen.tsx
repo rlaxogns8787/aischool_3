@@ -321,7 +321,13 @@ export default function HomeScreen() {
             {isLoading ? (
               <ActivityIndicator size="large" color="white" />
             ) : error ? (
-              <Text style={styles.errorText}>{error}</Text>
+              <>
+                <View style={styles.locationContainer}>
+                  <LocationIcon width={16} height={16} color="#FFFFFF" />
+                  <Text style={styles.location}>서울 잠실동</Text>
+                </View>
+                <Text style={styles.temperature}>24°</Text>
+              </>
             ) : weather ? (
               <>
                 <View style={styles.locationContainer}>
