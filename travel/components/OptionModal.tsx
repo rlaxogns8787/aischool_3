@@ -6,26 +6,37 @@ import {
   StyleSheet,
   Image,
   ScrollView,
+  Dimensions,
 } from "react-native";
 import Modal from "react-native-modal";
 import Carousel from "react-native-snap-carousel";
 import Pagination from "react-native-snap-carousel/src/pagination/Pagination";
+
+const { width: screenWidth } = Dimensions.get("window");
+
+type Place = {
+  image: { uri: string };
+  name: string;
+  address: string;
+  duration: string;
+};
+
+type DayPlan = {
+  day: string;
+  date: string;
+  places: Place[];
+};
 
 type OptionModalProps = {
   isVisible: boolean;
   onClose: () => void;
   images: { uri: string }[];
   themeName: string;
-  rating: number; // 평점 삭제 예정
   description: string;
   keywords: string[];
-  places: { image: { uri: string }; name: string; address: string }[];
+  dayPlans: DayPlan[];
   onShare: () => void;
-  onPlacePress: (place: {
-    image: { uri: string };
-    name: string;
-    address: string;
-  }) => void;
+  onPlacePress: (place: Place) => void;
   onShareWithColleagues: () => void;
 };
 
@@ -34,10 +45,9 @@ const OptionModal: React.FC<OptionModalProps> = ({
   onClose,
   images,
   themeName,
-  rating,
   description,
   keywords,
-  places,
+  dayPlans,
   onShare,
   onPlacePress,
   onShareWithColleagues,
@@ -48,11 +58,6 @@ const OptionModal: React.FC<OptionModalProps> = ({
     <Modal
       isVisible={isVisible}
       onBackdropPress={onClose}
-      // swipeDirection="down"
-      // onSwipeComplete={onClose} //손보거나 제외 라이브러리 문제일수도.. 스와이프해서 종료하기
-      // onSwipeMove={onClose}
-
-      // onTouchMove={onClose}
       onBackButtonPress={onClose}
       style={{
         margin: 0,
@@ -66,31 +71,16 @@ const OptionModal: React.FC<OptionModalProps> = ({
         <TouchableOpacity style={styles.closeButton} onPress={onClose}>
           <Text style={styles.closeButtonText}>X</Text>
         </TouchableOpacity>
-        {/* <Carousel
-          data={images}
-          renderItem={({ item }) => (
-            <Image source={item} style={styles.carouselImage} />
-          )}
-          sliderWidth={300}
-          itemWidth={300}
-        />
-        <View style={styles.carouselIndicatorContainer}>
-          {images.map((_, index) => (
-            <View key={index} style={styles.carouselIndicator} />
-          ))}
-        </View> */}
         <View style={styles.carouselContainer}>
           <Carousel
             data={images}
             renderItem={({ item }) => (
               <Image source={{ uri: item.uri }} style={styles.carouselImage} />
             )}
-            sliderWidth={300}
-            itemWidth={300}
-            // containerCustomStyle={{ height: 300 }}
+            sliderWidth={screenWidth}
+            itemWidth={screenWidth * 0.8}
             containerCustomStyle={styles.carouselContainer}
             onSnapToItem={(index) => setActiveSlide(index)}
-            // loop={true}
             autoplay={true}
             autoplayDelay={5000}
           />
@@ -106,14 +96,8 @@ const OptionModal: React.FC<OptionModalProps> = ({
         </View>
         <View style={styles.header}>
           <Text style={styles.themeName}>{themeName}</Text>
-          {/* <Text style={styles.rating}>⭐ {rating}</Text> */}
-          <TouchableOpacity style={styles.shareButton} onPress={onShare}>
-            <Text style={styles.shareButtonText}>공유하기</Text>
-          </TouchableOpacity>
         </View>
-        <Text style={styles.rating}>⭐ {rating}</Text>
         <Text style={styles.description}>{description}</Text>
-
         <View style={styles.keywordsContainer}>
           {keywords.map((keyword, index) => (
             <View key={index} style={styles.keywordBubble}>
@@ -121,21 +105,40 @@ const OptionModal: React.FC<OptionModalProps> = ({
             </View>
           ))}
         </View>
-        <Text style={styles.placesName}>장소명칭</Text>
-        <ScrollView style={[styles.placesContainer, { height: 270 }]}>
-          {places.map((place, index) => (
-            <TouchableOpacity
-              key={index}
-              style={styles.placeBox}
-              onPress={() => onPlacePress(place)}
-            >
-              <Image source={place.image} style={styles.placeImage} />
-              <View style={styles.placeInfo}>
-                <Text style={styles.placeName}>{place.name}</Text>
-                <Text style={styles.placeAddress}>{place.address}</Text>
-              </View>
-              <Text style={styles.placeArrow}>{">"}</Text>
-            </TouchableOpacity>
+        <ScrollView style={styles.dayPlansContainer}>
+          {dayPlans.map((dayPlan, index) => (
+            <View key={index} style={styles.dayPlanContainer}>
+              <Text style={styles.dayPlanTitle}>
+                <Text style={styles.boldText}>{dayPlan.day}</Text>{" "}
+                {dayPlan.date}
+              </Text>
+              <Carousel
+                data={dayPlan.places}
+                renderItem={({ item }) => (
+                  <View style={styles.placeCard}>
+                    <Image source={item.image} style={styles.placeImage} />
+                    <View style={styles.placeInfo}>
+                      <Text style={styles.placeName}>{item.name}</Text>
+                      <Text style={styles.placeAddress}>{item.address}</Text>
+                      <Text style={styles.placeDuration}>{item.duration}</Text>
+                    </View>
+                    <TouchableOpacity
+                      style={styles.removeButton}
+                      onPress={() => onPlacePress(item)}
+                    >
+                      <Text style={styles.removeButtonText}>-</Text>
+                    </TouchableOpacity>
+                  </View>
+                )}
+                sliderWidth={screenWidth}
+                itemWidth={screenWidth * 0.72}
+                containerCustomStyle={styles.carouselContainer}
+                contentContainerCustomStyle={{
+                  paddingLeft: 0,
+                  paddingRight: screenWidth * 0.1,
+                }}
+              />
+            </View>
           ))}
         </ScrollView>
         <TouchableOpacity
@@ -171,26 +174,18 @@ const styles = StyleSheet.create({
     color: "black",
   },
   carouselImage: {
-    width: 300,
+    width: screenWidth * 0.8,
     height: 200,
     borderRadius: 10,
   },
   carouselContainer: {
-    // ...other styles
-    height: 300,
-    width: 300,
-    // borderWidth: 1,
-    bottom: -30,
+    height: 250,
   },
   carouselIndicatorContainer: {
     flexDirection: "row",
     justifyContent: "center",
-    marginVertical: 0,
-    bottom: 50,
-    // borderWidth: 1,
-    width: 300,
+    marginVertical: 10,
   },
-
   activeDot: {
     width: 10,
     height: 10,
@@ -203,89 +198,75 @@ const styles = StyleSheet.create({
     borderRadius: 5,
     backgroundColor: "lightgray",
   },
-  // carouselIndicator: {
-  //   width: 8,
-  //   height: 8,
-  //   borderRadius: 4,
-  //   backgroundColor: "gray",
-  //   marginHorizontal: 4,
-  // },
   header: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
     width: "100%",
     marginVertical: 10,
-    // borderWidth: 1,
   },
   themeName: {
     fontSize: 18,
     fontWeight: "bold",
-    // borderWidth: 1,
-  },
-  rating: {
-    fontSize: 16,
-    color: "gold",
-    alignSelf: "flex-start",
-    // borderWidth: 1,
-    bottom: 10,
-  },
-  shareButton: {
-    backgroundColor: "#007AFF",
-    padding: 10,
-    borderRadius: 5,
-  },
-  shareButtonText: {
-    color: "white",
   },
   description: {
     fontSize: 14,
     color: "#666",
     marginVertical: 10,
     alignSelf: "flex-start",
-    // borderWidth: 1,
-    bottom: 10,
   },
-
   keywordsContainer: {
     flexDirection: "row",
     flexWrap: "wrap",
     marginVertical: 10,
-    alignSelf: "flex-start",
     // borderWidth: 1,
-    bottom: 10,
+    alignSelf: "flex-start",
   },
   keywordBubble: {
-    backgroundColor: "#f2f2f2",
+    backgroundColor: "#EAF2FF",
     padding: 8,
     borderRadius: 15,
     margin: 5,
   },
   keywordText: {
     fontSize: 12,
-    color: "#333",
-  },
-  placesName: {
-    fontSize: 16,
+    color: "#006CF7",
     fontWeight: "bold",
-    marginVertical: 10,
-    alignSelf: "flex-start",
-    // borderWidth: 1,
-    bottom: 10,
   },
-  placesContainer: {
-    width: "100%",
-    marginVertical: 10,
-    // borderWidth: 1,
-    bottom: 10,
+  dayPlansContainer: {
+    maxHeight: 400,
+    marginBottom: 10,
   },
-  placeBox: {
-    flexDirection: "row",
-    alignItems: "center",
-    padding: 10,
-    backgroundColor: "#f9f9f9",
+  dayPlanContainer: {
+    marginVertical: 5, // 간격을 좁힘
+    borderWidth: 0,
+    borderColor: "#ddd",
     borderRadius: 5,
-    marginVertical: 5,
+    padding: 10,
+    marginBottom: -150,
+    marginLeft: 0,
+    alignItems: "flex-start",
+    justifyContent: "flex-start",
+    width: screenWidth * 0.9,
+  },
+  dayPlanTitle: {
+    fontSize: 18,
+    fontWeight: "bold",
+    marginBottom: 5, // 간격을 좁힘
+  },
+  boldText: {
+    fontWeight: "bold",
+  },
+  placeCard: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    padding: 10,
+    backgroundColor: "#F8F9FE",
+    borderRadius: 5,
+    marginVertical: 10,
+    // borderWidth: 0.5,
+    // borderColor: "#B4F0FC",
+    width: screenWidth * 0.66,
   },
   placeImage: {
     width: 80,
@@ -304,9 +285,26 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: "#666",
   },
-  placeArrow: {
-    fontSize: 25,
-    color: "#007AFF",
+  placeDuration: {
+    fontSize: 12,
+    color: "#666",
+  },
+  removeButton: {
+    position: "absolute",
+    right: 10,
+    bottom: 10,
+    width: 30, // 원의 지름
+    height: 30, // 원의 지름
+    borderRadius: 15, // 원의 반지름
+    backgroundColor: "#FACECB",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  removeButtonText: {
+    fontSize: 40, // 텍스트 크기
+
+    color: "red",
+    lineHeight: 36, // 텍스트 높이
   },
   shareWithColleaguesButton: {
     backgroundColor: "#007AFF",
