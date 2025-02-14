@@ -76,6 +76,7 @@ python app.py
 cd travel
 npm install
 npx expo start
+yarn add react-native-snap-carousel@4.0.0-beta.6 # carousel 사용에 필요
 ```
 
 ## 라이선스
