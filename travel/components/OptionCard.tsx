@@ -19,19 +19,21 @@ const OptionCard: React.FC<OptionCardProps> = ({
   onPress,
 }) => {
   return (
-    <View style={styles.card}>
-      <Image source={{ uri: image }} style={styles.image} />
-      <View style={styles.peopleContainer}>
-        <Text style={styles.people}>{people}</Text>
+    <View>
+      <View style={styles.card}>
+        <Image source={{ uri: image }} style={styles.image} />
+        <View style={styles.peopleContainer}>
+          <Text style={styles.people}>{people}</Text>
+        </View>
+        <View style={styles.content}>
+          <Text style={styles.title}>{title}</Text>
+          <Text style={styles.date}>{date}</Text>
+          <Text style={styles.info}>{info}</Text>
+        </View>
+        <TouchableOpacity style={styles.button} onPress={onPress}>
+          <Text style={styles.buttonText}>상세보기</Text>
+        </TouchableOpacity>
       </View>
-      <View style={styles.content}>
-        <Text style={styles.title}>{title}</Text>
-        <Text style={styles.date}>{date}</Text>
-        <Text style={styles.info}>{info}</Text>
-      </View>
-      <TouchableOpacity style={styles.button} onPress={onPress}>
-        <Text style={styles.buttonText}>상세보기</Text>
-      </TouchableOpacity>
     </View>
   );
 };
