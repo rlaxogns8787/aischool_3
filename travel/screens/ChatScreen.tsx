@@ -5,6 +5,7 @@ import {
   Platform,
   TouchableOpacity,
   Text,
+  Alert,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useNavigation, NavigationProp } from "@react-navigation/native";
@@ -20,6 +21,7 @@ import { Message, MessageOption } from "../types/chat";
 import { INITIAL_MESSAGE, COMPANION_OPTIONS } from "../constants/chat";
 import { formatDate, extractTripInfo } from "../utils/messageUtils";
 import { Schedule } from "../types/schedule";
+import RefreshChatIcon from "../assets/refreshchat.svg";
 
 type RootStackParamList = {
   Chat: undefined;
@@ -47,6 +49,18 @@ const OptionButton = ({
   </TouchableOpacity>
 );
 
+// 메시지 타입 정의 추가
+interface AIResponse {
+  timestamp: string;
+  message: string;
+  type: "ai" | "user";
+  metadata?: {
+    location?: string;
+    topic?: string;
+    context?: string;
+  };
+}
+
 export default function ChatScreen() {
   const navigation = useNavigation<NavigationProp<RootStackParamList>>();
   const [messages, setMessages] = useState<Message[]>([]);
@@ -61,6 +75,9 @@ export default function ChatScreen() {
   const [selectedStartDate, setSelectedStartDate] = useState<Date | null>(null);
   const [selectedEndDate, setSelectedEndDate] = useState<Date | null>(null);
   const [isSelectingEndDate, setIsSelectingEndDate] = useState(false);
+
+  // AI 응답 저장을 위한 state 추가
+  const [aiResponses, setAiResponses] = useState<AIResponse[]>([]);
 
   // 초기 메시지 설정
   useEffect(() => {
@@ -202,47 +219,58 @@ export default function ChatScreen() {
   };
 
   // 날짜 선택 처리 함수 수정
+  const handleConfirm = () => {
+    try {
+      const formattedStartDate = startDate.toLocaleDateString("ko-KR", {
+        year: "numeric",
+        month: "long",
+        day: "numeric",
+      });
 
-  const handleConfirm = (finalEndDate: Date) => {
-    // console.log("handleConfirm 호출됨");
-    // console.log("startDate:", startDate);
-    // console.log("endDate:", endDate);
-    const formattedStartDate = startDate.toLocaleDateString("ko-KR", {
-      year: "numeric",
-      month: "long",
-      day: "numeric",
-    });
-    const formattedEndDate = finalEndDate.toLocaleDateString("ko-KR", {
-      year: "numeric",
-      month: "long",
-      day: "numeric",
-    });
+      const formattedEndDate = endDate.toLocaleDateString("ko-KR", {
+        year: "numeric",
+        month: "long",
+        day: "numeric",
+      });
 
-    // 여행 기간 계산
-    const days = Math.ceil(
-      (endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)
-    );
-    const nights = days - 1;
-    const duration = `${nights}박${days}일`;
+      // 여행 기간 계산 수정
+      const days = Math.ceil(
+        (endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)
+      ); // +1 제거
+      const nights = days; // 당일치기면 0박, 1박이상이면 days값 그대로 사용
+      const duration = `${nights}박${days + 1}일`; // 일수는 +1 (당일 포함)
 
-    const confirmMessage: Message = {
-      id: Date.now().toString(),
-      text: `${formattedStartDate}부터 ${formattedEndDate}까지 ${duration} 여행을 계획하시는군요!`,
-      isBot: true,
-      timestamp: new Date().toISOString(),
-    };
+      const confirmMessage: Message = {
+        id: Date.now().toString(),
+        text: `${formattedStartDate}부터 ${formattedEndDate}까지 ${duration} 여행을 계획하시는군요!`,
+        isBot: true,
+        timestamp: new Date().toISOString(),
+      };
 
-    const nextQuestion: Message = {
-      id: (Date.now() + 1).toString(),
-      text: "누구와 함께 여행하시나요?",
-      isBot: true,
-      timestamp: new Date().toISOString(),
-      options: COMPANION_OPTIONS,
-    };
+      const nextQuestion: Message = {
+        id: (Date.now() + 1).toString(),
+        text: "누구와 함께 여행하시나요?",
+        isBot: true,
+        timestamp: new Date().toISOString(),
+        options: COMPANION_OPTIONS,
+      };
 
-    updateMessages([confirmMessage, nextQuestion], "여행 날짜를 선택해주세요");
+      updateMessages(
+        [confirmMessage, nextQuestion],
+        "여행 날짜를 선택해주세요"
+      );
+      setDatePickerVisible(false);
 
-    setDatePickerVisible(false);
+      // 디버그 로그
+      console.log("Date selection completed:", {
+        startDate: formattedStartDate,
+        endDate: formattedEndDate,
+        duration,
+      });
+    } catch (error) {
+      console.error("Date handling error:", error);
+      Alert.alert("오류", "날짜 처리 중 오류가 발생했습니다.");
+    }
   };
 
   // 메시지 전송 처리
@@ -574,6 +602,33 @@ export default function ChatScreen() {
           // AI 일정 생성
           const aiResponse = await generateTravelSchedule(tripInfo);
 
+          // 일정 생성 로그
+          console.log("=== Travel Schedule Generated ===");
+          console.log(
+            JSON.stringify(
+              {
+                timestamp: new Date().toISOString(),
+                tripInfo: {
+                  startDate: tripInfo.startDate,
+                  endDate: tripInfo.endDate,
+                  duration: `${tripInfo.nights}박${tripInfo.days}일`,
+                  companion: tripInfo.companion,
+                  budget: tripInfo.budget,
+                  transportation: tripInfo.transportation,
+                  preferences: tripInfo.preferences,
+                },
+                generatedSchedule: aiResponse,
+                metadata: {
+                  userInteractions: messages.filter((m) => !m.isBot).length,
+                  generationTime: new Date().toISOString(),
+                },
+              },
+              null,
+              2
+            )
+          );
+          console.log("================================");
+
           // 생성된 일정으로 메시지 교체
           const scheduleMessage: Message = {
             id: Date.now().toString(),
@@ -687,6 +742,90 @@ export default function ChatScreen() {
     );
   };
 
+  // AI 응답 저장을 위한 함수 추가
+  const handleAIResponse = (response: string) => {
+    // 새로운 AI 응답 객체 생성
+    const newResponse: AIResponse = {
+      timestamp: new Date().toISOString(),
+      message: response,
+      type: "ai",
+      metadata: {
+        location: "현재 위치", // 실제 위치 정보로 대체 필요
+        topic: currentTopic, // 현재 대화 주제
+        context: "chat", // 컨텍스트 정보
+      },
+    };
+
+    // 응답 저장
+    setAiResponses((prev) => [...prev, newResponse]);
+
+    // 콘솔에 JSON 형식으로 로깅
+    console.log("=== New AI Response ===");
+    console.log(JSON.stringify(newResponse, null, 2));
+    console.log("=====================");
+
+    // 기존 메시지 처리 로직
+    setMessages((prevMessages) => [
+      ...prevMessages,
+      {
+        content: response,
+        role: "assistant",
+      },
+    ]);
+  };
+
+  // processMessageToChatGPT 함수 수정
+  const processMessageToChatGPT = async (userMessage: string) => {
+    try {
+      setIsLoading(true);
+      const response = await processQuery(userMessage);
+
+      if (response) {
+        // AI 응답 처리
+        handleAIResponse(response);
+      }
+    } catch (error) {
+      console.error("Error processing message:", error);
+      Alert.alert("오류", "메시지 처리 중 오류가 발생했습니다.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // formatDate 헬퍼 함수 추가
+  const formatDate = (date: Date): string => {
+    try {
+      return date.toLocaleDateString("ko-KR", {
+        year: "numeric",
+        month: "long",
+        day: "numeric",
+      });
+    } catch (error) {
+      console.error("Date formatting error:", error);
+      return "날짜 형식 오류";
+    }
+  };
+
+  const resetChat = () => {
+    Alert.alert("대화 초기화", "대화를 처음부터 다시 시작하시겠습니까?", [
+      {
+        text: "취소",
+        style: "cancel",
+      },
+      {
+        text: "확인",
+        onPress: () => {
+          setMessages([INITIAL_MESSAGE]);
+          setShowOptions(true);
+          setDatePickerVisible(false);
+          setStartDate(new Date());
+          setEndDate(new Date());
+          setDatePickerMode("start");
+        },
+      },
+    ]);
+  };
+
   return (
     <SafeAreaView style={styles.container}>
       {/* Navigation Bar */}
@@ -698,6 +837,9 @@ export default function ChatScreen() {
           <Icon name="chevron-back" size={24} color="#007AFF" />
         </TouchableOpacity>
         <Text style={styles.navTitle}>AI 여행 플래너</Text>
+        <TouchableOpacity style={styles.refreshButton} onPress={resetChat}>
+          <RefreshChatIcon width={24} height={24} />
+        </TouchableOpacity>
       </View>
 
       <KeyboardAvoidingView
@@ -728,8 +870,6 @@ export default function ChatScreen() {
               </Text>
               <TouchableOpacity
                 onPress={() => {
-                  // console.log("DatePicker mode:", datePickerMode);
-                  // console.log("다음버튼");
                   if (datePickerMode === "start") {
                     setDatePickerMode("end");
                     setEndDate(
@@ -752,17 +892,21 @@ export default function ChatScreen() {
               is24Hour={true}
               display="inline"
               onChange={(event: DateTimePickerEvent, date?: Date) => {
-                // console.log("Selected date:", date);
-                // console.log("DatePicker mode:", datePickerMode);
                 if (event.type === "set" && date) {
                   if (datePickerMode === "start") {
                     setStartDate(date);
                     setDatePickerMode("end");
-                    setEndDate(new Date(date.getTime() + 24 * 60 * 60 * 1000));
+                    setEndDate(date); // 시작일과 동일한 날짜로 초기화
                   } else {
-                    setEndDate(date);
-                    handleConfirm(date);
-                    // console.log(date);
+                    if (date >= startDate) {
+                      setEndDate(date);
+                      handleConfirm();
+                    } else {
+                      Alert.alert(
+                        "알림",
+                        "종료일은 시작일과 같거나 이후여야 합니다."
+                      );
+                    }
                   }
                 }
               }}

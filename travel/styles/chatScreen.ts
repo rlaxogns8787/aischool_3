@@ -128,4 +128,9 @@ export const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "600",
   },
+  refreshButton: {
+    position: 'absolute',
+    right: 16,
+    padding: 8,
+  },
 });
