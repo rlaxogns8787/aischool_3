@@ -161,7 +161,7 @@ export default function MessageList({
               {message.isBot &&
                 message.text.includes("여행 일정이 생성되었습니다") && (
                   <OptionCard
-                    image="https://png.pngtree.com/png-vector/20231215/ourmid/pngtree-star-icon-png-image_11363937.png" // 실제 이미지 URL로 변경
+                    image="https://cdn.informaticsview.com/news/photo/202408/480_1718_1317.jpg" // 실제 이미지 URL로 변경
                     people="2명"
                     title="여행 일정"
                     date="3박 4일"
@@ -169,9 +169,9 @@ export default function MessageList({
                     onPress={() =>
                       handleCardPress({
                         image: {
-                          uri: "https://png.pngtree.com/png-vector/20231215/ourmid/pngtree-star-icon-png-image_11363937.png",
+                          uri: "https://cdn.informaticsview.com/news/photo/202408/480_1718_1317.jpg",
                         },
-                        keyword: "2명",
+                        keyword: "여행",
                         title: "여행 일정",
                         address: "3박 4일",
                       })

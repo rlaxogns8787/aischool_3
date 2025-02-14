@@ -40,8 +40,8 @@ const OptionCard: React.FC<OptionCardProps> = ({
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: "#fff",
-    borderRadius: 10,
+    backgroundColor: "#F8F9FE",
+    borderRadius: 30,
     shadowColor: "#000",
     shadowOpacity: 0.1,
     shadowOffset: { width: 0, height: 2 },
@@ -84,9 +84,11 @@ const styles = StyleSheet.create({
   button: {
     backgroundColor: "#007AFF",
     padding: 10,
-    borderRadius: 5,
+    borderRadius: 12,
     alignItems: "center",
     margin: 10,
+    width: "80%",
+    alignSelf: "center",
   },
   buttonText: {
     color: "#fff",
