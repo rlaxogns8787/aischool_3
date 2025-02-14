@@ -5653,10 +5653,10 @@ expo-asset@~11.0.3:
     invariant "^2.2.4"
     md5-file "^3.2.3"
 
-expo-av@~15.0.2:
-  version "15.0.2"
-  resolved "https://registry.yarnpkg.com/expo-av/-/expo-av-15.0.2.tgz#65bb08658a7fe3a67aa47da614abbfae9adb684e"
-  integrity sha512-AHIHXdqLgK1dfHZF0JzX3YSVySGMrWn9QtPzaVjw54FAzvXfMt4sIoq4qRL/9XWCP9+ICcCs/u3EcvmxQjrfcA==
+expo-av@~13.10.5:
+  version "13.10.6"
+  resolved "https://registry.yarnpkg.com/expo-av/-/expo-av-13.10.6.tgz#ca1b5d0c46a016069f653c1740a25516ffc730a2"
+  integrity sha512-h3c1fg5yhWnP0RIGO+fhgPx6cmh4B4lnKdXR2i69aC3vs5D5Cu+JlzBon1gLIu6eUo2IVfC0RjSLpfQbcJ4doQ==
 
 expo-blur@^14.0.3:
   version "14.0.3"
@@ -7933,7 +7933,7 @@ micromatch@^4.0.2, micromatch@^4.0.4, micromatch@^4.0.7, micromatch@^4.0.8:
     braces "^3.0.3"
     picomatch "^2.3.1"
 
-microsoft-cognitiveservices-speech-sdk@^1.42.0:
+microsoft-cognitiveservices-speech-sdk@^1.34.0:
   version "1.42.0"
   resolved "https://registry.yarnpkg.com/microsoft-cognitiveservices-speech-sdk/-/microsoft-cognitiveservices-speech-sdk-1.42.0.tgz#37869d68ed5a8c80dbfbaae7aa6b015c558ff673"
   integrity sha512-ERrS1rwPPCN1foOwlJv3XmKO4NtBchjW+zYPQBgv4ffRfh87DcxuISXICPDjvlAU61w/r+y6p1W0pnX3gwVZ7A==
