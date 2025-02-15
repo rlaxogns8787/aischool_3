@@ -17,7 +17,7 @@ import DateTimePicker, {
   DateTimePickerEvent,
 } from "@react-native-community/datetimepicker";
 import { styles } from "../styles/chatScreen";
-import { Message, MessageOption } from "../types/chat";
+import { Message, MessageOption, TripInfo } from "../types/chat";
 import { INITIAL_MESSAGE, COMPANION_OPTIONS } from "../constants/chat";
 import { formatDate, extractTripInfo } from "../utils/messageUtils";
 import { Schedule } from "../types/schedule";
@@ -532,7 +532,7 @@ export default function ChatScreen() {
       ) {
         try {
           // 먼저 사용자의 모든 선택사항을 수집
-          const tripInfo = {
+          const tripInfo: TripInfo = {
             styles: messages
               .find((msg) => msg.text.includes("을(를) 선택하셨네요"))
               ?.text.split("을(를) 선택하셨네요")[0]
@@ -615,7 +615,7 @@ export default function ChatScreen() {
                   companion: tripInfo.companion,
                   budget: tripInfo.budget,
                   transportation: tripInfo.transportation,
-                  preferences: tripInfo.preferences,
+                  preferences: tripInfo.styles,
                 },
                 generatedSchedule: aiResponse,
                 metadata: {
@@ -893,14 +893,20 @@ export default function ChatScreen() {
               is24Hour={true}
               display="inline"
               onChange={(event: DateTimePickerEvent, date?: Date) => {
+                console.log("Date selected:", date);
+                console.log("startDate:", startDate);
+                console.log("endDate:", endDate);
                 if (event.type === "set" && date) {
                   if (datePickerMode === "start") {
                     setStartDate(date);
+                    setSelectedStartDate(date);
                     setDatePickerMode("end");
                     setEndDate(date); // 시작일과 동일한 날짜로 초기화
+                    setSelectedEndDate(date);
                   } else {
                     if (date >= startDate) {
                       setEndDate(date);
+                      setSelectedEndDate(date);
                       handleConfirm();
                     } else {
                       Alert.alert(
