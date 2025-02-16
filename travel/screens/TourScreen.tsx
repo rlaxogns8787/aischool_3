@@ -92,7 +92,6 @@ export default function TourScreen() {
     id: "ko-KR-SunHiNeural",
     description: "차분하고 전문적인 성우 음성",
   });
-  const [initialVoiceSelection, setInitialVoiceSelection] = useState(true);
 
   // 사용자 관심사를 "요리"로 고정
   const userInterest = "요리";
@@ -130,27 +129,14 @@ export default function TourScreen() {
     },
   ];
 
-  // useEffect 추가 - 컴포넌트 마운트 시 음성 선택 모달 표시
-  useEffect(() => {
-    if (initialVoiceSelection) {
-      setShowVoiceModal(true);
-    }
-  }, [initialVoiceSelection]);
-
   // 음성 선택 핸들러 수정
   const handleVoiceSelect = async (voice: VoiceType) => {
     setSelectedVoice(voice);
     setShowVoiceModal(false);
-    setInitialVoiceSelection(false);
 
-    if (initialVoiceSelection) {
-      // 최초 선택 시 도슨트 가이드 시작
-      const nearbySpot = findNearbySpot(
-        currentLocation?.coords || {
-          latitude: 37.579617,
-          longitude: 126.977041,
-        }
-      );
+    // 현재 위치에 대한 새로운 설명 생성
+    if (currentLocation) {
+      const nearbySpot = findNearbySpot(currentLocation.coords);
       if (nearbySpot) {
         const guideText = await generateTourGuide(
           nearbySpot.name,
@@ -158,25 +144,6 @@ export default function TourScreen() {
         );
         setIsGuiding(true);
         startSpeaking(guideText);
-      }
-    } else {
-      // 음성 변경 시 현재 위치에 대한 설명을 새로운 스타일로 재생성
-      const nearbySpot = findNearbySpot(
-        currentLocation?.coords || {
-          latitude: 37.579617,
-          longitude: 126.977041,
-        }
-      );
-      if (nearbySpot) {
-        // 잠시 대기 후 새로운 음성으로 시작 (음성 전환을 위한 딜레이)
-        setTimeout(async () => {
-          const newGuideText = await generateTourGuide(
-            nearbySpot.name,
-            userInterest
-          );
-          setIsGuiding(true);
-          startSpeaking(newGuideText);
-        }, 100);
       }
     }
   };
@@ -463,16 +430,22 @@ export default function TourScreen() {
           personality: "차분하고 전문적인 성우",
           style: "정확하고 전문적인 설명과 함께 역사적 맥락을 중요시하는",
           tone: "우아하고 세련된",
+          examples:
+            "이곳은 조선 시대 최고의 궁중 음식이 만들어지던 수랏간이 있던 자리입니다. 왕실의 식문화를 엿볼 수 있는 소중한 공간이지요.",
         },
         "ko-KR-JiMinNeural": {
           personality: "밝고 친근한 청년",
-          style: "재미있는 일화와 현대적인 관점을 곁들인 친근한",
-          tone: "활기차고 경쾌한",
+          style: "재미있는 일화와 현대적인 관점을 곁들인 친근하고 캐주얼한",
+          tone: "활기차고 경쾌한 반말",
+          examples:
+            "안녕! 내가 오늘 진짜 재밌는 이야기 들려줄게~ 여기가 바로 조선시대 '임금님의 맛남의 광장'이 펼쳐졌던 곳이야! 궁중 셰프들이 실력 발휘하면서 임금님 리액션도 받았다는 TMI까지 알려줄게 ㅎㅎ",
         },
         "ko-KR-InJoonNeural": {
           personality: "부드럽고 차분한 남성",
           style: "깊이 있는 통찰과 철학적인 관점을 담은",
           tone: "차분하고 사려 깊은",
+          examples:
+            "이 공간에서 우리는 조선 왕실의 식문화가 얼마나 정교했는지를 엿볼 수 있습니다. 음식을 통해 국가의 위엄을 보여주었던 것이지요.",
         },
       } as const;
 
@@ -615,41 +588,6 @@ export default function TourScreen() {
     };
   });
 
-  // 음성 모달 스타일 수정
-  const modalStyles = StyleSheet.create({
-    initialModalOverlay: {
-      position: "absolute",
-      top: 0,
-      left: 0,
-      right: 0,
-      bottom: 0,
-      backgroundColor: "rgba(0, 0, 0, 0.7)",
-      justifyContent: "center",
-      alignItems: "center",
-      zIndex: 1000,
-    },
-    initialModalContent: {
-      backgroundColor: "#FFFFFF",
-      borderRadius: 16,
-      padding: 20,
-      width: "80%",
-      maxWidth: 400,
-    },
-    modalTitle: {
-      fontSize: 20,
-      fontWeight: "600",
-      marginBottom: 16,
-      color: "#000000",
-      textAlign: "center",
-    },
-    modalSubtitle: {
-      fontSize: 14,
-      color: "#666666",
-      marginBottom: 20,
-      textAlign: "center",
-    },
-  });
-
   if (!isAudioReady) {
     return (
       <View style={styles.loadingContainer}>
@@ -680,27 +618,9 @@ export default function TourScreen() {
 
       {/* 음성 선택 모달 */}
       {showVoiceModal && (
-        <View
-          style={
-            initialVoiceSelection
-              ? modalStyles.initialModalOverlay
-              : styles.modalOverlay
-          }
-        >
-          <View
-            style={
-              initialVoiceSelection
-                ? modalStyles.initialModalContent
-                : styles.modalContent
-            }
-          >
-            <Text style={modalStyles.modalTitle}>도슨트 음성 선택</Text>
-            {initialVoiceSelection && (
-              <Text style={modalStyles.modalSubtitle}>
-                도슨트의 목소리를 선택해주세요. 나중에 언제든 변경할 수
-                있습니다.
-              </Text>
-            )}
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>도슨트 음성 선택</Text>
             {voiceTypes.map((voice) => (
               <TouchableOpacity
                 key={voice.id}
