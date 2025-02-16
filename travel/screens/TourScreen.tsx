@@ -92,6 +92,7 @@ export default function TourScreen() {
     id: "ko-KR-SunHiNeural",
     description: "차분하고 전문적인 성우 음성",
   });
+  const [initialVoiceSelection, setInitialVoiceSelection] = useState(true);
 
   // 사용자 관심사를 "요리"로 고정
   const userInterest = "요리";
@@ -129,10 +130,55 @@ export default function TourScreen() {
     },
   ];
 
-  // 음성 선택 핸들러
-  const handleVoiceSelect = (voice: VoiceType) => {
+  // useEffect 추가 - 컴포넌트 마운트 시 음성 선택 모달 표시
+  useEffect(() => {
+    if (initialVoiceSelection) {
+      setShowVoiceModal(true);
+    }
+  }, [initialVoiceSelection]);
+
+  // 음성 선택 핸들러 수정
+  const handleVoiceSelect = async (voice: VoiceType) => {
     setSelectedVoice(voice);
     setShowVoiceModal(false);
+    setInitialVoiceSelection(false);
+
+    if (initialVoiceSelection) {
+      // 최초 선택 시 도슨트 가이드 시작
+      const nearbySpot = findNearbySpot(
+        currentLocation?.coords || {
+          latitude: 37.579617,
+          longitude: 126.977041,
+        }
+      );
+      if (nearbySpot) {
+        const guideText = await generateTourGuide(
+          nearbySpot.name,
+          userInterest
+        );
+        setIsGuiding(true);
+        startSpeaking(guideText);
+      }
+    } else {
+      // 음성 변경 시 현재 위치에 대한 설명을 새로운 스타일로 재생성
+      const nearbySpot = findNearbySpot(
+        currentLocation?.coords || {
+          latitude: 37.579617,
+          longitude: 126.977041,
+        }
+      );
+      if (nearbySpot) {
+        // 잠시 대기 후 새로운 음성으로 시작 (음성 전환을 위한 딜레이)
+        setTimeout(async () => {
+          const newGuideText = await generateTourGuide(
+            nearbySpot.name,
+            userInterest
+          );
+          setIsGuiding(true);
+          startSpeaking(newGuideText);
+        }, 100);
+      }
+    }
   };
 
   // 텍스트를 점진적으로 표시하는 함수 수정
@@ -411,13 +457,37 @@ export default function TourScreen() {
   const generateTourGuide = async (location: string, interest: string) => {
     setIsLoading(true);
     try {
+      // 선택된 음성에 따른 캐릭터 특성 정의
+      const characterTraits = {
+        "ko-KR-SunHiNeural": {
+          personality: "차분하고 전문적인 성우",
+          style: "정확하고 전문적인 설명과 함께 역사적 맥락을 중요시하는",
+          tone: "우아하고 세련된",
+        },
+        "ko-KR-JiMinNeural": {
+          personality: "밝고 친근한 청년",
+          style: "재미있는 일화와 현대적인 관점을 곁들인 친근한",
+          tone: "활기차고 경쾌한",
+        },
+        "ko-KR-InJoonNeural": {
+          personality: "부드럽고 차분한 남성",
+          style: "깊이 있는 통찰과 철학적인 관점을 담은",
+          tone: "차분하고 사려 깊은",
+        },
+      } as const;
+
+      // 타입 안전성을 위한 체크 추가
+      let selectedCharacter =
+        characterTraits[selectedVoice.id as keyof typeof characterTraits] ||
+        characterTraits["ko-KR-SunHiNeural"]; // 기본값 설정
+
       const messages = [
         {
           role: "system",
-          content: `당신은 전문 도슨트입니다. ${interest} 분야에 관심이 많은 관광객을 위해 
-          ${location}에 대한 전문적이고 흥미로운 설명을 제공해주세요.
+          content: `당신은 ${selectedCharacter.personality} 도슨트입니다. ${interest} 분야에 관심이 많은 관광객을 위해 
+          ${location}에 대한 ${selectedCharacter.style} 설명을 제공해주세요.
           
-          특히 ${interest}와 관련된 내용을 상세히 다루되, 다음 사항을 포함해주세요:
+          당신의 말투는 ${selectedCharacter.tone} 어조를 유지하며, 다음 사항을 포함해주세요:
           - ${interest} 관점에서 본 ${location}만의 특별한 점
           - 관련된 전문적인 용어와 설명
           - 일반 관광 가이드에서는 접할 수 없는 심층적인 정보
@@ -427,7 +497,12 @@ export default function TourScreen() {
           1) 최대 200자 내외의 짧은 해설을 지향합니다.
           2) 장소의 역사/배경 + 재미있는 TMI(1~2줄) 포함.
           3) 너무 긴 문장보다, 짧은 문장 중심.
-          4) 필요 시 감탄사나 비유적 표현을 적절히 사용.`,
+          4) 각 캐릭터의 특성에 맞는 어투와 표현을 사용.
+          
+          예시 어투:
+          선희: "이곳은 조선시대 최고의 궁중 음식이 만들어지던 수랏간이 있던 자리입니다."
+          지민: "와, 여러분~ 여기가 바로 조선 시대 임금님의 진수성찬이 탄생한 곳이에요!"
+          인주: "이 공간에서 우리는 조선 왕실의 식문화가 얼마나 정교했는지를 엿볼 수 있죠."`,
         },
         {
           role: "user",
@@ -460,6 +535,11 @@ export default function TourScreen() {
 
       const data = await response.json();
       const content = data.choices[0].message.content;
+
+      if (!content) {
+        throw new Error("No content in response");
+      }
+
       setTourGuide("");
       animateText(content);
       return content;
@@ -535,6 +615,41 @@ export default function TourScreen() {
     };
   });
 
+  // 음성 모달 스타일 수정
+  const modalStyles = StyleSheet.create({
+    initialModalOverlay: {
+      position: "absolute",
+      top: 0,
+      left: 0,
+      right: 0,
+      bottom: 0,
+      backgroundColor: "rgba(0, 0, 0, 0.7)",
+      justifyContent: "center",
+      alignItems: "center",
+      zIndex: 1000,
+    },
+    initialModalContent: {
+      backgroundColor: "#FFFFFF",
+      borderRadius: 16,
+      padding: 20,
+      width: "80%",
+      maxWidth: 400,
+    },
+    modalTitle: {
+      fontSize: 20,
+      fontWeight: "600",
+      marginBottom: 16,
+      color: "#000000",
+      textAlign: "center",
+    },
+    modalSubtitle: {
+      fontSize: 14,
+      color: "#666666",
+      marginBottom: 20,
+      textAlign: "center",
+    },
+  });
+
   if (!isAudioReady) {
     return (
       <View style={styles.loadingContainer}>
@@ -565,9 +680,27 @@ export default function TourScreen() {
 
       {/* 음성 선택 모달 */}
       {showVoiceModal && (
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>도슨트 음성 선택</Text>
+        <View
+          style={
+            initialVoiceSelection
+              ? modalStyles.initialModalOverlay
+              : styles.modalOverlay
+          }
+        >
+          <View
+            style={
+              initialVoiceSelection
+                ? modalStyles.initialModalContent
+                : styles.modalContent
+            }
+          >
+            <Text style={modalStyles.modalTitle}>도슨트 음성 선택</Text>
+            {initialVoiceSelection && (
+              <Text style={modalStyles.modalSubtitle}>
+                도슨트의 목소리를 선택해주세요. 나중에 언제든 변경할 수
+                있습니다.
+              </Text>
+            )}
             {voiceTypes.map((voice) => (
               <TouchableOpacity
                 key={voice.id}
