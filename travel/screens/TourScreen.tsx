@@ -160,27 +160,23 @@ export default function TourScreen() {
   // 텍스트를 점진적으로 표시하는 함수 수정
   const animateText = (text: string) => {
     let currentIndex = 0;
-    setTourGuide(""); // 초기화
+    setTourGuide("");
 
     const showNextCharacter = () => {
       if (currentIndex < text.length) {
         setTourGuide((prev) => {
-          const newText = prev + text[currentIndex];
-          if (
-            text[currentIndex] === "." ||
-            text[currentIndex] === "!" ||
-            text[currentIndex] === "?"
-          ) {
-            if (
-              currentIndex + 1 < text.length &&
-              text[currentIndex + 1] !== " "
-            ) {
+          const newText = prev + text[currentIndex]; // 현재 글자 추가
+          currentIndex++; // 인덱스 증가
+
+          // 문장 끝에서 줄바꿈 추가
+          if ([".", "!", "?"].includes(text[currentIndex - 1])) {
+            if (currentIndex < text.length && text[currentIndex] !== " ") {
               return newText + "\n\n";
             }
           }
           return newText;
         });
-        currentIndex++;
+
         textTimeoutRef.current = setTimeout(showNextCharacter, characterDelay);
       }
     };
