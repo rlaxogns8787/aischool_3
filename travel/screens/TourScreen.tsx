@@ -133,34 +133,52 @@ export default function TourScreen() {
 
   // 음성 선택 핸들러 수정
   const handleVoiceSelect = async (voice: VoiceType) => {
-    // 먼저 음성 선택 상태 업데이트
-    setSelectedVoice(voice);
-    setShowVoiceModal(false);
+    try {
+      setIsLoading(true);
 
-    // 현재 위치에 대한 새로운 설명 생성
-    if (currentLocation) {
-      const nearbySpot = findNearbySpot(currentLocation.coords);
-      if (nearbySpot) {
-        // 이전 설명 초기화
-        setTourGuide("");
-        // 새로운 음성으로 설명 생성
-        const guideText = await generateTourGuide(
-          nearbySpot.name,
-          userInterest
-        );
-        setIsGuiding(true);
-        // 새로운 음성으로 설명 시작
-        if (guideText !== "설명 생성 실패") {
-          await startSpeaking(guideText);
+      // 이전 음성 및 텍스트 상태 초기화
+      if (textTimeoutRef.current) {
+        clearTimeout(textTimeoutRef.current);
+      }
+
+      // 음성 선택 상태 업데이트
+      setSelectedVoice(voice);
+      setShowVoiceModal(false);
+
+      // 현재 위치에 대한 새로운 설명 생성
+      if (currentLocation) {
+        const nearbySpot = findNearbySpot(currentLocation.coords);
+        if (nearbySpot) {
+          // 새로운 설명 생성 전에 이전 텍스트 초기화
+          setTourGuide("");
+
+          const guideText = await generateTourGuide(
+            nearbySpot.name,
+            userInterest
+          );
+
+          if (guideText !== "설명 생성 실패") {
+            setIsGuiding(true);
+            await startSpeaking(guideText);
+          }
         }
       }
+    } catch (error) {
+      console.error("Voice selection error:", error);
+    } finally {
+      setIsLoading(false);
     }
   };
 
   // 텍스트를 점진적으로 표시하는 함수 수정
   const animateText = (text: string) => {
+    // 이전 타이머가 있다면 클리어
+    if (textTimeoutRef.current) {
+      clearTimeout(textTimeoutRef.current);
+    }
+
     let currentIndex = 0;
-    setTourGuide("");
+    // setTourGuide(""); // 초기화
 
     const showNextCharacter = () => {
       if (currentIndex < text.length) {
@@ -181,8 +199,14 @@ export default function TourScreen() {
       }
     };
 
-    // 즉시 첫 문자 표시
     showNextCharacter();
+
+    // 컴포넌트 언마운트 시 타이머 클리어
+    return () => {
+      if (textTimeoutRef.current) {
+        clearTimeout(textTimeoutRef.current);
+      }
+    };
   };
 
   // Audio 권한 및 초기화
