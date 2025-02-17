@@ -133,6 +133,7 @@ export default function TourScreen() {
 
   // 음성 선택 핸들러 수정
   const handleVoiceSelect = async (voice: VoiceType) => {
+    // 먼저 음성 선택 상태 업데이트
     setSelectedVoice(voice);
     setShowVoiceModal(false);
 
@@ -140,12 +141,18 @@ export default function TourScreen() {
     if (currentLocation) {
       const nearbySpot = findNearbySpot(currentLocation.coords);
       if (nearbySpot) {
+        // 이전 설명 초기화
+        setTourGuide("");
+        // 새로운 음성으로 설명 생성
         const guideText = await generateTourGuide(
           nearbySpot.name,
           userInterest
         );
         setIsGuiding(true);
-        startSpeaking(guideText);
+        // 새로운 음성으로 설명 시작
+        if (guideText !== "설명 생성 실패") {
+          await startSpeaking(guideText);
+        }
       }
     }
   };
@@ -153,19 +160,17 @@ export default function TourScreen() {
   // 텍스트를 점진적으로 표시하는 함수 수정
   const animateText = (text: string) => {
     let currentIndex = 0;
-    setTourGuide("");
+    setTourGuide(""); // 초기화
 
     const showNextCharacter = () => {
       if (currentIndex < text.length) {
         setTourGuide((prev) => {
           const newText = prev + text[currentIndex];
-          // 문장 끝에서 줄바꿈 처리 수정
           if (
             text[currentIndex] === "." ||
             text[currentIndex] === "!" ||
             text[currentIndex] === "?"
           ) {
-            // 다음 문자가 있고 공백이 아닌 경우에만 줄바꿈 추가
             if (
               currentIndex + 1 < text.length &&
               text[currentIndex + 1] !== " "
@@ -180,6 +185,7 @@ export default function TourScreen() {
       }
     };
 
+    // 즉시 첫 문자 표시
     showNextCharacter();
   };
 
@@ -457,36 +463,42 @@ export default function TourScreen() {
         // },
       } as const;
 
-      // 타입 안전성을 위한 체크 추가
-      let selectedCharacter =
-        characterTraits[selectedVoice.id as keyof typeof characterTraits] ||
-        characterTraits["ko-KR-SunHiNeural"]; // 기본값 설정
+      // 현재 선택된 음성의 캐릭터 특성 가져오기
+      const selectedCharacter =
+        characterTraits[selectedVoice.id as keyof typeof characterTraits];
+
+      if (!selectedCharacter) {
+        throw new Error("Invalid voice selection");
+      }
 
       const messages = [
         {
           role: "system",
-          content: `당신은 ${selectedCharacter.personality} 도슨트입니다. ${interest} 분야에 관심이 많은 관광객을 위해 
-          ${location}에 대한 ${selectedCharacter.style} 설명을 제공해주세요.
-          
-          당신의 말투는 ${selectedCharacter.tone} 어조를 유지하며, 다음 사항을 포함해주세요:
-          - ${interest} 관점에서 본 ${location}만의 특별한 점
-          - 관련된 전문적인 용어와 설명
-          - 일반 관광 가이드에서는 접할 수 없는 심층적인 정보
-          - ${interest} 애호가들이 특히 관심을 가질 만한 세부사항
-          
-          주의사항:
-          1) 최대 200자 내외의 짧은 해설을 지향합니다.
-          2) 장소의 역사/배경 + 재미있는 TMI(1~2줄) 포함.
-          3) 너무 긴 문장보다는 짧은 문장 중심으로 작성합니다.
-          4) 각 캐릭터의 특성에 맞는 어투와 표현을 사용합니다.
-          5) 한글 맞춤법과 띄어쓰기를 정확하게 지켜주세요.
-          
-          예시 어투:
-          ${selectedCharacter.examples}`,
+          content: `You are a ${selectedCharacter.personality} tour guide.
+      Your role is to provide an engaging and informative explanation about ${location} for tourists who are interested in ${interest}. 
+      
+      Your explanation style should align with ${selectedCharacter.style}, and your tone should remain ${selectedCharacter.tone}. 
+      The explanation must include:
+      
+      1. Unique aspects of ${location} from the perspective of ${interest}.
+      2. Relevant technical terms and professional explanations.
+      3. In-depth information that is not typically found in standard tourist guides.
+      4. Specific details that enthusiasts of ${interest} would find particularly fascinating.
+      
+      ### **Instructions:**
+      - Keep the response within **200 characters**.
+      - Use **short and concise sentences** rather than overly long ones.
+      - Maintain the **specific tone and style** of the selected character.
+      - Ensure **proper Korean spelling and spacing**.
+      - The response **must be in Korean**.
+      
+      ### **Example Output Style:**
+      ${selectedCharacter.examples}
+          `,
         },
         {
           role: "user",
-          content: `${location}에 대해 설명해주세요. 나는 ${interest}에 관심이 많습니다.`,
+          content: `Please describe ${location} from the perspective of ${interest}. The response should be in Korean.`,
         },
       ];
 
@@ -516,8 +528,11 @@ export default function TourScreen() {
       const data = await response.json();
       let content = data.choices[0].message.content;
 
-      // 문자열 정리: 앞뒤 공백 제거 및 불필요한 문자 제거
-      content = content.trim().replace(/undefined/g, "");
+      // 문자열 정리: 앞뒤 공백과 undefined 제거
+      content = content
+        ?.trim()
+        .replace(/undefined/g, "")
+        .replace(/\.$/, ""); // 마지막 마침표 제거
 
       if (!content) {
         throw new Error("No content in response");
