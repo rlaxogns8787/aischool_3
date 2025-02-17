@@ -45,6 +45,12 @@ const AZURE_OPENAI_KEY =
   "65fEqo2qsGl8oJPg7lzs8ZJk7pUgdTEgEhUx2tvUsD2e07hbowbCJQQJ99BBACfhMk5XJ3w3AAABACOGr7S4";
 const DEPLOYMENT_NAME = "gpt-4o";
 
+//Azure AI Search 키와 인덱스
+const SEARCH_ENDPOINT = 'https://ssapy-ai-search.search.windows.net';
+const SEARCH_KEY = 'NGZcgM1vjwqKoDNPnFXcApBFttxWmGRLmnukKldPcTAzSeBjHCk6';
+const ATTRACTION_INDEX = 'attraction';
+
+
 // type Interest = "건축" | "역사" | "문화" | "요리" | "자연";
 
 // 샘플 일정 타입 정의 추가
@@ -408,30 +414,35 @@ export default function TourScreen() {
     navigation.navigate("Map");
   };
 
-  const generateTourGuide = async (location: string, interest: string) => {
+  const fetchNearbyPlaces = async ({ latitude, longitude }) => {
+    try {
+      const response = await fetch(`${AZURE_SEARCH_ENDPOINT}/indexes/places/docs?api-version=2023-07-01&$filter=geo.distance(location, geography'POINT(${longitude} ${latitude})') lt 1`, {
+        headers: { 'api-key': AZURE_SEARCH_API_KEY },
+      });
+      const data = await response.json();
+
+      if (!data.value || !Array.isArray(data.value)) {
+        throw new Error('Invalid response format: value must be an array');
+      }
+      generateTourGuide(data.value);
+    } catch (error) {
+      console.error('AI Search error:', error);
+      setTourGuide('AI Search에서 데이터를 불러오는 데 실패했습니다.');
+    }
+  };
+
+  const generateTourGuide = async (nearbyPlaces) => {
     setIsLoading(true);
     try {
+      const placeDescriptions = nearbyPlaces.map(place => `${place.AREA_CLTUR_TRRSRT_NM}: ${place.SUMRY_CN}`).join("\n");
       const messages = [
         {
-          role: "system",
-          content: `당신은 전문 도슨트입니다. ${interest} 분야에 관심이 많은 관광객을 위해 
-          ${location}에 대한 전문적이고 흥미로운 설명을 제공해주세요.
-          
-          특히 ${interest}와 관련된 내용을 상세히 다루되, 다음 사항을 포함해주세요:
-          - ${interest} 관점에서 본 ${location}만의 특별한 점
-          - 관련된 전문적인 용어와 설명
-          - 일반 관광 가이드에서는 접할 수 없는 심층적인 정보
-          - ${interest} 애호가들이 특히 관심을 가질 만한 세부사항
-          
-          주의사항:
-          1) 최대 200자 내외의 짧은 해설을 지향합니다.
-          2) 장소의 역사/배경 + 재미있는 TMI(1~2줄) 포함.
-          3) 너무 긴 문장보다, 짧은 문장 중심.
-          4) 필요 시 감탄사나 비유적 표현을 적절히 사용.`,
+          role: 'system',
+          content: `다음 내용을 기반으로 관광지 가이드를 진행해줘. \n${placeDescriptions}`,
         },
         {
-          role: "user",
-          content: `${location}에 대해 설명해주세요. 나는 ${interest}에 관심이 많습니다.`,
+          role: 'user',
+          content: '근처 관광지에 대해 안내해주세요.',
         },
       ];
 
