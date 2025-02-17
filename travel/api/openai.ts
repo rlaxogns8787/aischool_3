@@ -1,3 +1,4 @@
+import AsyncStorage from "@react-native-async-storage/async-storage";
 // Azure OpenAI 설정
 const AZURE_OPENAI_ENDPOINT = "https://ssapy-openai.openai.azure.com/";
 const AZURE_OPENAI_KEY =
@@ -279,6 +280,20 @@ export const generateTravelSchedule = async (tripInfo: TripInfo) => {
 
       return text;
     };
+    // AsyncStorage에 저장
+    try {
+      await AsyncStorage.setItem(
+        "formattedSchedule",
+        JSON.stringify(scheduleJson)
+      );
+      console.log("일정이 성공적으로 저장되었습니다.");
+
+      // 저장된 데이터를 로그로 출력
+      const storedData = await AsyncStorage.getItem("formattedSchedule");
+      console.log("저장된 일정 데이터:", storedData);
+    } catch (error) {
+      console.error("일정 저장 중 오류 발생:", error);
+    }
 
     // JSON 원본은 저장하고, 텍스트 형식으로 변환하여 반환
     return formatScheduleToText(scheduleJson);

@@ -15,6 +15,7 @@ import Carousel from "react-native-snap-carousel";
 import OptionCard from "./OptionCard";
 import OptionModal from "./OptionModal"; // OptionModal import 추가
 import StyleToggleButton from "./StyleToggleButton";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 const { width: screenWidth } = Dimensions.get("window");
 
@@ -73,6 +74,17 @@ export default function MessageList({
   const scrollViewRef = useRef<ScrollView>(null);
   const [isModalVisible, setModalVisible] = useState(false);
   const [selectedCard, setSelectedCard] = useState<CardItem | null>(null);
+  const [schedule, setSchedule] = useState<any>(null);
+
+  useEffect(() => {
+    const fetchSchedule = async () => {
+      const storedSchedule = await AsyncStorage.getItem("formattedSchedule");
+      if (storedSchedule) {
+        setSchedule(JSON.parse(storedSchedule));
+      }
+    };
+    fetchSchedule();
+  }, []);
 
   const handleCardPress = (card: CardItem) => {
     setSelectedCard(card);
@@ -160,23 +172,7 @@ export default function MessageList({
               {/* OptionCard 렌더링 */}
               {message.isBot &&
                 message.text.includes("여행 일정이 생성되었습니다") && (
-                  <OptionCard
-                    image="https://cdn.informaticsview.com/news/photo/202408/480_1718_1317.jpg" // 실제 이미지 URL로 변경
-                    people="2명"
-                    title="여행 일정"
-                    date="3박 4일"
-                    info="여행 일정이 생성되었습니다. 자세한 내용은 나중에 DB에서 가져올 예정입니다."
-                    onPress={() =>
-                      handleCardPress({
-                        image: {
-                          uri: "https://cdn.informaticsview.com/news/photo/202408/480_1718_1317.jpg",
-                        },
-                        keyword: "여행",
-                        title: "여행 일정",
-                        address: "3박 4일",
-                      })
-                    }
-                  />
+                  <OptionCard onPress={() => handleCardPress(schedule)} />
                 )}
             </View>
           ) : null
@@ -190,83 +186,11 @@ export default function MessageList({
         <OptionModal
           isVisible={isModalVisible}
           onClose={handleCloseModal}
-          images={[
-            {
-              uri: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSt3DCbI2D3dd9d5foUaeITIVjicguWURtF4w&s",
-            },
-            {
-              uri: "https://thumb.pann.com/tc_480/http://fimg5.pann.com/new/download.jsp?FileID=55485262",
-            },
-            {
-              uri: "https://i.pinimg.com/736x/f1/ee/c9/f1eec90d828b0d417e86143daf493261.jpg",
-            },
-          ]} // 여러 이미지 전달
-          themeName={selectedCard.title}
-          description={selectedCard.address}
-          keywords={[selectedCard.keyword]} // 예시로 키워드 전달
-          dayPlans={[
-            {
-              day: "1일차",
-              date: "2.12/월",
-              places: [
-                {
-                  image: {
-                    uri: "https://www.heritage.go.kr/gung/gogung1/images/ic-c1.jpg",
-                  },
-                  name: "경복궁",
-                  address: "서울 중구",
-                  duration: "29분 소요",
-                },
-                {
-                  image: {
-                    uri: "https://heritage.unesco.or.kr/wp-content/uploads/2019/04/hd6_393_i1.jpg",
-                  },
-                  name: "창덕궁",
-                  address: "서울 종로구",
-                  duration: "45분 소요",
-                },
-                {
-                  image: {
-                    uri: "https://upload.wikimedia.org/wikipedia/commons/3/35/%EB%8D%95%EC%88%98%EA%B6%81.jpg",
-                  },
-                  name: "덕수궁",
-                  address: "서울 중구",
-                  duration: "30분 소요",
-                },
-              ],
-            },
-            {
-              day: "2일차",
-              date: "2.13/화",
-              places: [
-                {
-                  image: {
-                    uri: "https://cdn.pixabay.com/photo/2022/09/16/17/08/namsan-tower-7459178_640.jpg",
-                  },
-                  name: "남산타워",
-                  address: "서울 용산구",
-                  duration: "45분 소요",
-                },
-                {
-                  image: {
-                    uri: "https://cdn.pixabay.com/photo/2014/04/17/05/16/myeongdong-326136_640.jpg",
-                  },
-                  name: "명동",
-                  address: "서울 중구",
-                  duration: "1시간 소요",
-                },
-                {
-                  image: {
-                    uri: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTrQr8t3KCKCw8qbz1kKg44Ls_ZAT1hpAtKPQ&s",
-                  },
-                  name: "동대문",
-                  address: "서울 중구",
-                  duration: "1시간 30분 소요",
-                },
-              ],
-            },
-            // 다른 일차들 추가
-          ]}
+          images={schedule.images}
+          themeName={schedule.title}
+          description={schedule.description}
+          keywords={schedule.keywords}
+          dayPlans={schedule.days}
           onShare={() => {}}
           onPlacePress={() => {}}
           onShareWithColleagues={() => {}}
