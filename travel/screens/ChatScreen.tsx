@@ -22,6 +22,7 @@ import { INITIAL_MESSAGE, COMPANION_OPTIONS } from "../constants/chat";
 import { formatDate, extractTripInfo } from "../utils/messageUtils";
 import { Schedule } from "../types/schedule";
 import RefreshChatIcon from "../assets/refreshchat.svg";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 type RootStackParamList = {
   Chat: undefined;
@@ -566,6 +567,9 @@ export default function ChatScreen() {
                 ?.styleOptions?.filter((opt) => opt.selected)
                 .map((opt) => opt.text) || [],
           };
+
+          // 여행 정보를 AsyncStorage에 저장
+          await AsyncStorage.setItem("scheduleData", JSON.stringify(tripInfo));
 
           // 먼저 확인 메시지 표시
           const confirmMessage: Message = {
