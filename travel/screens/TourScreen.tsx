@@ -129,10 +129,23 @@ export default function TourScreen() {
     },
   ];
 
-  // 음성 선택 핸들러
-  const handleVoiceSelect = (voice: VoiceType) => {
+  // 음성 선택 핸들러 수정
+  const handleVoiceSelect = async (voice: VoiceType) => {
     setSelectedVoice(voice);
     setShowVoiceModal(false);
+
+    // 현재 위치에 대한 새로운 설명 생성
+    if (currentLocation) {
+      const nearbySpot = findNearbySpot(currentLocation.coords);
+      if (nearbySpot) {
+        const guideText = await generateTourGuide(
+          nearbySpot.name,
+          userInterest
+        );
+        setIsGuiding(true);
+        startSpeaking(guideText);
+      }
+    }
   };
 
   // 텍스트를 점진적으로 표시하는 함수 수정
@@ -411,13 +424,43 @@ export default function TourScreen() {
   const generateTourGuide = async (location: string, interest: string) => {
     setIsLoading(true);
     try {
+      // 선택된 음성에 따른 캐릭터 특성 정의
+      const characterTraits = {
+        "ko-KR-SunHiNeural": {
+          personality: "차분하고 전문적인 성우",
+          style: "정확하고 전문적인 설명과 함께 역사적 맥락을 중요시하는",
+          tone: "우아하고 세련된",
+          examples:
+            "이곳은 조선 시대 최고의 궁중 음식이 만들어지던 수랏간이 있던 자리입니다. 왕실의 식문화를 엿볼 수 있는 소중한 공간이지요.",
+        },
+        "ko-KR-JiMinNeural": {
+          personality: "밝고 친근한 청년",
+          style: "재미있는 일화와 현대적인 관점을 곁들인 친근하고 캐주얼한",
+          tone: "활기차고 경쾌한 반말",
+          examples:
+            "안녕! 내가 오늘 진짜 재밌는 이야기 들려줄게~ 여기가 바로 조선시대 '임금님의 맛남의 광장'이 펼쳐졌던 곳이야! 궁중 셰프들이 실력 발휘하면서 임금님 리액션도 받았다는 TMI까지 알려줄게 ㅎㅎ",
+        },
+        "ko-KR-InJoonNeural": {
+          personality: "부드럽고 차분한 남성",
+          style: "깊이 있는 통찰과 철학적인 관점을 담은",
+          tone: "차분하고 사려 깊은",
+          examples:
+            "이 공간에서 우리는 조선 왕실의 식문화가 얼마나 정교했는지를 엿볼 수 있습니다. 음식을 통해 국가의 위엄을 보여주었던 것이지요.",
+        },
+      } as const;
+
+      // 타입 안전성을 위한 체크 추가
+      let selectedCharacter =
+        characterTraits[selectedVoice.id as keyof typeof characterTraits] ||
+        characterTraits["ko-KR-SunHiNeural"]; // 기본값 설정
+
       const messages = [
         {
           role: "system",
-          content: `당신은 전문 도슨트입니다. ${interest} 분야에 관심이 많은 관광객을 위해 
-          ${location}에 대한 전문적이고 흥미로운 설명을 제공해주세요.
+          content: `당신은 ${selectedCharacter.personality} 도슨트입니다. ${interest} 분야에 관심이 많은 관광객을 위해 
+          ${location}에 대한 ${selectedCharacter.style} 설명을 제공해주세요.
           
-          특히 ${interest}와 관련된 내용을 상세히 다루되, 다음 사항을 포함해주세요:
+          당신의 말투는 ${selectedCharacter.tone} 어조를 유지하며, 다음 사항을 포함해주세요:
           - ${interest} 관점에서 본 ${location}만의 특별한 점
           - 관련된 전문적인 용어와 설명
           - 일반 관광 가이드에서는 접할 수 없는 심층적인 정보
@@ -427,7 +470,12 @@ export default function TourScreen() {
           1) 최대 200자 내외의 짧은 해설을 지향합니다.
           2) 장소의 역사/배경 + 재미있는 TMI(1~2줄) 포함.
           3) 너무 긴 문장보다, 짧은 문장 중심.
-          4) 필요 시 감탄사나 비유적 표현을 적절히 사용.`,
+          4) 각 캐릭터의 특성에 맞는 어투와 표현을 사용.
+          
+          예시 어투:
+          선희: "이곳은 조선시대 최고의 궁중 음식이 만들어지던 수랏간이 있던 자리입니다."
+          지민: "와, 여러분~ 여기가 바로 조선 시대 임금님의 진수성찬이 탄생한 곳이에요!"
+          인주: "이 공간에서 우리는 조선 왕실의 식문화가 얼마나 정교했는지를 엿볼 수 있죠."`,
         },
         {
           role: "user",
@@ -460,6 +508,11 @@ export default function TourScreen() {
 
       const data = await response.json();
       const content = data.choices[0].message.content;
+
+      if (!content) {
+        throw new Error("No content in response");
+      }
+
       setTourGuide("");
       animateText(content);
       return content;

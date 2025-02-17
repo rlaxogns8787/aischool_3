@@ -32,6 +32,24 @@ const scheduleData = {
   title: "맛 따라 걷는 후암동, 한입에 설레는 남산 뷰",
 };
 
+// 날씨 관련 랜덤 텍스트 배열
+const WEATHER_PHRASES = [
+  "미세먼지 걱정 없는",
+  "화창한 하늘 아래",
+  "구름 한 점 없는 맑은",
+  "선선한 바람이 부는",
+  "따뜻한 햇살이 가득한",
+  "시원한 공기가 감도는",
+  "상쾌한 공기 가득한",
+  "푸른 하늘이 펼쳐진",
+  "바람이 살랑이는",
+  "포근한 바람이 부는",
+  "가볍게 걷기 좋은",
+  "맑은 공기가 가득한",
+  "기분 좋은 바람이 부는",
+  "여행하기 좋은 날씨인",
+];
+
 type RootStackParamList = {
   Chat: undefined;
   Schedule: undefined;
@@ -52,6 +70,14 @@ export default function HomeScreen() {
   const [weather, setWeather] = useState<WeatherData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  // 랜덤 문구를 위한 state 추가
+  const [weatherPhrase, setWeatherPhrase] = useState("");
+
+  useEffect(() => {
+    // 컴포넌트 마운트 시 랜덤 문구 선택
+    const randomIndex = Math.floor(Math.random() * WEATHER_PHRASES.length);
+    setWeatherPhrase(WEATHER_PHRASES[randomIndex]);
+  }, []);
 
   useEffect(() => {
     async function loadWeatherData() {
@@ -313,7 +339,7 @@ export default function HomeScreen() {
         {/* Main Content */}
         <View style={styles.content}>
           <Text style={styles.title}>
-            미세먼지 가득한,{"\n"}오늘은 어디로 떠나{"\n"}볼까요?
+            {weatherPhrase},{"\n"}오늘은 어디로 떠나볼까요?
           </Text>
 
           {/* Weather Info */}

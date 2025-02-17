@@ -6,6 +6,7 @@ import {
   TouchableOpacity,
   Text,
   Alert,
+  TextInput,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useNavigation, NavigationProp } from "@react-navigation/native";
@@ -849,8 +850,7 @@ export default function ChatScreen() {
       <KeyboardAvoidingView
         style={styles.keyboardAvoid}
         behavior={Platform.OS === "ios" ? "padding" : "height"}
-        keyboardVerticalOffset={Platform.OS === "ios" ? 90 : 0}
-        enabled
+        keyboardVerticalOffset={Platform.OS === "ios" ? 8 : 0}
       >
         <View style={styles.messageList}>
           <MessageList
@@ -858,6 +858,7 @@ export default function ChatScreen() {
             onOptionSelect={handleOptionSelect}
             onStyleToggle={handleStyleToggle}
             onStyleSelectComplete={handleStyleSelectComplete}
+            keyboardShouldPersistTaps="handled"
           />
         </View>
 
@@ -933,6 +934,8 @@ export default function ChatScreen() {
             onSend={handleSendMessage}
             disabled={isLoading}
             autoFocus={false}
+            style={styles.input}
+            returnKeyType="send"
           />
         </View>
       </KeyboardAvoidingView>

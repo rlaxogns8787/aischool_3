@@ -145,11 +145,55 @@ const searchTravelInfo = async (searchQuery: string) => {
 import { TripInfo } from "../types/chat";
 
 export const generateTravelSchedule = async (tripInfo: TripInfo) => {
+  const systemPrompt = `당신은 여행 일정을 생성해주는 AI 어시스턴트입니다. 
+사용자의 선호도와 조건에 맞는 상세한 여행 일정을 JSON 형식으로 생성해주세요.
+
+응답은 반드시 아래 형식을 따라야 합니다:
+{
+  "tripId": "고유ID",
+  "timestamp": "생성시간",
+  "title": "여행 테마에 맞는 제목",
+  "companion": "동행인 정보",
+  "startDate": "시작날짜",
+  "endDate": "종료날짜", 
+  "duration": "n박m일",
+  "budget": "예산",
+  "transportation": ["교통수단1", "교통수단2"],
+  "keywords": ["키워드1", "키워드2"],
+  "summary": "대표 코스 요약",
+  "days": [
+    {
+      "dayIndex": 1,
+      "date": "YYYY-MM-DD",
+      "places": [
+        {
+          "order": 1,
+          "time": "HH:MM",
+          "title": "장소명",
+          "description": "설명",
+          "duration": "소요시간",
+          "address": "주소",
+          "cost": 비용(숫자),
+          "coords": {
+            "lat": 위도,
+            "lng": 경도
+          }
+        }
+      ]
+    }
+  ],
+  "extraInfo": {
+    "estimatedCost": [
+      { "type": "비용항목", "amount": 금액 }
+    ],
+    "totalCost": 총비용
+  }
+}`;
+
   const messages = [
     {
       role: "system",
-      content:
-        "당신은 여행 일정을 생성해주는 AI 어시스턴트입니다. 사용자의 선호도와 조건에 맞는 상세한 여행 일정을 생성해주세요.",
+      content: systemPrompt,
     },
     {
       role: "user",
@@ -161,7 +205,9 @@ export const generateTravelSchedule = async (tripInfo: TripInfo) => {
 예산: ${tripInfo.budget}
 교통수단: ${tripInfo.transportation?.join(", ")}
 
-위 조건에 맞는 여행 일정을 생성해주세요. 각 장소마다 예상 소요 시간, 입장료, 설명을 포함해주세요.`,
+위 조건에 맞는 여행 일정을 JSON 형식으로 생성해주세요.
+각 장소마다 예상 소요 시간, 입장료, 설명을 포함해주세요.
+응답은 반드시 파싱 가능한 JSON 형식이어야 합니다.`,
     },
   ];
 
@@ -176,11 +222,12 @@ export const generateTravelSchedule = async (tripInfo: TripInfo) => {
         },
         body: JSON.stringify({
           messages,
-          max_tokens: 2000,
+          max_tokens: 3000,
           temperature: 0.7,
           top_p: 0.95,
           frequency_penalty: 0,
           presence_penalty: 0,
+          response_format: { type: "json_object" },
         }),
       }
     );
@@ -190,7 +237,51 @@ export const generateTravelSchedule = async (tripInfo: TripInfo) => {
     }
 
     const data = await response.json();
-    return data.choices[0].message.content;
+    const scheduleJson = JSON.parse(data.choices[0].message.content);
+
+    // 원본 JSON 문자열 저장
+    scheduleJson.generatedScheduleRaw = data.choices[0].message.content;
+
+    // JSON을 가독성 좋은 텍스트로 변환
+    const formatScheduleToText = (schedule: any) => {
+      const formatCost = (cost: number) => cost.toLocaleString("ko-KR");
+
+      let text = `[${schedule.title}]\n\n`;
+      text += `▪️ 여행 기간: ${schedule.startDate} ~ ${schedule.endDate} (${schedule.duration})\n`;
+      text += `▪️ 동행: ${schedule.companion}\n`;
+      text += `▪️ 교통수단: ${schedule.transportation.join(", ")}\n`;
+      text += `▪️ 예산: ${schedule.budget}\n`;
+      text += `▪️ 여행 키워드: ${schedule.keywords.join(", ")}\n\n`;
+      text += `📍 대표 코스: ${schedule.summary}\n\n`;
+
+      // 일자별 일정
+      schedule.days.forEach((day: any) => {
+        text += `=== ${day.date} (${day.dayIndex}일차) ===\n\n`;
+
+        day.places.forEach((place: any) => {
+          text += `⏰ ${place.time} ${place.title}\n`;
+          text += `   • ${place.description}\n`;
+          text += `   • 소요시간: ${place.duration}\n`;
+          text += `   • 주소: ${place.address}\n`;
+          if (place.cost > 0) {
+            text += `   • 비용: ${formatCost(place.cost)}원\n`;
+          }
+          text += "\n";
+        });
+      });
+
+      // 예상 비용 정보
+      text += "=== 예상 비용 내역 ===\n\n";
+      schedule.extraInfo.estimatedCost.forEach((cost: any) => {
+        text += `• ${cost.type}: ${formatCost(cost.amount)}원\n`;
+      });
+      text += `\n총 예상 비용: ${formatCost(schedule.extraInfo.totalCost)}원`;
+
+      return text;
+    };
+
+    // JSON 원본은 저장하고, 텍스트 형식으로 변환하여 반환
+    return formatScheduleToText(scheduleJson);
   } catch (error) {
     console.error("Error generating schedule:", error);
     throw error;

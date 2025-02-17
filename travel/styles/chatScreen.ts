@@ -81,6 +81,8 @@ export const styles = StyleSheet.create({
     backgroundColor: "#f8f8f8",
     borderTopWidth: 1,
     borderTopColor: "#E5E5EA",
+    alignItems: "center",
+    width: "100%",
   },
   datePickerHeader: {
     flexDirection: "row",
@@ -88,6 +90,7 @@ export const styles = StyleSheet.create({
     padding: 10,
     borderBottomWidth: 1,
     borderBottomColor: "#E5E5EA",
+    width: "100%",
   },
   datePickerButton: {
     color: "#007AFF",
@@ -96,6 +99,8 @@ export const styles = StyleSheet.create({
   },
   datePicker: {
     height: 200,
+    width: "100%",
+    alignSelf: "center",
   },
   datePickerTitle: {
     fontSize: 17,
@@ -129,7 +134,7 @@ export const styles = StyleSheet.create({
     fontWeight: "600",
   },
   refreshButton: {
-    position: 'absolute',
+    position: "absolute",
     right: 16,
     padding: 8,
   },
