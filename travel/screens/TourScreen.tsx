@@ -278,9 +278,8 @@ export default function TourScreen() {
       speechConfig.speechSynthesisLanguage = "ko-KR";
 
       // 음성 품질 향상 설정
-      speechConfig.setSpeechSynthesisOutputFormat(
-        sdk.SpeechSynthesisOutputFormat.Riff24Khz16BitMonoPcm
-      );
+      speechConfig.speechSynthesisOutputFormat =
+        sdk.SpeechSynthesisOutputFormat.Riff24Khz16BitMonoPcm;
 
       const audioConfig = sdk.AudioConfig.fromDefaultSpeakerOutput();
       const synthesizer = new sdk.SpeechSynthesizer(speechConfig, audioConfig);
@@ -482,7 +481,7 @@ export default function TourScreen() {
       4. Specific details that enthusiasts of ${interest} would find particularly fascinating.
       
       ### **Instructions:**
-      - Keep the response within **200 characters**.
+      - Keep the response within **300 characters**.
       - Use **short and concise sentences** rather than overly long ones.
       - Maintain the **specific tone and style** of the selected character.
       - Ensure **proper Korean spelling and spacing**.
