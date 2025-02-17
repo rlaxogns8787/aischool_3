@@ -178,17 +178,22 @@ export default function TourScreen() {
     }
 
     let currentIndex = 0;
-    // setTourGuide(""); // 초기화
 
     const showNextCharacter = () => {
       if (currentIndex < text.length) {
         setTourGuide((prev) => {
-          const newText = prev + text[currentIndex]; // 현재 글자 추가
-          currentIndex++; // 인덱스 증가
+          const newText = prev + text[currentIndex];
+          currentIndex++;
 
-          // 문장 끝에서 줄바꿈 추가
+          // 문장 끝 부호 다음에 줄바꿈 추가
           if ([".", "!", "?"].includes(text[currentIndex - 1])) {
-            if (currentIndex < text.length && text[currentIndex] !== " ") {
+            // 다음 문자가 있고 공백이 아닌 경우 문단 구분
+            if (currentIndex < text.length) {
+              // 다음 문자가 공백이면 일반 문장 끝
+              if (text[currentIndex] === " ") {
+                return newText + "\n";
+              }
+              // 다음 문자가 공백이 아니면 새로운 문단 시작
               return newText + "\n\n";
             }
           }
@@ -200,13 +205,6 @@ export default function TourScreen() {
     };
 
     showNextCharacter();
-
-    // 컴포넌트 언마운트 시 타이머 클리어
-    return () => {
-      if (textTimeoutRef.current) {
-        clearTimeout(textTimeoutRef.current);
-      }
-    };
   };
 
   // Audio 권한 및 초기화
@@ -505,11 +503,13 @@ export default function TourScreen() {
       4. Specific details that enthusiasts of ${interest} would find particularly fascinating.
       
       ### **Instructions:**
-      - Keep the response within **300 characters**.
+      - Keep the response within **200 characters**.
       - Use **short and concise sentences** rather than overly long ones.
       - Maintain the **specific tone and style** of the selected character.
       - Ensure **proper Korean spelling and spacing**.
       - The response **must be in Korean**.
+      - Do not repeat the same information or sentences.
+      - Each sentence should provide new information.
       
       ### **Example Output Style:**
       ${selectedCharacter.examples}
@@ -517,7 +517,7 @@ export default function TourScreen() {
         },
         {
           role: "user",
-          content: `Please describe ${location} from the perspective of ${interest}. The response should be in Korean.`,
+          content: `Please describe ${location} from the perspective of ${interest}. The response should be in Korean. Make sure each sentence provides unique information without repetition.`,
         },
       ];
 
