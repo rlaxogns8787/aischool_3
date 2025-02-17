@@ -100,9 +100,8 @@ export const addSchedule = async (scheduleData) => {
     if (!userData) {
       throw new Error("사용자 정보를 찾을 수 없습니다.");
     }
-
     const userInfo = JSON.parse(userData);
-
+    console.log("User Info:", userInfo); // 사용자 정보 확인
     const formattedScheduleData = {
       username: userInfo.username,
       tripId: scheduleData.tripId,
@@ -120,12 +119,12 @@ export const addSchedule = async (scheduleData) => {
       extraInfo: scheduleData.extraInfo,
       generatedScheduleRaw: JSON.stringify(scheduleData),
     };
-
+    console.log("Formatted Schedule Data:", formattedScheduleData); // 포맷된 일정 데이터 확인
     const response = await axios.post(
       `${BASE_URL}/schedule`,
       formattedScheduleData
     );
-
+    console.log("Add Schedule Response:", response.data); // 서버 응답 확인
     return response.data;
   } catch (error) {
     console.error("Add schedule error:", error);

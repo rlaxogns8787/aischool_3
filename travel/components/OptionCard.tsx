@@ -21,6 +21,16 @@ const OptionCard: React.FC<OptionCardProps> = ({ onPress }) => {
     fetchSchedule();
   }, []);
 
+  useEffect(() => {
+    const updateSchedule = async () => {
+      const storedSchedule = await AsyncStorage.getItem("formattedSchedule");
+      if (storedSchedule) {
+        setSchedule(JSON.parse(storedSchedule));
+      }
+    };
+    updateSchedule();
+  }, [schedule]);
+
   if (!schedule) {
     return null;
   }

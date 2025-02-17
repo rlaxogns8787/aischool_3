@@ -19,13 +19,17 @@ import Svg, { SvgProps } from "react-native-svg"; // SVG 렌더링을 위한 라
 const { width: screenWidth } = Dimensions.get("window");
 
 type Place = {
+  order: number; // 추가된 부분
   image: { uri: string };
   name: string;
   address: string;
   duration: string;
+  cost: number; // 비용 추가
+  type: string; // type 속성 추가
 };
 
 type DayPlan = {
+  dayIndex: number; // 추가된 부분
   day: string;
   date: string;
   places: Place[];
@@ -42,6 +46,7 @@ type OptionModalProps = {
   description: any;
   keywords: any;
   dayPlans: any;
+  onUpdate: (updatedSchedule: any) => void; // 추가된 부분
 };
 
 const OptionModal: React.FC<OptionModalProps> = ({
@@ -50,6 +55,7 @@ const OptionModal: React.FC<OptionModalProps> = ({
   onShare,
   onPlacePress,
   onShareWithColleagues,
+  onUpdate, // 추가된 부분
 }) => {
   const [schedule, setSchedule] = useState<any>(null);
   const [activeSlide, setActiveSlide] = useState(0);
@@ -67,6 +73,54 @@ const OptionModal: React.FC<OptionModalProps> = ({
   if (!schedule) {
     return null;
   }
+
+  const handleRemovePlace = async (dayIndex: number, placeOrder: number) => {
+    const updatedDays = schedule.days.map((day: DayPlan) => {
+      if (day.dayIndex === dayIndex) {
+        const updatedPlaces = day.places
+          .filter((place: Place) => place.order !== placeOrder)
+          .map((place: Place, index: number) => ({
+            ...place,
+            order: index + 1, // order 값 업데이트
+          }));
+        return {
+          ...day,
+          places: updatedPlaces,
+        };
+      }
+      return day;
+    });
+
+    const updatedTotalCost = updatedDays.reduce(
+      (total: number, day: DayPlan) => {
+        return (
+          total +
+          day.places.reduce(
+            (dayTotal: number, place: Place) => dayTotal + place.cost,
+            0
+          )
+        );
+      },
+      0
+    );
+
+    const updatedSchedule = {
+      ...schedule,
+      days: updatedDays,
+      extraInfo: {
+        ...schedule.extraInfo,
+        totalCost: updatedTotalCost, // totalCost 업데이트
+      },
+    };
+    setSchedule(updatedSchedule);
+    onUpdate(updatedSchedule); // 추가된 부분
+
+    // AsyncStorage에 업데이트된 일정 저장
+    await AsyncStorage.setItem(
+      "formattedSchedule",
+      JSON.stringify(updatedSchedule)
+    );
+  };
 
   return (
     <Modal
@@ -169,7 +223,9 @@ const OptionModal: React.FC<OptionModalProps> = ({
                       </View>
                       <TouchableOpacity
                         style={styles.removeButton}
-                        onPress={() => onPlacePress(item)}
+                        onPress={() =>
+                          handleRemovePlace(dayPlan.dayIndex, item.order)
+                        }
                       >
                         <Text style={styles.removeButtonText}>-</Text>
                       </TouchableOpacity>
@@ -391,6 +447,14 @@ const styles = StyleSheet.create({
     position: "absolute",
     top: 10,
     left: 10,
+    backgroundColor: "#007AFF",
+    borderRadius: 18,
+    padding: 10,
+  },
+  companionContainer: {
+    position: "absolute",
+    top: 10,
+    right: 10,
     backgroundColor: "#007AFF",
     borderRadius: 18,
     padding: 10,

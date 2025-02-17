@@ -96,6 +96,10 @@ export default function MessageList({
     setSelectedCard(null);
   };
 
+  const handleUpdateSchedule = (updatedSchedule: any) => {
+    setSchedule(updatedSchedule);
+  };
+
   // 새 메시지가 추가될 때 자동 스크롤
   useEffect(() => {
     if (scrollViewRef.current && messages.length > 0) {
@@ -194,6 +198,7 @@ export default function MessageList({
           onShare={() => {}}
           onPlacePress={() => {}}
           onShareWithColleagues={() => {}}
+          onUpdate={handleUpdateSchedule} // 추가된 부분
         />
       )}
     </View>
