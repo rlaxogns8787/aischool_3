@@ -68,7 +68,10 @@ export const updateUserInfo = async (field, value, password) => {
       }),
     };
 
-    const response = await axios.put(`${BASE_URL}/user/${username}`, updateData);
+    const response = await axios.put(
+      `${BASE_URL}/user/${username}`,
+      updateData
+    );
 
     console.log("Update response:", response.data);
 
@@ -87,8 +90,6 @@ export const updateUserInfo = async (field, value, password) => {
     );
   }
 };
-
-
 
 /**
  * 여행 일정 추가 API
@@ -129,7 +130,7 @@ export const deleteSchedule = async (scheduleId) => {
     const userInfo = JSON.parse(userData);
 
     const response = await axios.delete(`${BASE_URL}/schedule/${scheduleId}`, {
-      params: { username: userInfo.username },  // 사용자 정보는 쿼리 파라미터로 전달
+      params: { username: userInfo.username }, // 사용자 정보는 쿼리 파라미터로 전달
     });
 
     return response.data;
@@ -154,7 +155,7 @@ export const getSchedules = async () => {
     const userInfo = JSON.parse(userData);
 
     const response = await axios.get(`${BASE_URL}/schedule`, {
-      params: { username: userInfo.username },  // 사용자 정보는 쿼리 파라미터로 전달
+      params: { username: userInfo.username }, // 사용자 정보는 쿼리 파라미터로 전달
     });
 
     return response.data;
