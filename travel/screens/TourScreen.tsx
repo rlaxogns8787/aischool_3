@@ -62,6 +62,7 @@ interface VoiceType {
   name: string;
   id: string;
   description: string;
+  disabled?: boolean;
 }
 
 export default function TourScreen() {
@@ -123,9 +124,10 @@ export default function TourScreen() {
       description: "밝고 친근한 청년 음성",
     },
     {
-      name: "인주",
+      name: "진수",
       id: "ko-KR-InJoonNeural",
       description: "부드럽고 차분한 남성 음성",
+      disabled: true,
     },
   ];
 
@@ -157,13 +159,19 @@ export default function TourScreen() {
       if (currentIndex < text.length) {
         setTourGuide((prev) => {
           const newText = prev + text[currentIndex];
-          // 문장 끝에서 한 줄만 띄우기
+          // 문장 끝에서 줄바꿈 처리 수정
           if (
             text[currentIndex] === "." ||
             text[currentIndex] === "!" ||
             text[currentIndex] === "?"
           ) {
-            return newText + "\n"; // \n\n에서 \n으로 변경
+            // 다음 문자가 있고 공백이 아닌 경우에만 줄바꿈 추가
+            if (
+              currentIndex + 1 < text.length &&
+              text[currentIndex + 1] !== " "
+            ) {
+              return newText + "\n\n";
+            }
           }
           return newText;
         });
@@ -431,22 +439,22 @@ export default function TourScreen() {
           style: "정확하고 전문적인 설명과 함께 역사적 맥락을 중요시하는",
           tone: "우아하고 세련된",
           examples:
-            "이곳은 조선 시대 최고의 궁중 음식이 만들어지던 수랏간이 있던 자리입니다. 왕실의 식문화를 엿볼 수 있는 소중한 공간이지요.",
+            "경복궁은 조선 왕조의 중심이자, 궁중 요리의 정수가 담긴 수랏간이 있던 곳입니다. 수랏간은 임금의 식사를 준비하는 전용 공간으로, 엄선된 재료와 조리법이 사용되었습니다. 특히 궁중 음식은 계절과 의례에 맞춘 정교한 메뉴 구성으로 유명했죠. 예를 들어, '구절판'은 미적 감각과 영양 균형을 고려한 대표적 요리로, 이곳에서 탄생한 음식 중 하나입니다. 재미있게도, 수랏간의 요리사들은 궁 밖으로 나가지 못했는데, 이는 조리 비법의 유출을 막기 위함이었답니다.",
         },
         "ko-KR-JiMinNeural": {
           personality: "밝고 친근한 청년",
           style: "재미있는 일화와 현대적인 관점을 곁들인 친근하고 캐주얼한",
           tone: "활기차고 경쾌한 반말",
           examples:
-            "안녕! 내가 오늘 진짜 재밌는 이야기 들려줄게~ 여기가 바로 조선시대 '임금님의 맛남의 광장'이 펼쳐졌던 곳이야! 궁중 셰프들이 실력 발휘하면서 임금님 리액션도 받았다는 TMI까지 알려줄게 ㅎㅎ",
+            "와~ 여러분! 여기가 바로 대박 맛집의 시초였던 조선시대 수랏간이야! 임금님 수라상을 만드는 초특급 비밀 주방이었다고! 완전 대박인 건 뭔지 알아? 요리사들이 궁 밖으로 못 나갔대. 비법이 새어나갈까 봐 그랬던 거지ㅎㅎ 그리고 여기서 탄생한 '구절판'이라는 음식이 있는데, 이게 진짜 예술이야! 재료 손질부터 플레이팅까지 완전 현대 미슐랭 급이었다니까? 계절 따라 메뉴도 바뀌고, 먹방 여신 같은 의궤 덕분에 지금까지도 그 비법이 전해진다는 거 실화야?",
         },
-        "ko-KR-InJoonNeural": {
-          personality: "부드럽고 차분한 남성",
-          style: "깊이 있는 통찰과 철학적인 관점을 담은",
-          tone: "차분하고 사려 깊은",
-          examples:
-            "이 공간에서 우리는 조선 왕실의 식문화가 얼마나 정교했는지를 엿볼 수 있습니다. 음식을 통해 국가의 위엄을 보여주었던 것이지요.",
-        },
+        // "ko-KR-InJoonNeural": {
+        //   personality: "부드럽고 차분한 남성",
+        //   style: "깊이 있는 통찰과 철학적인 관점을 담은",
+        //   tone: "차분하고 사려 깊은",
+        //   examples:
+        //     "이 공간에서 우리는 조선 왕실의 식문화가 얼마나 정교했는지를 엿볼 수 있습니다. 음식을 통해 국가의 위엄을 보여주었던 것이지요.",
+        // },
       } as const;
 
       // 타입 안전성을 위한 체크 추가
@@ -469,13 +477,12 @@ export default function TourScreen() {
           주의사항:
           1) 최대 200자 내외의 짧은 해설을 지향합니다.
           2) 장소의 역사/배경 + 재미있는 TMI(1~2줄) 포함.
-          3) 너무 긴 문장보다, 짧은 문장 중심.
-          4) 각 캐릭터의 특성에 맞는 어투와 표현을 사용.
+          3) 너무 긴 문장보다는 짧은 문장 중심으로 작성합니다.
+          4) 각 캐릭터의 특성에 맞는 어투와 표현을 사용합니다.
+          5) 한글 맞춤법과 띄어쓰기를 정확하게 지켜주세요.
           
           예시 어투:
-          선희: "이곳은 조선시대 최고의 궁중 음식이 만들어지던 수랏간이 있던 자리입니다."
-          지민: "와, 여러분~ 여기가 바로 조선 시대 임금님의 진수성찬이 탄생한 곳이에요!"
-          인주: "이 공간에서 우리는 조선 왕실의 식문화가 얼마나 정교했는지를 엿볼 수 있죠."`,
+          ${selectedCharacter.examples}`,
         },
         {
           role: "user",
@@ -507,7 +514,10 @@ export default function TourScreen() {
       }
 
       const data = await response.json();
-      const content = data.choices[0].message.content;
+      let content = data.choices[0].message.content;
+
+      // 문자열 정리: 앞뒤 공백 제거 및 불필요한 문자 제거
+      content = content.trim().replace(/undefined/g, "");
 
       if (!content) {
         throw new Error("No content in response");
@@ -627,16 +637,30 @@ export default function TourScreen() {
                 style={[
                   styles.voiceOption,
                   selectedVoice.id === voice.id && styles.selectedVoice,
+                  voice.disabled && styles.disabledVoice,
                 ]}
-                onPress={() => handleVoiceSelect(voice)}
+                onPress={() => !voice.disabled && handleVoiceSelect(voice)}
+                disabled={voice.disabled}
               >
                 <View>
-                  <Text style={styles.voiceName}>{voice.name}</Text>
-                  <Text style={styles.voiceDescription}>
+                  <Text
+                    style={[
+                      styles.voiceName,
+                      voice.disabled && styles.disabledText,
+                    ]}
+                  >
+                    {voice.name}
+                  </Text>
+                  <Text
+                    style={[
+                      styles.voiceDescription,
+                      voice.disabled && styles.disabledText,
+                    ]}
+                  >
                     {voice.description}
                   </Text>
                 </View>
-                {selectedVoice.id === voice.id && (
+                {selectedVoice.id === voice.id && !voice.disabled && (
                   <View style={styles.checkmark} />
                 )}
               </TouchableOpacity>
@@ -1035,5 +1059,12 @@ const styles = StyleSheet.create({
     height: 20,
     borderRadius: 10,
     backgroundColor: "#007AFF",
+  },
+  disabledVoice: {
+    opacity: 0.5,
+    backgroundColor: "#F5F5F5",
+  },
+  disabledText: {
+    color: "#999999",
   },
 });
