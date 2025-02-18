@@ -386,7 +386,7 @@ export default function TourScreen() {
   useEffect(() => {
     const fetchSchedule = async () => {
       try {
-        const storedSchedule = await AsyncStorage.getItem("formattedSchedule");
+        const storedSchedule = await AsyncStorage.getItem("confirmedSchedule");
         if (storedSchedule) {
           const schedule = JSON.parse(storedSchedule);
           if (schedule && schedule.days) {
