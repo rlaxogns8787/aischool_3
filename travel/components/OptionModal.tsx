@@ -381,7 +381,9 @@ const styles = StyleSheet.create({
     paddingLeft: 16,
     backgroundColor: "#F8F9FE",
     borderRadius: 16,
-    width: 280,
+    minWidth: 280, // 최소 너비 설정
+    minHeight: 101, // 최소 높이 설정
+    flex: 1, // 내부 내용에 맞게 확장
   },
   placeImage: {
     width: 80,
