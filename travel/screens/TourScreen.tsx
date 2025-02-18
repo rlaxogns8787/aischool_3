@@ -17,7 +17,6 @@ import * as sdk from "microsoft-cognitiveservices-speech-sdk";
 import "react-native-get-random-values";
 import { useAzureBot } from "../src/hooks/useAzureBot";
 import { useNavigation } from "@react-navigation/native";
-// import * as azureSpeech from "microsoft-cognitiveservices-speech-sdk";
 import { LinearGradient } from "expo-linear-gradient";
 import BackToStoryIcon from "../assets/backtostory.svg";
 import { AudioService } from "../services/audioService";
@@ -30,6 +29,8 @@ import Animated, {
 } from "react-native-reanimated";
 import * as Location from "expo-location";
 import { Audio } from "expo-av";
+import * as FileSystem from "expo-file-system";
+import { encode as btoa } from "base-64";
 
 type TourScreenProps = {
   navigation: any;
@@ -37,7 +38,7 @@ type TourScreenProps = {
 
 // Azure Speech Services 키와 리전 설정
 const SPEECH_KEY =
-  "9ot6vDP41TrM6i1MRWbtsyZrOFlXDy4UunpzMcZbT5QrzyLvEHDYJQQJ99BAACYeBjFXJ3w3AAAYACOGvVzj"; // ⚠️ 실제 키로 교체 필요
+  "9ot6vDP41TrM6i1MRWbtsyZrOFlXDy4UunpzMcZbT5QrzyLvEHDYJQQJ99BAACYeBjFXJ3w3AAAYACOGvVzj";
 const SPEECH_REGION = "eastus";
 
 const AZURE_OPENAI_ENDPOINT = "https://ssapy-openai.openai.azure.com/";
@@ -45,9 +46,7 @@ const AZURE_OPENAI_KEY =
   "65fEqo2qsGl8oJPg7lzs8ZJk7pUgdTEgEhUx2tvUsD2e07hbowbCJQQJ99BBACfhMk5XJ3w3AAABACOGr7S4";
 const DEPLOYMENT_NAME = "gpt-4o";
 
-// type Interest = "건축" | "역사" | "문화" | "요리" | "자연";
-
-// 샘플 일정 타입 정의 추가
+// 샘플 일정 타입 정의 (경복궁 관련 내용 그대로 유지)
 interface SpotInfo {
   name: string;
   coords: {
@@ -57,7 +56,7 @@ interface SpotInfo {
   description?: string;
 }
 
-// 음성 타입 정의 추가
+// 음성 타입 정의 (기존 그대로)
 interface VoiceType {
   name: string;
   id: string;
@@ -75,12 +74,11 @@ export default function TourScreen() {
   const scrollViewRef = useRef<ScrollView>(null);
   const recognizer = useRef<sdk.SpeechRecognizer | null>(null);
   const { processQuery, isProcessing } = useAzureBot();
-  // const [selectedInterest, setSelectedInterest] = useState<Interest | null>(null);
   const [tourGuide, setTourGuide] = useState<string>("");
   const [isLoading, setIsLoading] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
   const textTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const characterDelay = 50; // 글자당 50ms 딜레이
+  const characterDelay = 50;
   const audioService = useRef(new AudioService());
   const rotation = useSharedValue(0);
   const [currentLocation, setCurrentLocation] =
@@ -97,21 +95,16 @@ export default function TourScreen() {
   // 사용자 관심사를 "요리"로 고정
   const userInterest = "요리";
 
-  // const interests: Interest[] = ["건축", "역사", "문화", "요리", "자연"];
-
-  // 샘플 일정 데이터
+  // 샘플 일정 데이터 (경복궁 관련 내용 그대로 유지)
   const sampleSchedule: SpotInfo[] = [
     {
       name: "경복궁",
-      coords: {
-        latitude: 37.579617,
-        longitude: 126.977041,
-      },
+      coords: { latitude: 37.579617, longitude: 126.977041 },
       description: "조선왕조의 법궁, 수랏간과 다양한 궁중 음식 문화의 중심지",
     },
   ];
 
-  // 사용 가능한 음성 목록
+  // 사용 가능한 음성 목록 (기존 그대로)
   const voiceTypes: VoiceType[] = [
     {
       name: "선희",
@@ -131,32 +124,23 @@ export default function TourScreen() {
     },
   ];
 
-  // 음성 선택 핸들러 수정
+  // 음성 선택 핸들러 (기존 그대로)
   const handleVoiceSelect = async (voice: VoiceType) => {
+    console.log("handleVoiceSelect 시작:", voice);
     try {
       setIsLoading(true);
-
-      // 이전 음성 및 텍스트 상태 초기화
-      if (textTimeoutRef.current) {
-        clearTimeout(textTimeoutRef.current);
-      }
-
-      // 음성 선택 상태 업데이트
+      if (textTimeoutRef.current) clearTimeout(textTimeoutRef.current);
       setSelectedVoice(voice);
       setShowVoiceModal(false);
-
-      // 현재 위치에 대한 새로운 설명 생성
       if (currentLocation) {
         const nearbySpot = findNearbySpot(currentLocation.coords);
         if (nearbySpot) {
-          // 새로운 설명 생성 전에 이전 텍스트 초기화
           setTourGuide("");
-
           const guideText = await generateTourGuide(
             nearbySpot.name,
             userInterest
           );
-
+          console.log("guideText 생성 완료:", guideText);
           if (guideText !== "설명 생성 실패") {
             setIsGuiding(true);
             await startSpeaking(guideText);
@@ -170,96 +154,70 @@ export default function TourScreen() {
     }
   };
 
-  // 텍스트를 점진적으로 표시하는 함수 수정
+  // animateText 함수 (텍스트를 점진적으로 표시)
   const animateText = (text: string) => {
-    // 이전 타이머가 있다면 클리어
-    if (textTimeoutRef.current) {
-      clearTimeout(textTimeoutRef.current);
-    }
-
+    console.log("animateText 시작:", text);
+    if (textTimeoutRef.current) clearTimeout(textTimeoutRef.current);
     let currentIndex = 0;
-
+    setTourGuide(""); // 기존 텍스트 초기화
     const showNextCharacter = () => {
       if (currentIndex < text.length) {
-        setTourGuide((prev) => {
-          const newText = prev + text[currentIndex];
-          currentIndex++;
-
-          // 문장 끝 부호 다음에 줄바꿈 추가
-          if ([".", "!", "?"].includes(text[currentIndex - 1])) {
-            // 다음 문자가 있고 공백이 아닌 경우 문단 구분
-            if (currentIndex < text.length) {
-              // 다음 문자가 공백이면 일반 문장 끝
-              if (text[currentIndex] === " ") {
-                return newText + "\n";
-              }
-              // 다음 문자가 공백이 아니면 새로운 문단 시작
-              return newText + "\n\n";
-            }
-          }
-          return newText;
-        });
-
+        setTourGuide((prev) => prev + text[currentIndex]);
+        currentIndex++;
         textTimeoutRef.current = setTimeout(showNextCharacter, characterDelay);
+      } else {
+        console.log("animateText 완료");
       }
     };
-
     showNextCharacter();
   };
 
-  // Audio 권한 및 초기화
+  // 오디오 초기화 (expo-av)
   useEffect(() => {
     const initializeAudio = async () => {
+      console.log("오디오 초기화 시작");
       try {
-        // Audio 권한 요청
         const permission = await Audio.requestPermissionsAsync();
         if (!permission.granted) {
           Alert.alert("오류", "오디오 권한이 필요합니다.");
           return;
         }
-
-        // Audio 모드 설정 수정
         await Audio.setAudioModeAsync({
           allowsRecordingIOS: true,
           playsInSilentModeIOS: true,
           staysActiveInBackground: true,
-          // iOS 인터럽션 모드 수정
           interruptionModeIOS: Audio.InterruptionModeIOS.MixWithOthers,
-          // Android 인터럽션 모드 수정
           interruptionModeAndroid: Audio.InterruptionModeAndroid.DuckOthers,
           shouldDuckAndroid: true,
           playThroughEarpieceAndroid: false,
         });
-
+        console.log("오디오 초기화 성공");
         setIsAudioReady(true);
       } catch (error) {
         console.error("Audio initialization error:", error);
         Alert.alert("오류", "오디오 초기화에 실패했습니다.");
       }
     };
-
     initializeAudio();
   }, []);
 
-  // Azure STT 함수 수정
+  // Azure STT 함수 (Azure Speech SDK 사용)
   const startAzureSTT = async () => {
+    console.log("startAzureSTT 시작");
     try {
       const speechConfig = sdk.SpeechConfig.fromSubscription(
         SPEECH_KEY,
         SPEECH_REGION
       );
       speechConfig.speechRecognitionLanguage = "ko-KR";
-
       const audioConfig = sdk.AudioConfig.fromDefaultMicrophoneInput();
       const recognizer = new sdk.SpeechRecognizer(speechConfig, audioConfig);
-
-      console.log("Starting STT...");
-
+      console.log("STT 인식 시작...");
       return new Promise<string>((resolve, reject) => {
         recognizer.recognizeOnceAsync(
           (result) => {
             if (result.text) {
-              console.log("Recognized text:", result.text);
+              console.log("STT 결과:", result.text);
               resolve(result.text);
             } else {
               reject(new Error("음성 인식에 실패했습니다."));
@@ -279,61 +237,81 @@ export default function TourScreen() {
     }
   };
 
-  // Azure TTS 함수 수정
+  // Azure TTS 함수: REST API와 expo-av를 이용해 음성 합성 및 재생 (한 번만 실행)
   const startSpeaking = async (text: string) => {
+    console.log("startSpeaking 호출, text:", text);
     if (!text) {
       console.error("No text provided for TTS");
       return;
     }
-
     try {
-      console.log("Starting Azure TTS with text:", text);
+      console.log("Starting Azure TTS (REST) with text:", text);
       setIsSpeaking(true);
 
-      const speechConfig = sdk.SpeechConfig.fromSubscription(
-        SPEECH_KEY,
-        SPEECH_REGION
-      );
-
-      // 선택된 음성 적용
-      speechConfig.speechSynthesisVoiceName = selectedVoice.id;
-      speechConfig.speechSynthesisLanguage = "ko-KR";
-
-      // 음성 품질 향상 설정
-      speechConfig.speechSynthesisOutputFormat =
-        sdk.SpeechSynthesisOutputFormat.Riff24Khz16BitMonoPcm;
-
-      const audioConfig = sdk.AudioConfig.fromDefaultSpeakerOutput();
-      const synthesizer = new sdk.SpeechSynthesizer(speechConfig, audioConfig);
-
-      // 텍스트를 적절한 길이로 나누기
-      const sentences = text.split(/[.!?]/g).filter(Boolean);
-
-      for (const sentence of sentences) {
-        if (sentence.trim()) {
-          await new Promise((resolve, reject) => {
-            synthesizer.speakTextAsync(
-              sentence.trim(),
-              (result) => {
-                if (
-                  result.reason === sdk.ResultReason.SynthesizingAudioCompleted
-                ) {
-                  resolve(result);
-                } else {
-                  reject(new Error(result.errorDetails));
-                }
-              },
-              (error) => {
-                reject(error);
-              }
-            );
-          });
+      // 1) 토큰 발급
+      const tokenResponse = await fetch(
+        `https://${SPEECH_REGION}.api.cognitive.microsoft.com/sts/v1.0/issueToken`,
+        {
+          method: "POST",
+          headers: { "Ocp-Apim-Subscription-Key": SPEECH_KEY },
         }
+      );
+      if (!tokenResponse.ok) {
+        throw new Error("토큰 발급 실패: " + tokenResponse.status);
       }
+      const accessToken = await tokenResponse.text();
+      console.log("토큰 발급 완료");
 
-      // 텍스트 표시 시작
-      animateText(text);
+      // 2) SSML 생성
+      const ssml = `
+<speak version='1.0' xml:lang='ko-KR'>
+  <voice xml:lang='ko-KR' xml:gender='Female' name='${selectedVoice.id}'>
+    ${text}
+  </voice>
+</speak>
+      `.trim();
+      console.log("SSML 생성:", ssml);
 
+      // 3) TTS REST API 요청
+      const ttsResponse = await fetch(
+        `https://${SPEECH_REGION}.tts.speech.microsoft.com/cognitiveservices/v1`,
+        {
+          method: "POST",
+          headers: {
+            Authorization: "Bearer " + accessToken,
+            "Content-Type": "application/ssml+xml",
+            "X-Microsoft-OutputFormat": "riff-24khz-16bit-mono-pcm",
+            "User-Agent": "ExpoTTS",
+          },
+          body: ssml,
+        }
+      );
+      if (!ttsResponse.ok) {
+        const errText = await ttsResponse.text();
+        throw new Error("TTS 요청 실패: " + ttsResponse.status + " " + errText);
+      }
+      console.log("TTS 요청 성공");
+
+      // 4) 음성 데이터를 파일로 저장 후 재생
+      const fileUri = FileSystem.cacheDirectory + "output.wav";
+      const audioData = await ttsResponse.arrayBuffer();
+      const uint8Array = new Uint8Array(audioData);
+      let binary = "";
+      for (let i = 0; i < uint8Array.byteLength; i++) {
+        binary += String.fromCharCode(uint8Array[i]);
+      }
+      const base64Audio = btoa(binary);
+      await FileSystem.writeAsStringAsync(fileUri, base64Audio, {
+        encoding: FileSystem.EncodingType.Base64,
+      });
+      console.log("TTS 음성 파일 저장 완료:", fileUri);
+
+      const soundObject = new Audio.Sound();
+      await soundObject.loadAsync({ uri: fileUri });
+      await soundObject.playAsync();
+      console.log("TTS 음성 재생 완료");
+
+      // 여기서는 animateText를 호출하지 않아, 이미 generateTourGuide에서 tourGuide를 설정함
       return true;
     } catch (error) {
       console.error("TTS setup error:", error);
@@ -344,21 +322,15 @@ export default function TourScreen() {
     }
   };
 
-  // 테스트용 위치 체크 함수 수정
+  // 테스트용 위치 체크 함수 (경복궁 샘플 데이터 사용)
   function findNearbySpot(userCoords: Location.LocationObject["coords"]) {
-    // 테스트를 위해 항상 경복궁 근처라고 가정
-    const testUserCoords = {
-      latitude: 37.579617, // 경복궁과 동일한 좌표
-      longitude: 126.977041,
-    };
-
-    // 실제 거리 계산 로직은 나중에 구현
-    // 테스트를 위해 항상 첫 번째 장소 반환
+    console.log("findNearbySpot 호출, userCoords:", userCoords);
     return sampleSchedule[0];
   }
 
-  // 근처 장소 체크 및 도슨트 실행 함수 수정
+  // 근처 장소 체크 및 도슨트 실행 함수
   const checkNearbySpots = async (location: Location.LocationObject) => {
+    console.log("checkNearbySpots 호출, location:", location);
     if (!isGuiding) {
       const nearbySpot = findNearbySpot(location.coords);
       if (nearbySpot) {
@@ -368,21 +340,21 @@ export default function TourScreen() {
           userInterest
         );
         setIsGuiding(true);
-        startSpeaking(guideText);
+        await startSpeaking(guideText);
       }
     }
   };
 
-  // 위치 추적 설정 useEffect 수정
+  // 위치 추적 useEffect
   useEffect(() => {
     (async () => {
+      console.log("위치 권한 요청 시작");
       const { status } = await Location.requestForegroundPermissionsAsync();
       if (status !== "granted") {
         Alert.alert("위치 권한이 필요합니다");
         return;
       }
-
-      // 테스트를 위해 실제 위치 추적 대신 가짜 위치 사용
+      console.log("위치 권한 허용됨");
       const fakeLocation: Location.LocationObject = {
         coords: {
           latitude: 37.579617,
@@ -395,37 +367,29 @@ export default function TourScreen() {
         },
         timestamp: Date.now(),
       };
-
-      // 즉시 가짜 위치로 체크 시작
+      console.log("가짜 위치 생성:", fakeLocation);
       setCurrentLocation(fakeLocation);
       checkNearbySpots(fakeLocation);
-
-      // 실제 위치 추적은 주석 처리
-      // const subscription = await Location.watchPositionAsync(...)
-
-      return () => {
-        // subscription.remove();
-      };
+      return () => {};
     })();
   }, []);
 
-  // 마이크 버튼 핸들러 수정
+  // 마이크 버튼 핸들러
   const handleMicPress = async () => {
+    console.log("handleMicPress 호출");
     if (isGuiding) {
-      // 도슨트 안내 중이면 일시 정지
       Speech.stop();
       setPausedGuideText(tourGuide);
     }
-
     setIsRecording(true);
     try {
       const userQuestion = await startAzureSTT();
+      console.log("사용자 질문:", userQuestion);
       if (userQuestion) {
         const answer = await processQuery(userQuestion);
+        console.log("답변:", answer);
         if (answer) {
           await startSpeaking(answer);
-
-          // 질문 답변 후 도슨트 안내 재개
           if (pausedGuideText) {
             await startSpeaking(pausedGuideText);
             setPausedGuideText(null);
@@ -441,6 +405,7 @@ export default function TourScreen() {
 
   // 도슨트 안내 재개 버튼 핸들러
   const handleResumeGuide = async () => {
+    console.log("handleResumeGuide 호출");
     if (pausedGuideText) {
       await startSpeaking(pausedGuideText);
       setPausedGuideText(null);
@@ -449,127 +414,20 @@ export default function TourScreen() {
   };
 
   const handleMapPress = () => {
+    console.log("handleMapPress 호출");
     navigation.navigate("Map");
   };
 
+  // generateTourGuide 함수: 샘플 문구를 "내 이름은 둘리. 빙하타고 내려왔지"로 반환
   const generateTourGuide = async (location: string, interest: string) => {
+    console.log("generateTourGuide 호출:", location, interest);
     setIsLoading(true);
     try {
-      // 선택된 음성에 따른 캐릭터 특성 정의
-      const characterTraits = {
-        "ko-KR-SunHiNeural": {
-          personality: "차분하고 전문적인 성우",
-          style: "정확하고 전문적인 설명과 함께 역사적 맥락을 중요시하는",
-          tone: "우아하고 세련된",
-          examples:
-            "경복궁은 조선 왕조의 중심이자, 궁중 요리의 정수가 담긴 수랏간이 있던 곳입니다. 수랏간은 임금의 식사를 준비하는 전용 공간으로, 엄선된 재료와 조리법이 사용되었습니다. 특히 궁중 음식은 계절과 의례에 맞춘 정교한 메뉴 구성으로 유명했죠. 예를 들어, '구절판'은 미적 감각과 영양 균형을 고려한 대표적 요리로, 이곳에서 탄생한 음식 중 하나입니다. 재미있게도, 수랏간의 요리사들은 궁 밖으로 나가지 못했는데, 이는 조리 비법의 유출을 막기 위함이었답니다.",
-        },
-        "ko-KR-JiMinNeural": {
-          personality: "밝고 친근한 청년",
-          style: "재미있는 일화와 현대적인 관점을 곁들인 친근하고 캐주얼한",
-          tone: "활기차고 경쾌한 반말",
-          examples:
-            "와~ 여러분! 여기가 바로 대박 맛집의 시초였던 조선시대 수랏간이야! 임금님 수라상을 만드는 초특급 비밀 주방이었다고! 완전 대박인 건 뭔지 알아? 요리사들이 궁 밖으로 못 나갔대. 비법이 새어나갈까 봐 그랬던 거지ㅎㅎ 그리고 여기서 탄생한 '구절판'이라는 음식이 있는데, 이게 진짜 예술이야! 재료 손질부터 플레이팅까지 완전 현대 미슐랭 급이었다니까? 계절 따라 메뉴도 바뀌고, 먹방 여신 같은 의궤 덕분에 지금까지도 그 비법이 전해진다는 거 실화야?",
-        },
-        // "ko-KR-InJoonNeural": {
-        //   personality: "부드럽고 차분한 남성",
-        //   style: "깊이 있는 통찰과 철학적인 관점을 담은",
-        //   tone: "차분하고 사려 깊은",
-        //   examples:
-        //     "이 공간에서 우리는 조선 왕실의 식문화가 얼마나 정교했는지를 엿볼 수 있습니다. 음식을 통해 국가의 위엄을 보여주었던 것이지요.",
-        // },
-      } as const;
-
-      // 현재 선택된 음성의 캐릭터 특성 가져오기
-      const selectedCharacter =
-        characterTraits[selectedVoice.id as keyof typeof characterTraits];
-
-      if (!selectedCharacter) {
-        throw new Error("Invalid voice selection");
-      }
-
-      const messages = [
-        {
-          role: "system",
-          content: `You are a ${selectedCharacter.personality} tour guide.
-Your role is to provide an engaging and informative explanation about ${location} for tourists who are interested in ${interest}. 
-
-Your explanation style should align with ${selectedCharacter.style}, and your tone should remain ${selectedCharacter.tone}. 
-The explanation must include:
-
-1. Unique aspects of ${location} from the perspective of ${interest}.
-2. Relevant technical terms and professional explanations.
-3. In-depth information that is not typically found in standard tourist guides.
-4. Specific details that enthusiasts of ${interest} would find particularly fascinating.
-
-### **Critical Instructions:**
-- Keep the response within **200 characters**.
-- Use **short and concise sentences**.
-- Each sentence MUST provide completely new information.
-- STRICTLY NO REPETITION of words, concepts, or themes.
-- Avoid redundant expressions like "궁중 요리" multiple times.
-- If mentioning a place or concept, describe it only once.
-- Focus on diverse aspects in a structured way:
-  1. Start with location and main purpose
-  2. Describe unique features and processes
-  3. Add interesting historical facts
-  4. End with cultural significance
-- Each topic should be clearly separated.
-- Ensure **proper Korean spelling and spacing**.
-- The response **must be in Korean**.
-
-### **Example Output Style:**
-${selectedCharacter.examples}
-    `,
-        },
-        {
-          role: "user",
-          content: `Please describe ${location} from the perspective of ${interest}. 
-Each sentence must provide completely new information without any repetition of concepts.
-Organize the information in a clear, logical structure.
-The response should be in Korean.`,
-        },
-      ];
-
-      const response = await fetch(
-        `${AZURE_OPENAI_ENDPOINT}/openai/deployments/${DEPLOYMENT_NAME}/chat/completions?api-version=2024-02-15-preview`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "api-key": AZURE_OPENAI_KEY,
-          },
-          body: JSON.stringify({
-            messages,
-            max_tokens: 500,
-            temperature: 0.7,
-            top_p: 0.95,
-            frequency_penalty: 0,
-            presence_penalty: 0,
-          }),
-        }
-      );
-
-      if (!response.ok) {
-        throw new Error("Failed to generate tour guide");
-      }
-
-      const data = await response.json();
-      let content = data.choices[0].message.content;
-
-      // 문자열 정리: 앞뒤 공백과 undefined 제거
-      content = content
-        ?.trim()
-        .replace(/undefined/g, "")
-        .replace(/\.$/, ""); // 마지막 마침표 제거
-
-      if (!content) {
-        throw new Error("No content in response");
-      }
-
-      setTourGuide("");
-      animateText(content);
-      return content;
+      const sampleGuideText = "내 이름은 둘리. 빙하타고 내려왔지";
+      // 텍스트를 한 번만 설정
+      setTourGuide(sampleGuideText);
+      console.log("generateTourGuide 완료:", sampleGuideText);
+      return sampleGuideText;
     } catch (error) {
       console.error("Error generating tour guide:", error);
       setTourGuide("죄송합니다. 설명을 불러오는데 실패했습니다.");
@@ -579,68 +437,42 @@ The response should be in Korean.`,
     }
   };
 
-  // speakText 함수 수정
+  // speakText 함수 (TTS 실행)
   const speakText = (text: string) => {
-    setIsSpeaking(!isSpeaking);
-    // TODO: 실제 음성 기능 구현 시 audioService 연동
-  };
-
-  // 음성 및 텍스트 표시 중지
-  const stopSpeaking = () => {
-    // if (synthesizer.current) {
-    //   synthesizer.current.close();
-    //   setIsSpeaking(false);
-    //
-    //   // 애니메이션 중지 및 전체 텍스트 표시
-    //   if (textTimeoutRef.current) {
-    //     clearTimeout(textTimeoutRef.current);
-    //   }
-    //   setDisplayedText(fullText);
-    // }
+    startSpeaking(text);
   };
 
   // 컴포넌트 언마운트 시 정리
   useEffect(() => {
     return () => {
-      if (textTimeoutRef.current) {
-        clearTimeout(textTimeoutRef.current);
-      }
-      // if (synthesizer.current) {
-      //   synthesizer.current.close();
-      // }
+      if (textTimeoutRef.current) clearTimeout(textTimeoutRef.current);
     };
   }, []);
 
   useEffect(() => {
-    // 오디오 서비스 초기화
     audioService.current.initialize();
-
     return () => {
       audioService.current.cleanup();
     };
   }, []);
 
-  // 녹음 시작시 애니메이션 시작
   useEffect(() => {
     if (isRecording) {
       rotation.value = withRepeat(
-        withTiming(360, {
-          duration: 3000, // 3초에 한바퀴 (더 천천히)
-        }),
-        -1, // 무한 반복
-        false // 역방향 없음
+        withTiming(360, { duration: 3000 }),
+        -1,
+        false
       );
     } else {
-      rotation.value = withTiming(0, { duration: 300 }); // 부드럽게 멈춤
+      rotation.value = withTiming(0, { duration: 300 });
     }
   }, [isRecording]);
 
-  // 회전 애니메이션 스타일
   const animatedStyle = useAnimatedStyle(() => {
-    return {
-      transform: [{ rotate: `${rotation.value}deg` }],
-    };
+    return { transform: [{ rotate: `${rotation.value}deg` }] };
   });
+
+  // 자동 TTS 호출 useEffect는 제거 (한 번만 실행됨)
 
   if (!isAudioReady) {
     return (
@@ -670,7 +502,6 @@ The response should be in Korean.`,
         </TouchableOpacity>
       </View>
 
-      {/* 음성 선택 모달 */}
       {showVoiceModal && (
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
@@ -718,10 +549,9 @@ The response should be in Korean.`,
         style={styles.guideContainer}
         contentContainerStyle={styles.guideContent}
         showsVerticalScrollIndicator={false}
-        onContentSizeChange={() => {
-          // 새 내용이 추가될 때마다 자동 스크롤
-          scrollViewRef.current?.scrollToEnd({ animated: true });
-        }}
+        onContentSizeChange={() =>
+          scrollViewRef.current?.scrollToEnd({ animated: true })
+        }
       >
         {isLoading ? (
           <ActivityIndicator size="large" color="#fff" />
@@ -736,18 +566,15 @@ The response should be in Korean.`,
         )}
       </ScrollView>
 
-      {/* 음성 시각화 및 텍스트 영역 */}
       <View style={styles.voiceVisualizerContainer}>
         {isRecording && (
           <Text style={styles.listeningText}>듣고 있습니다...</Text>
         )}
-        {/* 나중에 여기에 voice wave 컴포넌트가 들어갈 예정 */}
       </View>
 
       <View style={styles.footer}>
         <View style={styles.tabBar}>
           <View style={styles.actions}>
-            {/* 왼쪽 버튼 - 음성 선택 */}
             <TouchableOpacity
               style={styles.squareButton}
               onPress={() => setShowVoiceModal(true)}
@@ -755,7 +582,6 @@ The response should be in Korean.`,
               <View style={styles.square} />
             </TouchableOpacity>
 
-            {/* 중앙 마이크 버튼 */}
             <View style={styles.micButtonContainer}>
               <TouchableOpacity
                 style={[
@@ -766,9 +592,7 @@ The response should be in Korean.`,
               >
                 {isRecording ? (
                   <>
-                    {/* 바깥쪽 원 (고정) */}
                     <View style={styles.micButtonBorderOuter} />
-                    {/* 안쪽 원 (회전) */}
                     <Animated.View
                       style={[styles.micButtonBorderInner, animatedStyle]}
                     />
@@ -780,14 +604,11 @@ The response should be in Korean.`,
               </TouchableOpacity>
             </View>
 
-            {/* 오른쪽 버튼 - 녹음 중일 때만 표시 */}
             <View style={styles.rightButtonContainer}>
               {isRecording ? (
                 <TouchableOpacity
                   style={styles.backToStoryButton}
-                  onPress={() => {
-                    /* 뒤로가기 처리 */
-                  }}
+                  onPress={() => {}}
                 >
                   <BackToStoryIcon width={54} height={18} />
                 </TouchableOpacity>
@@ -803,32 +624,17 @@ The response should be in Korean.`,
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-  gradient: {
-    position: "absolute",
-    left: 0,
-    right: 0,
-    top: 0,
-    bottom: 0,
-  },
+  container: { flex: 1 },
+  gradient: { position: "absolute", left: 0, right: 0, top: 0, bottom: 0 },
   header: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
     padding: 16,
   },
-  backButton: {
-    padding: 8,
-  },
-  mapButton: {
-    padding: 8,
-  },
-  title: {
-    fontSize: 18,
-    fontWeight: "600",
-  },
+  backButton: { padding: 8 },
+  mapButton: { padding: 8 },
+  title: { fontSize: 18, fontWeight: "600" },
   interestsContainer: {
     paddingVertical: 12,
     borderBottomWidth: 1,
@@ -842,30 +648,15 @@ const styles = StyleSheet.create({
     borderColor: "#007AFF",
     marginHorizontal: 6,
   },
-  selectedInterest: {
-    backgroundColor: "#007AFF",
-  },
-  interestText: {
-    color: "#007AFF",
-    fontSize: 16,
-  },
-  selectedInterestText: {
-    color: "#fff",
-  },
-  guideContainer: {
-    flex: 1,
-    marginBottom: 120, // 하단 버튼들을 가리지 않도록
-  },
-  guideContent: {
-    padding: 20,
-  },
-  textContainer: {
-    flex: 1,
-    padding: 16,
-  },
+  selectedInterest: { backgroundColor: "#007AFF" },
+  interestText: { color: "#007AFF", fontSize: 16 },
+  selectedInterestText: { color: "#fff" },
+  guideContainer: { flex: 1, marginBottom: 120 },
+  guideContent: { padding: 20 },
+  textContainer: { flex: 1, padding: 16 },
   guideText: {
     fontSize: 24,
-    lineHeight: 32, // 줄 간격을 36에서 32로 줄임
+    lineHeight: 32,
     color: "#FFFFFF",
     letterSpacing: -0.3,
     fontWeight: "400",
@@ -884,17 +675,12 @@ const styles = StyleSheet.create({
     position: "absolute",
     left: 0,
     right: 0,
-    bottom: 140, // tabBar 위쪽에 위치
+    bottom: 140,
     height: 100,
     justifyContent: "center",
     alignItems: "center",
   },
-  listeningText: {
-    color: "#FFFFFF",
-    fontSize: 14,
-    opacity: 0.8,
-    marginTop: 8,
-  },
+  listeningText: { color: "#FFFFFF", fontSize: 14, opacity: 0.8, marginTop: 8 },
   tabBar: {
     position: "absolute",
     bottom: 0,
@@ -914,11 +700,7 @@ const styles = StyleSheet.create({
     isolation: "isolate",
     alignSelf: "stretch",
   },
-  micButtonContainer: {
-    width: 64,
-    height: 64,
-    position: "relative",
-  },
+  micButtonContainer: { width: 64, height: 64, position: "relative" },
   micButton: {
     width: 64,
     height: 64,
@@ -954,29 +736,16 @@ const styles = StyleSheet.create({
     backgroundColor: "#FFFFFF",
     borderRadius: 7.11,
   },
-  micIcon: {
-    position: "absolute",
-    left: "31%",
-    top: "31%",
-  },
-  micButtonActive: {
-    backgroundColor: "transparent",
-  },
+  micIcon: { position: "absolute", left: "31%", top: "31%" },
+  micButtonActive: { backgroundColor: "transparent" },
   userInput: {
     fontSize: 18,
     color: "#007AFF",
     marginBottom: 20,
     fontWeight: "500",
   },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  loadingText: {
-    marginTop: 20,
-    color: "#666",
-  },
+  loadingContainer: { flex: 1, justifyContent: "center", alignItems: "center" },
+  loadingText: { marginTop: 20, color: "#666" },
   recordingStatus: {
     fontSize: 16,
     color: "#007AFF",
@@ -992,14 +761,8 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
   },
-  stopButton: {
-    backgroundColor: "#FF3B30",
-  },
-  buttonText: {
-    color: "#fff",
-    fontSize: 16,
-    fontWeight: "600",
-  },
+  stopButton: { backgroundColor: "#FF3B30" },
+  buttonText: { color: "#fff", fontSize: 16, fontWeight: "600" },
   backToStoryButton: {
     width: 54,
     height: 40,
@@ -1008,10 +771,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
   },
-  speakButtonIcon: {
-    color: "#fff",
-    fontSize: 16,
-  },
+  speakButtonIcon: { color: "#fff", fontSize: 16 },
   squareButton: {
     width: 64,
     height: 64,
@@ -1045,10 +805,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
   },
-  emptySpace: {
-    width: 64,
-    height: 64,
-  },
+  emptySpace: { width: 64, height: 64 },
   modalOverlay: {
     position: "absolute",
     top: 0,
@@ -1085,30 +842,20 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     marginBottom: 8,
   },
-  selectedVoice: {
-    backgroundColor: "#F0F0F0",
-  },
+  selectedVoice: { backgroundColor: "#F0F0F0" },
   voiceName: {
     fontSize: 18,
     fontWeight: "500",
     color: "#000000",
     marginBottom: 4,
   },
-  voiceDescription: {
-    fontSize: 14,
-    color: "#666666",
-  },
+  voiceDescription: { fontSize: 14, color: "#666666" },
   checkmark: {
     width: 20,
     height: 20,
     borderRadius: 10,
     backgroundColor: "#007AFF",
   },
-  disabledVoice: {
-    opacity: 0.5,
-    backgroundColor: "#F5F5F5",
-  },
-  disabledText: {
-    color: "#999999",
-  },
+  disabledVoice: { opacity: 0.5, backgroundColor: "#F5F5F5" },
+  disabledText: { color: "#999999" },
 });
