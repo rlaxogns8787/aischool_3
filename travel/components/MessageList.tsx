@@ -246,7 +246,7 @@ export default function MessageList({
                       selectedOptions[message.id] === "confirm" &&
                         styles.optionButtonSelected,
                     ]}
-                    onPress={() => {
+                    onPress={async () => {
                       if (!disabledButtons[message.id]) {
                         // 🔹 개별 메시지의 버튼이 비활성화 상태가 아니면 실행
                         handleExit();
@@ -258,6 +258,43 @@ export default function MessageList({
                           ...prev,
                           [message.id]: true,
                         })); // 🔹 해당 메시지 버튼 비활성화
+
+                        // 🔹 일정 확정 시 AsyncStorage에 저장
+                        try {
+                          const userData = await AsyncStorage.getItem(
+                            "userData"
+                          );
+                          if (userData) {
+                            await AsyncStorage.setItem(
+                              "confirmedUserData",
+                              userData
+                            );
+                            console.log(
+                              "UserData -> confirmedUserData 에 저장됨:",
+                              userData
+                            );
+                          }
+
+                          const formattedSchedule = await AsyncStorage.getItem(
+                            "formattedSchedule"
+                          );
+                          if (formattedSchedule) {
+                            await AsyncStorage.setItem(
+                              "confirmedSchedule",
+                              formattedSchedule
+                            );
+                            console.log(
+                              "FormattedSchedule -> confirmedSchedule 에 저장됨:",
+                              formattedSchedule
+                            );
+                          }
+
+                          console.log(
+                            "일정과 사용자 데이터가 성공적으로 저장되었습니다."
+                          );
+                        } catch (error) {
+                          console.error("데이터 저장 중 오류 발생:", error);
+                        }
                       }
                     }}
                     disabled={disabledButtons[message.id]} // 🔹 개별 메시지의 버튼을 비활성화
