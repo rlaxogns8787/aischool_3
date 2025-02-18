@@ -199,7 +199,8 @@ export default function MessageList({
               )}
               {/* OptionCard 렌더링 */}
               {message.isBot &&
-                message.text.includes("여행 일정이 생성되었습니다") && (
+                (message.text.includes("여행 일정이 생성되었습니다") ||
+                  message.text.includes("새로운 일정이 생성되었습니다")) && (
                   <OptionCard onPress={() => handleCardPress(schedule)} />
                 )}
 
