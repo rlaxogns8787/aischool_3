@@ -31,6 +31,7 @@ import * as Location from "expo-location";
 import { Audio } from "expo-av";
 import * as FileSystem from "expo-file-system";
 import { encode as btoa } from "base-64";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 type TourScreenProps = {
   navigation: any;
@@ -379,6 +380,39 @@ export default function TourScreen() {
       checkNearbySpots(fakeLocation);
       return () => {};
     })();
+  }, []);
+
+  // 일정 데이터 불러오기 및 스토리텔링 시작
+  useEffect(() => {
+    const fetchSchedule = async () => {
+      try {
+        const storedSchedule = await AsyncStorage.getItem("formattedSchedule");
+        if (storedSchedule) {
+          const schedule = JSON.parse(storedSchedule);
+          if (schedule && schedule.days) {
+            const guideText = schedule.days
+              .map((day) =>
+                day.places
+                  .map((place) => `${place.title}: ${place.description}`)
+                  .join("\n")
+              )
+              .join("\n\n");
+            setTourGuide("");
+            animateText(guideText);
+            await startSpeaking(guideText);
+          } else {
+            throw new Error("Invalid schedule format");
+          }
+        } else {
+          throw new Error("No schedule found");
+        }
+      } catch (error) {
+        console.error("Error fetching schedule:", error);
+        setTourGuide("일정을 불러오는 데 실패했습니다.");
+      }
+    };
+
+    fetchSchedule();
   }, []);
 
   // 마이크 버튼 핸들러
