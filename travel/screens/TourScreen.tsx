@@ -46,6 +46,13 @@ const AZURE_OPENAI_KEY =
   "65fEqo2qsGl8oJPg7lzs8ZJk7pUgdTEgEhUx2tvUsD2e07hbowbCJQQJ99BBACfhMk5XJ3w3AAABACOGr7S4";
 const DEPLOYMENT_NAME = "gpt-4o";
 
+//Azure AI Search 키와 인덱스
+const SEARCH_ENDPOINT = "https://ssapy-ai-search.search.windows.net";
+const SEARCH_KEY = "NGZcgM1vjwqKoDNPnFXcApBFttxWmGRLmnukKldPcTAzSeBjHCk6";
+const ATTRACTION_INDEX = "attraction";
+
+// type Interest = "건축" | "역사" | "문화" | "요리" | "자연";
+
 // 샘플 일정 타입 정의 (경복궁 관련 내용 그대로 유지)
 interface SpotInfo {
   name: string;
@@ -418,16 +425,71 @@ export default function TourScreen() {
     navigation.navigate("Map");
   };
 
-  // generateTourGuide 함수: 샘플 문구를 "내 이름은 둘리. 빙하타고 내려왔지"로 반환
-  const generateTourGuide = async (location: string, interest: string) => {
-    console.log("generateTourGuide 호출:", location, interest);
+  const fetchNearbyPlaces = async ({ latitude, longitude }) => {
+    try {
+      const response = await fetch(
+        `${AZURE_SEARCH_ENDPOINT}/indexes/places/docs?api-version=2023-07-01&$filter=geo.distance(location, geography'POINT(${longitude} ${latitude})') lt 1`,
+        {
+          headers: { "api-key": AZURE_SEARCH_API_KEY },
+        }
+      );
+      const data = await response.json();
+
+      if (!data.value || !Array.isArray(data.value)) {
+        throw new Error("Invalid response format: value must be an array");
+      }
+      generateTourGuide(data.value);
+    } catch (error) {
+      console.error("AI Search error:", error);
+      setTourGuide("AI Search에서 데이터를 불러오는 데 실패했습니다.");
+    }
+  };
+
+  const generateTourGuide = async (nearbyPlaces) => {
     setIsLoading(true);
     try {
-      const sampleGuideText = "내 이름은 둘리. 빙하타고 내려왔지";
-      // 텍스트를 한 번만 설정
-      setTourGuide(sampleGuideText);
-      console.log("generateTourGuide 완료:", sampleGuideText);
-      return sampleGuideText;
+      const placeDescriptions = nearbyPlaces
+        .map((place) => `${place.AREA_CLTUR_TRRSRT_NM}: ${place.SUMRY_CN}`)
+        .join("\n");
+      const messages = [
+        {
+          role: "system",
+          content: `다음 내용을 기반으로 관광지 가이드를 진행해줘. \n${placeDescriptions}`,
+        },
+        {
+          role: "user",
+          content: "근처 관광지에 대해 안내해주세요.",
+        },
+      ];
+
+      const response = await fetch(
+        `${AZURE_OPENAI_ENDPOINT}/openai/deployments/${DEPLOYMENT_NAME}/chat/completions?api-version=2024-02-15-preview`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "api-key": AZURE_OPENAI_KEY,
+          },
+          body: JSON.stringify({
+            messages,
+            max_tokens: 500,
+            temperature: 0.7,
+            top_p: 0.95,
+            frequency_penalty: 0,
+            presence_penalty: 0,
+          }),
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error("Failed to generate tour guide");
+      }
+
+      const data = await response.json();
+      const content = data.choices[0].message.content;
+      setTourGuide("");
+      animateText(content);
+      return content;
     } catch (error) {
       console.error("Error generating tour guide:", error);
       setTourGuide("죄송합니다. 설명을 불러오는데 실패했습니다.");
