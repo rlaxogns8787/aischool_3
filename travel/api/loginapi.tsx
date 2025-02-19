@@ -100,14 +100,31 @@ export const addSchedule = async (scheduleData) => {
     if (!userData) {
       throw new Error("사용자 정보를 찾을 수 없습니다.");
     }
-
     const userInfo = JSON.parse(userData);
-
-    const response = await axios.post(`${BASE_URL}/schedule`, {
-      username: userInfo.username, // 사용자 이메일로 인증
-      ...scheduleData,
-    });
-
+    console.log("User Info:", userInfo); // 사용자 정보 확인
+    const formattedScheduleData = {
+      username: userInfo.username,
+      tripId: scheduleData.tripId,
+      timestamp: new Date().toISOString(),
+      title: scheduleData.title,
+      companion: scheduleData.companion,
+      startDate: scheduleData.startDate,
+      endDate: scheduleData.endDate,
+      duration: scheduleData.duration,
+      budget: scheduleData.budget,
+      transportation: scheduleData.transportation,
+      keywords: scheduleData.keywords,
+      summary: scheduleData.summary,
+      days: scheduleData.days,
+      extraInfo: scheduleData.extraInfo,
+      generatedScheduleRaw: JSON.stringify(scheduleData),
+    };
+    console.log("Formatted Schedule Data:", formattedScheduleData); // 포맷된 일정 데이터 확인
+    const response = await axios.post(
+      `${BASE_URL}/schedule`,
+      formattedScheduleData
+    );
+    console.log("Add Schedule Response:", response.data); // 서버 응답 확인
     return response.data;
   } catch (error) {
     console.error("Add schedule error:", error);
@@ -130,7 +147,7 @@ export const deleteSchedule = async (scheduleId) => {
     const userInfo = JSON.parse(userData);
 
     const response = await axios.delete(`${BASE_URL}/schedule/${scheduleId}`, {
-      params: { username: userInfo.username }, // 사용자 정보는 쿼리 파라미터로 전달
+      params: { username: userInfo.username },
     });
 
     return response.data;
@@ -155,7 +172,7 @@ export const getSchedules = async () => {
     const userInfo = JSON.parse(userData);
 
     const response = await axios.get(`${BASE_URL}/schedule`, {
-      params: { username: userInfo.username }, // 사용자 정보는 쿼리 파라미터로 전달
+      params: { username: userInfo.username },
     });
 
     return response.data;

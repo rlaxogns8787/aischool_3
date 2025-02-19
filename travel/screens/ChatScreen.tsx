@@ -78,6 +78,10 @@ export default function ChatScreen() {
   const [selectedStartDate, setSelectedStartDate] = useState<Date | null>(null);
   const [selectedEndDate, setSelectedEndDate] = useState<Date | null>(null);
   const [isSelectingEndDate, setIsSelectingEndDate] = useState(false);
+  const [showScheduleButtons, setShowScheduleButtons] = useState(false);
+  const [selectedOption, setSelectedOption] = useState<"recreate" | "confirm" | null>(null);  
+  const [selectedOptions, setSelectedOptions] = useState<{ [key: string]: "recreate" | "confirm" | null }>({});
+  const [disabledButtons, setDisabledButtons] = useState<{ [key: string]: boolean }>({});
 
   // 여행 일정 데이터 AsyncStorage에서 가져와 TMapScreen으로 이동
   const handleShowMap = async () => {
@@ -98,6 +102,10 @@ export default function ChatScreen() {
   useEffect(() => {
     setMessages([INITIAL_MESSAGE]);
   }, []);
+
+  // 메시지 개수 확인
+  useEffect(() => {
+  }, [messages]);
 
   // 메시지 업데이트 헬퍼 함수
   const updateMessages = (newMessages: Message[], removePattern?: string) => {
@@ -294,6 +302,23 @@ export default function ChatScreen() {
 
     try {
       setIsLoading(true);
+
+      // ✅ 🔄 일정 재생성 요청 감지 및 AI 일정 생성
+      if (text === "새로운 일정을 요청합니다.") {
+        
+        const aiResponse = await chatWithAI("새로운 일정을 요청합니다.");
+        
+        const aiMessage: Message = {
+          id: Date.now().toString(),
+          text: `🗓 새로운 일정이 생성되었습니다!\n\n${aiResponse}`,
+          isBot: true,
+          timestamp: new Date().toISOString(),
+        };
+
+        setMessages((prev) => [...prev, aiMessage]);
+        setIsLoading(false);
+        return; // ✅ 여기서 함수 종료
+      }
 
       // 예산 응답 처리
       if (messages.some((msg) => msg.text.includes("여행 예산은 어느 정도"))) {
@@ -506,9 +531,182 @@ export default function ChatScreen() {
         isBot: true,
         timestamp: new Date().toISOString(),
       };
-      updateMessages([errorMessage]);
+      setMessages((prev) => [...prev, errorMessage]);
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  // ⏹ 일정 종료 함수
+  const handleExit = () => {
+  
+    // ✅ 일정 확정 메시지를 채팅에 추가
+    setMessages((prev) => [
+      ...prev,
+      { 
+        id: Date.now().toString(), 
+        text: "✅ 여행일정이 확정되었습니다!", 
+        isBot: true, 
+        timestamp: new Date().toISOString() 
+      }
+    ]);
+    setSelectedOption("confirm"); // ✅ 선택한 버튼 스타일 변경
+    setShowScheduleButtons(false); // 버튼 숨기기
+  };
+
+  //처음부터 다시 시작 버튼 함수
+  const handleRestart = () => {
+    setMessages((prev) => [
+      ...prev,
+      {
+        id: Date.now().toString(),
+        text: "네, 처음부터 시작하겠습니다.",
+        isBot: true,
+        timestamp: new Date().toISOString(),
+      },
+    ]);
+
+     // 날짜 관련 상태 초기화
+    setStartDate(new Date());
+    setEndDate(new Date());
+    setSelectedStartDate(null);
+    setSelectedEndDate(null);
+    setIsSelectingEndDate(false);
+    setDatePickerVisible(false);
+    setDatePickerMode("start");
+  
+    // 1.5초 후 초기 메시지로 리셋
+    setTimeout(() => {
+      setMessages([INITIAL_MESSAGE]);
+      setSelectedOptions({});
+      setDisabledButtons({});
+    }, 1500);
+  
+    setShowScheduleButtons(false);
+  };
+
+  // 일정 생성 감지
+  useEffect(() => {
+    if (messages.length > 0) {
+      const lastMessage = messages[messages.length - 1]; // 마지막 메시지 가져오기
+  
+      // 🔹 일정 생성 완료 메시지 감지
+      if (lastMessage.text.includes("예산 정리") || lastMessage.text.includes("일정이 생성")) {
+        setShowScheduleButtons(true);
+        setMessages((prev) => {
+          if (prev.some((msg) => msg.isLoading)) {
+            return prev.filter((msg) => !msg.isLoading);
+          }
+          return prev;
+        });
+      }
+
+      // 🔹 새로운 일정 요청 감지 (추가된 코드)
+      if (lastMessage.text.includes("새로운 일정을 요청합니다.")) {
+        handleSendMessage("새로운 일정을 요청합니다.");
+      }
+    }
+  }, [messages]); // messages 변경될 때마다 실행
+
+  // ✅ 일정이 생성된 후에도 버튼을 계속 표시
+  useEffect(() => {
+    if (messages.some((msg) => msg.text.includes("일정이 생성되었습니다"))) {
+      setShowScheduleButtons(true); // ✅ 일정 생성 후 버튼 다시 활성화
+    }
+  }, [messages]);
+
+  // 🔄 일정 재생성 함수
+  const handleRecreateSchedule = async () => {
+  
+    // ✅ 기존 일정 버튼 숨기기
+    setShowScheduleButtons(false);
+    setSelectedOption(null);
+
+    // ✅ 로딩 메시지 추가
+    const loadingMessage: Message = {
+      id: `loading-${Date.now()}`,
+      isBot: true,
+      text: "🔄 AI가 여행 일정을 재생성하고 있습니다...",
+      timestamp: new Date().toISOString(),
+      isLoading: true,
+    };
+    setMessages((prev) => [...prev, loadingMessage]);
+
+    // ✅ 1초 대기 후 일정 생성 요청 (UI 반영 시간 확보)
+    await new Promise((resolve) => setTimeout(resolve, 1000));
+      
+    // ✅ 기존 사용자 선택 정보 찾기
+    const tripInfo = {
+      styles: messages
+        .find((msg) => msg.text.includes("여행 스타일:"))
+        ?.text.split("여행 스타일: ")[1]
+        .split("\n")[0]
+        .split(", "),
+      destination: messages
+        .find((msg) => msg.text.includes("여행 지역:"))
+        ?.text.split("여행 지역: ")[1]
+        .split("\n")[0],
+      startDate: selectedStartDate,
+      endDate: selectedEndDate,
+      duration: `${startDate.toLocaleDateString("ko-KR", {
+        year: "numeric",
+        month: "long",
+        day: "numeric",
+      })}부터 ${endDate.toLocaleDateString("ko-KR", {
+        year: "numeric",
+        month: "long",
+        day: "numeric",
+      })}까지`,
+      companion: messages
+        .find((msg) => msg.text.includes("여행 인원:"))
+        ?.text.split("여행 인원: ")[1]
+        .split("\n")[0],
+      budget: messages
+        .find((msg) => msg.text.includes("예산:"))
+        ?.text.split("예산: ")[1]
+        .split("\n")[0],
+      transportation: messages
+        .find((msg) => msg.text.includes("교통수단:"))
+        ?.text.split("교통수단: ")[1]
+        .split("\n")[0]
+        .split(", "),
+    };
+    
+    try {
+      // ✅ AI 일정 요청
+      const aiResponse = await generateTravelSchedule(tripInfo);
+  
+      // ✅ AI 응답 메시지 추가 (로딩 메시지 대체)
+      setMessages((prev) =>
+        prev
+          .filter((msg) => !msg.isLoading) // 기존 로딩 메시지 제거
+          .concat([
+            {
+              id: Date.now().toString(),
+              text: `🗓 새로운 일정이 생성되었습니다!\n\n${aiResponse}`,
+              isBot: true,
+              timestamp: new Date().toISOString(),
+            },
+          ])
+      );
+      // ✅ 일정이 새로 생성되었으므로 버튼 다시 표시 (0.5초 뒤 실행)
+      setTimeout(() => {
+        setShowScheduleButtons(true);
+      }, 500);
+    } catch (error) {
+      console.error("❌ 일정 재생성 실패:", error);
+      setMessages((prev) =>
+        prev
+          .filter((msg) => !msg.isLoading) // 기존 로딩 메시지 제거
+          .concat([
+            {
+              id: Date.now().toString(),
+              text: "❌ 일정 재생성 중 오류가 발생했습니다. 다시 시도해주세요.",
+              isBot: true,
+              timestamp: new Date().toISOString(),
+            },
+          ])
+      );
     }
   };
 
@@ -877,6 +1075,14 @@ export default function ChatScreen() {
             onStyleToggle={handleStyleToggle}
             onStyleSelectComplete={handleStyleSelectComplete}
             keyboardShouldPersistTaps="handled"
+            handleRecreateSchedule={handleRecreateSchedule}
+            handleExit={handleExit}
+            handleRestart={handleRestart}
+            showScheduleButtons={showScheduleButtons}
+            selectedOption={selectedOption}
+            setSelectedOptions={setSelectedOptions}  // ✅ 추가
+            disabledButtons={disabledButtons}        // ✅ 추가
+            setDisabledButtons={setDisabledButtons}  // ✅ 추가
           />
         </View>
 

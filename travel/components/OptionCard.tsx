@@ -1,34 +1,63 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { View, Text, TouchableOpacity, StyleSheet, Image } from "react-native";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import Svg, { SvgProps } from "react-native-svg"; // SVG 렌더링을 위한 라이브러리 추가
+import EmptyImage from "../assets/Image.svg"; // 기본 이미지 추가
 
 type OptionCardProps = {
-  image: string;
-  people: string; // 여행인원
-  title: string; // 여행제목
-  date: string; // 여행 기간
-  info: string; // 정보
   onPress: () => void;
 };
 
-const OptionCard: React.FC<OptionCardProps> = ({
-  image,
-  people,
-  title,
-  date,
-  info,
-  onPress,
-}) => {
+const OptionCard: React.FC<OptionCardProps> = ({ onPress }) => {
+  const [schedule, setSchedule] = useState<any>(null);
+
+  useEffect(() => {
+    const fetchSchedule = async () => {
+      const storedSchedule = await AsyncStorage.getItem("formattedSchedule");
+      if (storedSchedule) {
+        setSchedule(JSON.parse(storedSchedule));
+      }
+    };
+    fetchSchedule();
+  }, []);
+
+  useEffect(() => {
+    const updateSchedule = async () => {
+      const storedSchedule = await AsyncStorage.getItem("formattedSchedule");
+      if (storedSchedule) {
+        setSchedule(JSON.parse(storedSchedule));
+      }
+    };
+    updateSchedule();
+  }, [schedule]);
+
+  if (!schedule) {
+    return null;
+  }
+
+  // places 배열의 title 값을 추출하여 info 텍스트로 설정
+  const placeTitles = schedule.days
+    .flatMap((day: any) => day.places)
+    .map((place: any) => place.title)
+    .join(", ");
+
   return (
     <View>
       <View style={styles.card}>
-        <Image source={{ uri: image }} style={styles.image} />
-        <View style={styles.peopleContainer}>
-          <Text style={styles.people}>{people}</Text>
+        {schedule.image ? (
+          <Image source={{ uri: schedule.image }} style={styles.image} />
+        ) : (
+          <EmptyImage width="100%" height="150" />
+        )}
+        <View style={styles.companionContainer}>
+          <Text style={styles.companion}>{schedule.companion}</Text>
         </View>
         <View style={styles.content}>
-          <Text style={styles.title}>{title}</Text>
-          <Text style={styles.date}>{date}</Text>
-          <Text style={styles.info}>{info}</Text>
+          <Text style={styles.title}>{schedule.title}</Text>
+          <Text style={styles.duration}>{schedule.duration}</Text>
+          <Text style={styles.info} numberOfLines={1} ellipsizeMode="tail">
+            {placeTitles}
+          </Text>
         </View>
         <TouchableOpacity style={styles.button} onPress={onPress}>
           <Text style={styles.buttonText}>상세보기</Text>
@@ -59,17 +88,18 @@ const styles = StyleSheet.create({
     width: "100%",
     height: 150,
   },
-  peopleContainer: {
+  companionContainer: {
     position: "absolute",
     top: 10,
     right: 10,
-    backgroundColor: "rgba(0, 0, 0, 0.5)",
-    borderRadius: 5,
-    padding: 5,
+    backgroundColor: "#007AFF",
+    borderRadius: 18,
+    padding: 10,
   },
-  people: {
+  companion: {
     color: "#fff",
     fontSize: 12,
+    fontWeight: "bold",
   },
   content: {
     padding: 16,
@@ -78,7 +108,7 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: "bold",
   },
-  date: {
+  duration: {
     fontSize: 14,
     color: "#666",
   },

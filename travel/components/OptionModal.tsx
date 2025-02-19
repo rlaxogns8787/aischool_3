@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import {
   View,
   Text,
@@ -12,18 +12,24 @@ import Modal from "react-native-modal";
 import Carousel from "react-native-snap-carousel";
 import Pagination from "react-native-snap-carousel/src/pagination/Pagination";
 import CloseIcon from "../assets/close.svg";
-import { wrap } from "module";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import EmptyImage from "../assets/Image.svg"; // 기본 이미지 추가
+import Svg, { SvgProps } from "react-native-svg"; // SVG 렌더링을 위한 라이브러리 추가
 
 const { width: screenWidth } = Dimensions.get("window");
 
 type Place = {
+  order: number; // 추가된 부분
   image: { uri: string };
   name: string;
   address: string;
   duration: string;
+  cost: number; // 비용 추가
+  type: string; // type 속성 추가
 };
 
 type DayPlan = {
+  dayIndex: number; // 추가된 부분
   day: string;
   date: string;
   places: Place[];
@@ -32,29 +38,89 @@ type DayPlan = {
 type OptionModalProps = {
   isVisible: boolean;
   onClose: () => void;
-  images: { uri: string }[];
-  themeName: string;
-  description: string;
-  keywords: string[];
-  dayPlans: DayPlan[];
   onShare: () => void;
   onPlacePress: (place: Place) => void;
   onShareWithColleagues: () => void;
+  images: any; // 추가된 부분
+  themeName: any;
+  description: any;
+  keywords: any;
+  dayPlans: any;
+  onUpdate: (updatedSchedule: any) => void; // 추가된 부분
 };
 
 const OptionModal: React.FC<OptionModalProps> = ({
   isVisible,
   onClose,
-  images,
-  themeName,
-  description,
-  keywords,
-  dayPlans,
   onShare,
   onPlacePress,
   onShareWithColleagues,
+  onUpdate, // 추가된 부분
 }) => {
-  const [activeSlide, setActiveSlide] = React.useState(0);
+  const [schedule, setSchedule] = useState<any>(null);
+  const [activeSlide, setActiveSlide] = useState(0);
+
+  useEffect(() => {
+    const fetchSchedule = async () => {
+      const storedSchedule = await AsyncStorage.getItem("formattedSchedule");
+      if (storedSchedule) {
+        setSchedule(JSON.parse(storedSchedule));
+      }
+    };
+    fetchSchedule();
+  }, []);
+
+  if (!schedule) {
+    return null;
+  }
+
+  const handleRemovePlace = async (dayIndex: number, placeOrder: number) => {
+    const updatedDays = schedule.days.map((day: DayPlan) => {
+      if (day.dayIndex === dayIndex) {
+        const updatedPlaces = day.places
+          .filter((place: Place) => place.order !== placeOrder)
+          .map((place: Place, index: number) => ({
+            ...place,
+            order: index + 1, // order 값 업데이트
+          }));
+        return {
+          ...day,
+          places: updatedPlaces,
+        };
+      }
+      return day;
+    });
+
+    const updatedTotalCost = updatedDays.reduce(
+      (total: number, day: DayPlan) => {
+        return (
+          total +
+          day.places.reduce(
+            (dayTotal: number, place: Place) => dayTotal + place.cost,
+            0
+          )
+        );
+      },
+      0
+    );
+
+    const updatedSchedule = {
+      ...schedule,
+      days: updatedDays,
+      extraInfo: {
+        ...schedule.extraInfo,
+        totalCost: updatedTotalCost, // totalCost 업데이트
+      },
+    };
+    setSchedule(updatedSchedule);
+    onUpdate(updatedSchedule); // 추가된 부분
+
+    // AsyncStorage에 업데이트된 일정 저장
+    await AsyncStorage.setItem(
+      "formattedSchedule",
+      JSON.stringify(updatedSchedule)
+    );
+  };
 
   return (
     <Modal
@@ -75,43 +141,54 @@ const OptionModal: React.FC<OptionModalProps> = ({
         </TouchableOpacity>
         <View style={styles.headerContainer}>
           <View style={styles.carouselContainer}>
-            <Carousel
-              data={images}
-              renderItem={({ item }) => (
-                <Image
-                  source={{ uri: item.uri }}
-                  style={styles.carouselImage}
+            {schedule.images && schedule.images.length > 0 ? (
+              <>
+                <Carousel
+                  data={schedule.images}
+                  renderItem={({ item }: { item: { uri: string } }) => (
+                    <Image
+                      source={{ uri: item.uri }}
+                      style={styles.carouselImage}
+                    />
+                  )}
+                  sliderWidth={screenWidth}
+                  itemWidth={screenWidth}
+                  containerCustomStyle={styles.carouselContainer}
+                  onSnapToItem={(index) => setActiveSlide(index)}
+                  autoplay={true}
+                  autoplayDelay={5000}
                 />
-              )}
-              sliderWidth={screenWidth}
-              itemWidth={screenWidth}
-              containerCustomStyle={styles.carouselContainer}
-              onSnapToItem={(index) => setActiveSlide(index)}
-              autoplay={true}
-              autoplayDelay={5000}
-            />
-            <Pagination
-              dotsLength={images.length}
-              activeDotIndex={activeSlide}
-              containerStyle={styles.carouselIndicatorContainer}
-              dotStyle={styles.activeDot}
-              inactiveDotStyle={styles.inactiveDot}
-              inactiveDotOpacity={0.4}
-              inactiveDotScale={0.6}
-            />
+                <Pagination
+                  dotsLength={schedule.images.length}
+                  activeDotIndex={activeSlide}
+                  containerStyle={styles.carouselIndicatorContainer}
+                  dotStyle={styles.activeDot}
+                  inactiveDotStyle={styles.inactiveDot}
+                  inactiveDotOpacity={0.4}
+                  inactiveDotScale={0.6}
+                />
+              </>
+            ) : (
+              <EmptyImage width={screenWidth} height={180} />
+            )}
+          </View>
+          <View style={styles.companionContainerLeft}>
+            <Text style={styles.companion}>{schedule.companion}</Text>
           </View>
         </View>
         <ScrollView style={[styles.scrollableContent]}>
-          <Text style={styles.scheduleTitle}>{themeName}</Text>
-          <Text style={styles.scheduleDate}>2024.02.12 - 2024.02.15</Text>
+          <Text style={styles.scheduleTitle}>{schedule.title}</Text>
+          <Text style={styles.scheduleDate}>
+            {schedule.startDate} - {schedule.endDate}
+          </Text>
           <View style={styles.infoSection}>
             <Text style={styles.sectionTitle}>정보</Text>
-            <Text style={styles.description}>{description}</Text>
+            <Text style={styles.summary}>{schedule.summary}</Text>
           </View>
           <View style={styles.keywordSection}>
             <Text style={styles.sectionTitle}>키워드</Text>
             <View style={styles.keywordsContainer}>
-              {keywords.map((keyword, index) => (
+              {schedule.keywords.map((keyword: string, index: number) => (
                 <View key={index} style={styles.keywordBubble}>
                   <Text style={styles.keywordText}>{keyword}</Text>
                 </View>
@@ -119,7 +196,7 @@ const OptionModal: React.FC<OptionModalProps> = ({
             </View>
           </View>
           <View style={styles.dayPlansContainer}>
-            {dayPlans.map((dayPlan, index) => (
+            {schedule.days.map((dayPlan: DayPlan, index: number) => (
               <View key={index} style={styles.dayPlanContainer}>
                 <Text style={styles.dayPlanTitle}>
                   <Text style={styles.boldText}>{dayPlan.day}</Text>{" "}
@@ -129,9 +206,16 @@ const OptionModal: React.FC<OptionModalProps> = ({
                   data={dayPlan.places}
                   renderItem={({ item }) => (
                     <View style={styles.placeCard}>
-                      <Image source={item.image} style={styles.placeImage} />
+                      {item.image ? (
+                        <Image
+                          source={{ uri: item.image.uri }}
+                          style={styles.placeImage}
+                        />
+                      ) : (
+                        <EmptyImage width={80} height={60} />
+                      )}
                       <View style={styles.placeInfo}>
-                        <Text style={styles.placeName}>{item.name}</Text>
+                        <Text style={styles.placeName}>{item.title}</Text>
                         <Text style={styles.placeAddress}>{item.address}</Text>
                         <Text style={styles.placeDuration}>
                           {item.duration}
@@ -139,7 +223,9 @@ const OptionModal: React.FC<OptionModalProps> = ({
                       </View>
                       <TouchableOpacity
                         style={styles.removeButton}
-                        onPress={() => onPlacePress(item)}
+                        onPress={() =>
+                          handleRemovePlace(dayPlan.dayIndex, item.order)
+                        }
                       >
                         <Text style={styles.removeButtonText}>-</Text>
                       </TouchableOpacity>
@@ -155,6 +241,19 @@ const OptionModal: React.FC<OptionModalProps> = ({
                 />
               </View>
             ))}
+          </View>
+          <View style={styles.extraInfoSection}>
+            <Text style={styles.sectionTitle}>추가 정보</Text>
+            {schedule.extraInfo.estimatedCost.map(
+              (cost: { type: string; amount: number }, index: number) => (
+                <Text key={index} style={styles.extraInfoText}>
+                  {cost.type}: {cost.amount.toLocaleString()}원
+                </Text>
+              )
+            )}
+            <Text style={styles.extraInfoText}>
+              총 비용: {schedule.extraInfo.totalCost.toLocaleString()}원
+            </Text>
           </View>
         </ScrollView>
         <View style={styles.footerContainer}>
@@ -229,7 +328,7 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: "bold",
   },
-  description: {
+  summary: {
     fontSize: 14,
     color: "#666",
     marginVertical: 10,
@@ -244,8 +343,10 @@ const styles = StyleSheet.create({
   },
   keywordBubble: {
     backgroundColor: "#EAF2FF",
-    padding: 12,
-    borderRadius: 16,
+    padding: 13,
+    borderRadius: 20,
+    marginHorizontal: 4, // 키워드 간 좌우 간격 추가
+    marginVertical: 4, // 키워드 간 상하 간격 추가
   },
   keywordText: {
     fontSize: 12,
@@ -280,7 +381,9 @@ const styles = StyleSheet.create({
     paddingLeft: 16,
     backgroundColor: "#F8F9FE",
     borderRadius: 16,
-    width: 280,
+    minWidth: 280, // 최소 너비 설정
+    minHeight: 101, // 최소 높이 설정
+    flex: 1, // 내부 내용에 맞게 확장
   },
   placeImage: {
     width: 80,
@@ -311,7 +414,7 @@ const styles = StyleSheet.create({
   placeDuration: {
     fontSize: 12,
     fontWeight: "600",
-    lineHeight: 12,
+    lineHeight: 16,
     color: "#006FFD",
   },
   removeButton: {
@@ -342,6 +445,27 @@ const styles = StyleSheet.create({
     height: 180,
     position: "relative",
   },
+  companionContainerLeft: {
+    position: "absolute",
+    top: 10,
+    left: 10,
+    backgroundColor: "#007AFF",
+    borderRadius: 18,
+    padding: 10,
+  },
+  companionContainer: {
+    position: "absolute",
+    top: 10,
+    right: 10,
+    backgroundColor: "#007AFF",
+    borderRadius: 18,
+    padding: 10,
+  },
+  companion: {
+    color: "#fff",
+    fontSize: 12,
+    fontWeight: "bold",
+  },
   footerContainer: {
     width: "100%",
     padding: 24,
@@ -366,7 +490,7 @@ const styles = StyleSheet.create({
   scheduleDate: {
     fontSize: 14,
     color: "#666",
-    marginBottom: 24,
+    marginBottom: 10,
   },
   infoSection: {
     marginBottom: 8,
@@ -379,6 +503,14 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     marginBottom: 2,
     color: "#333",
+  },
+  extraInfoSection: {
+    marginBottom: 16,
+  },
+  extraInfoText: {
+    fontSize: 12,
+    color: "#999", // 연한 글씨 색상
+    marginBottom: 2,
   },
 });
 

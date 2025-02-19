@@ -475,14 +475,14 @@ export default function ScheduleScreen({ navigation }: ScheduleScreenProps) {
         </ScrollView>
 
         {/* 하단 고정 버튼 */}
-        <View style={styles.bottomButtonContainer}>
+        {/* <View style={styles.bottomButtonContainer}>
           <TouchableOpacity
             style={styles.detailButton}
             onPress={() => navigation.navigate("Chat")}
           >
             <Text style={styles.buttonText}>일정 등록</Text>
           </TouchableOpacity>
-        </View>
+        </View> */}
       </SafeAreaView>
     </View>
   );
