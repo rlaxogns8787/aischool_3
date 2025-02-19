@@ -28,7 +28,7 @@ import Animated, {
   useSharedValue,
 } from "react-native-reanimated";
 import * as Location from "expo-location";
-import { Audio } from "expo-av";
+import { Audio, InterruptionModeAndroid, InterruptionModeIOS } from "expo-av";
 import * as FileSystem from "expo-file-system";
 import { encode as btoa } from "base-64";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -186,24 +186,26 @@ export default function TourScreen() {
       console.log("오디오 초기화 시작");
       try {
         const permission = await Audio.requestPermissionsAsync();
+        console.log("오디오 권한 요청 결과:", permission);
         if (!permission.granted) {
           Alert.alert("오류", "오디오 권한이 필요합니다.");
           return;
         }
+        console.log("오디오 모드 설정 시작");
         await Audio.setAudioModeAsync({
           allowsRecordingIOS: true,
           playsInSilentModeIOS: true,
           staysActiveInBackground: true,
-          interruptionModeIOS: Audio.InterruptionModeIOS.MixWithOthers,
-          interruptionModeAndroid: Audio.InterruptionModeAndroid.DuckOthers,
+          interruptionModeIOS: InterruptionModeIOS.MixWithOthers, // 수정
+          interruptionModeAndroid: InterruptionModeAndroid.DuckOthers, // 수정
           shouldDuckAndroid: true,
           playThroughEarpieceAndroid: false,
         });
-        console.log("오디오 초기화 성공");
+        console.log("오디오 모드 설정 성공");
         setIsAudioReady(true);
       } catch (error) {
         console.error("Audio initialization error:", error);
-        Alert.alert("오류", "오디오 초기화에 실패했습니다.");
+        Alert.alert("오류", `오디오 초기화에 실패했습니다: ${error.message}`);
       }
     };
     initializeAudio();
