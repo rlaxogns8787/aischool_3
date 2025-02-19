@@ -138,4 +138,16 @@ export const styles = StyleSheet.create({
     right: 16,
     padding: 8,
   },
+  mapButton: {
+    marginTop: 10,
+    backgroundColor: "#007AFF",
+    padding: 10,
+    borderRadius: 8,
+    alignItems: "center",
+    marginHorizontal: 20,
+  },
+  mapButtonText: {
+    color: "white",
+    fontSize: 16,
+  },
 });

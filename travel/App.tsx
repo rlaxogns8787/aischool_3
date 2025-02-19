@@ -23,6 +23,7 @@ import TourScreen from "./screens/TourScreen.tsx";
 import { MessageCircle } from "lucide-react-native";
 import MyProfileScreen from "./screens/MyProfileScreen";
 import EditProfileScreen from "./screens/EditProfileScreen";
+import TMapScreen from "./screens/TMapScreen";
 
 export type RootStackParamList = {
   Auth: undefined;
@@ -44,6 +45,7 @@ export type RootStackParamList = {
   Main: undefined;
   Chat: undefined;
   Tour: undefined;
+  TMapScreen: undefined;
   MyProfile: undefined;
 };
 
@@ -215,6 +217,7 @@ export default function App() {
               component={TourScreen}
               options={{ headerShown: false }}
             />
+            <Stack.Screen name="TMapScreen" component={TMapScreen} />
             <Stack.Screen
               name="EditProfile"
               component={EditProfileScreen}

@@ -28,6 +28,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 type RootStackParamList = {
   Chat: undefined;
   Schedule: undefined;
+  TMapScreen: undefined;
   // 다른 스크린들도 필요하다면 여기에 추가
 };
 
@@ -77,6 +78,18 @@ export default function ChatScreen() {
   const [selectedStartDate, setSelectedStartDate] = useState<Date | null>(null);
   const [selectedEndDate, setSelectedEndDate] = useState<Date | null>(null);
   const [isSelectingEndDate, setIsSelectingEndDate] = useState(false);
+
+  // 여행 일정 데이터 AsyncStorage에서 가져와 TMapScreen으로 이동
+  const handleShowMap = async () => {
+    const jsonData = await AsyncStorage.getItem("scheduleData");
+    console.log("🗺️ 지도 보기 버튼 클릭됨! 저장된 데이터:", jsonData);
+
+    if (jsonData) {
+      navigation.navigate("TMapScreen"); // 📌 정상 작동!
+    } else {
+      alert("저장된 여행 일정이 없습니다.");
+    }
+  };
 
   // AI 응답 저장을 위한 state 추가
   const [aiResponses, setAiResponses] = useState<AIResponse[]>([]);
@@ -572,6 +585,11 @@ export default function ChatScreen() {
           // 여행 정보를 AsyncStorage에 저장
           await AsyncStorage.setItem("scheduleData", JSON.stringify(tripInfo));
 
+          // 저장된 여행 정보 확인
+          const jsonData = await AsyncStorage.getItem("scheduleData");
+          console.log("🔵 저장된 tripInfo 확인:", jsonData);
+          console.log("🟢 여행 일정이 저장됨:", tripInfo); // ✅ 저장 확인 로그!
+
           // 먼저 확인 메시지 표시
           const confirmMessage: Message = {
             id: Date.now().toString(),
@@ -861,6 +879,11 @@ export default function ChatScreen() {
             keyboardShouldPersistTaps="handled"
           />
         </View>
+
+        {/* 🗺 지도 보기 버튼 추가 */}
+        <TouchableOpacity style={styles.mapButton} onPress={handleShowMap}>
+          <Text style={styles.mapButtonText}>🗺 지도에서 보기</Text>
+        </TouchableOpacity>
 
         {/* DatePicker를 항상 표시 */}
         {messages.some((msg) =>

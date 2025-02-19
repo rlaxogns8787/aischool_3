@@ -94,6 +94,12 @@ export default function TourScreen() {
     description: "차분하고 전문적인 성우 음성",
   });
 
+  // 여행 일정의 위치 데이터 추출 (TMAP 지도 전달용)
+  const locations = travelPlan.places.map((place) => ({
+    lat: place.latitue,
+    lng: place.longitude,
+  }));
+
   // 사용자 관심사를 "요리"로 고정
   const userInterest = "요리";
 
