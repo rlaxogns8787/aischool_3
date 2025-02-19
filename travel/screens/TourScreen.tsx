@@ -365,22 +365,13 @@ export default function TourScreen() {
         return;
       }
       console.log("위치 권한 허용됨");
-      const fakeLocation: Location.LocationObject = {
-        coords: {
-          latitude: 37.579617,
-          longitude: 126.977041,
-          altitude: null,
-          accuracy: null,
-          altitudeAccuracy: null,
-          heading: null,
-          speed: null,
-        },
-        timestamp: Date.now(),
-      };
-      console.log("가짜 위치 생성:", fakeLocation);
-      setCurrentLocation(fakeLocation);
-      checkNearbySpots(fakeLocation);
-      return () => {};
+      // 실제 위치 가져오기
+      const realLocation = await Location.getCurrentPositionAsync({
+        accuracy: Location.Accuracy.High,
+      });
+      console.log("실제 위치 정보:", realLocation);
+      setCurrentLocation(realLocation);
+      checkNearbySpots(realLocation);
     })();
   }, []);
 
