@@ -196,42 +196,39 @@ export default function HomeScreen() {
           </View>
         </View>
 
-        {/* Travel Card - 하단에 고정 */}
-        <View style={styles.travelCardContainer}>
-          <View style={styles.travelCard}>
-            <View style={styles.cardHeader}>
-              <Text style={styles.timeLabel}>
-                {schedule && isToday(new Date(schedule.startDate))
-                  ? "오늘 예정"
-                  : schedule
-                  ? formatDate(new Date(schedule.startDate))
-                  : ""}
-              </Text>
-              <View style={styles.travelStyleContainer}>
-                {schedule &&
-                  schedule.travelStyle &&
-                  schedule.travelStyle.map((style, index) => (
-                    <View key={index} style={styles.styleTag}>
-                      <Text style={styles.tagText}>{style}</Text>
-                    </View>
-                  ))}
+        {/* Travel Card - 일정이 있을 때만 표시 */}
+        {schedule && schedule.tripId && (
+          <View style={styles.travelCardContainer}>
+            <View style={styles.travelCard}>
+              <View style={styles.cardHeader}>
+                <Text style={styles.timeLabel}>
+                  {isToday(new Date(schedule.startDate))
+                    ? "오늘 예정"
+                    : formatDate(new Date(schedule.startDate))}
+                </Text>
+                <View style={styles.travelStyleContainer}>
+                  {schedule.travelStyle &&
+                    schedule.travelStyle.map((style: string, index: number) => (
+                      <View key={index} style={styles.styleTag}>
+                        <Text style={styles.tagText}>{style}</Text>
+                      </View>
+                    ))}
+                </View>
+              </View>
+              <View style={styles.cardContent}>
+                <Text style={styles.cardTitle}>{schedule.title}</Text>
+                <TouchableOpacity
+                  style={styles.arrowButton}
+                  onPress={() => {
+                    navigation.navigate("Tour");
+                  }}
+                >
+                  <FlyArrowIcon width={20} height={20} color="#FFFFFF" />
+                </TouchableOpacity>
               </View>
             </View>
-            <View style={styles.cardContent}>
-              <Text style={styles.cardTitle}>
-                {schedule ? schedule.title : ""}
-              </Text>
-              <TouchableOpacity
-                style={styles.arrowButton}
-                onPress={() => {
-                  navigation.navigate("Tour");
-                }}
-              >
-                <FlyArrowIcon width={20} height={20} color="#FFFFFF" />
-              </TouchableOpacity>
-            </View>
           </View>
-        </View>
+        )}
       </SafeAreaView>
     </ImageBackground>
   );

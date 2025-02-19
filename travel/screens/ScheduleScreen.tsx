@@ -388,11 +388,12 @@ const styles = StyleSheet.create({
   },
   emptyContainer: {
     flex: 1,
-    justifyContent: "space-between",
   },
   emptyStateContainer: {
     alignItems: "center",
-    marginTop: -100,
+    justifyContent: "center",
+    flex: 1,
+    marginTop: -100, // 상단 헤더 높이를 고려하여 약간 위로 조정
   },
   emptyTitle: {
     fontFamily: "Inter",
