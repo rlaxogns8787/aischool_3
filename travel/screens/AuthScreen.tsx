@@ -1043,7 +1043,8 @@ export default function AuthScreen({ navigation, route }: AuthScreenProps) {
                   </TouchableOpacity>
                   <TouchableOpacity
                     onPress={() => {
-                      if (selectedGender) handleGenderSelect(selectedGender);
+                      const genderToSet = selectedGender || "male";
+                      handleGenderSelect(genderToSet);
                     }}
                     style={styles.pickerHeaderButton}
                   >
@@ -1058,7 +1059,7 @@ export default function AuthScreen({ navigation, route }: AuthScreenProps) {
                   </TouchableOpacity>
                 </View>
                 <Picker
-                  selectedValue={selectedGender || gender}
+                  selectedValue={selectedGender || gender || "male"}
                   onValueChange={setSelectedGender}
                   style={styles.picker}
                 >
@@ -1083,8 +1084,8 @@ export default function AuthScreen({ navigation, route }: AuthScreenProps) {
                   </TouchableOpacity>
                   <TouchableOpacity
                     onPress={() => {
-                      if (selectedBirthYear)
-                        handleBirthYearSelect(selectedBirthYear);
+                      const yearToSet = selectedBirthYear || years[0];
+                      handleBirthYearSelect(yearToSet);
                     }}
                     style={styles.pickerHeaderButton}
                   >
@@ -1099,7 +1100,7 @@ export default function AuthScreen({ navigation, route }: AuthScreenProps) {
                   </TouchableOpacity>
                 </View>
                 <Picker
-                  selectedValue={selectedBirthYear || birthYear}
+                  selectedValue={selectedBirthYear || birthYear || years[0]}
                   onValueChange={setSelectedBirthYear}
                   style={styles.picker}
                 >
