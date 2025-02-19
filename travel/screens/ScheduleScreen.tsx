@@ -16,9 +16,9 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useFocusEffect } from "@react-navigation/native";
 import MenuIcon from "../assets/menu.svg";
 import CalendarIcon from "../assets/calendar.svg";
-import SunIcon from "../assets/sun.svg";
-import CloudIcon from "../assets/cloud.svg";
-import LocationIcon from "../assets/location.svg";
+// import SunIcon from "../assets/sun.svg";
+// import CloudIcon from "../assets/cloud.svg";
+// import LocationIcon from "../assets/location.svg";
 import TrashIcon from "../assets/trash.svg";
 import { Schedule } from "../types/schedule";
 import {
@@ -35,10 +35,10 @@ type ScheduleScreenProps = {
 
 export default function ScheduleScreen({ navigation }: ScheduleScreenProps) {
   const [schedules, setSchedules] = useState<Schedule[]>([]);
-  const [weather, setWeather] = useState<any>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [weatherForecast, setWeatherForecast] = useState<any[]>([]);
+  // const [weather, setWeather] = useState<any>(null);
+  // const [isLoading, setIsLoading] = useState(true);
+  // const [error, setError] = useState<string | null>(null);
+  // const [weatherForecast, setWeatherForecast] = useState<any[]>([]);
 
   const fetchSchedules = useCallback(async () => {
     try {
@@ -101,58 +101,58 @@ export default function ScheduleScreen({ navigation }: ScheduleScreenProps) {
     }, [fetchSchedules])
   );
 
-  useEffect(() => {
-    const fetchWeather = async () => {
-      try {
-        setIsLoading(true);
-        setError(null);
-        const weatherData = await getCurrentWeather("후암동");
-        setWeather(weatherData);
-      } catch (err) {
-        console.error("Weather fetch error:", err);
-        setError("날씨 정보를 불러오는데 실패했습니다");
-        // 임시 날씨 데이터 설정
-        setWeather({
-          temperature: 21,
-          condition: "맑음",
-          high: 24,
-          low: 13,
-          hourly: [
-            { time: "9AM", temp: 22, condition: "sunny" },
-            { time: "10AM", temp: 23, condition: "sunny" },
-            { time: "11AM", temp: 18, condition: "sunny" },
-            { time: "12PM", temp: 19, condition: "cloudy" },
-            { time: "1PM", temp: 21, condition: "cloudy" },
-            { time: "2PM", temp: 22, condition: "cloudy" },
-          ],
-        });
-      } finally {
-        setIsLoading(false);
-      }
-    };
+  // useEffect(() => {
+  //   const fetchWeather = async () => {
+  //     try {
+  //       setIsLoading(true);
+  //       setError(null);
+  //       const weatherData = await getCurrentWeather("후암동");
+  //       setWeather(weatherData);
+  //     } catch (err) {
+  //       console.error("Weather fetch error:", err);
+  //       setError("날씨 정보를 불러오는데 실패했습니다");
+  //       // 임시 날씨 데이터 설정
+  //       setWeather({
+  //         temperature: 21,
+  //         condition: "맑음",
+  //         high: 24,
+  //         low: 13,
+  //         hourly: [
+  //           { time: "9AM", temp: 22, condition: "sunny" },
+  //           { time: "10AM", temp: 23, condition: "sunny" },
+  //           { time: "11AM", temp: 18, condition: "sunny" },
+  //           { time: "12PM", temp: 19, condition: "cloudy" },
+  //           { time: "1PM", temp: 21, condition: "cloudy" },
+  //           { time: "2PM", temp: 22, condition: "cloudy" },
+  //         ],
+  //       });
+  //     } finally {
+  //       setIsLoading(false);
+  //     }
+  //   };
 
-    fetchWeather();
-  }, []);
+  //   fetchWeather();
+  // }, []);
 
-  useEffect(() => {
-    const loadWeatherForecast = async () => {
-      if (schedules.length > 0) {
-        const nextSchedule = schedules[0]; // 가장 가까운 일정
-        try {
-          // 여행지의 위도/경도 정보가 필요합니다
-          const forecast = await getHourlyForecast(
-            nextSchedule.latitude,
-            nextSchedule.longitude
-          );
-          setWeatherForecast(forecast);
-        } catch (error) {
-          console.error("Forecast error:", error);
-        }
-      }
-    };
+  // useEffect(() => {
+  //   const loadWeatherForecast = async () => {
+  //     if (schedules.length > 0) {
+  //       const nextSchedule = schedules[0]; // 가장 가까운 일정
+  //       try {
+  //         // 여행지의 위도/경도 정보가 필요합니다
+  //         const forecast = await getHourlyForecast(
+  //           nextSchedule.latitude,
+  //           nextSchedule.longitude
+  //         );
+  //         setWeatherForecast(forecast);
+  //       } catch (error) {
+  //         console.error("Forecast error:", error);
+  //       }
+  //     }
+  //   };
 
-    loadWeatherForecast();
-  }, [schedules]);
+  //   loadWeatherForecast();
+  // }, [schedules]);
 
   const deleteSchedule = async (id: string) => {
     try {
@@ -191,6 +191,7 @@ export default function ScheduleScreen({ navigation }: ScheduleScreenProps) {
         {schedules.length > 0 ? (
           <>
             {/* Weather Info */}
+            {/*
             <View style={styles.weatherContainer}>
               <View style={styles.weatherHeader}>
                 <View>
@@ -209,7 +210,6 @@ export default function ScheduleScreen({ navigation }: ScheduleScreenProps) {
                 </View>
               </View>
 
-              {/* Hourly Weather */}
               <ScrollView
                 horizontal
                 showsHorizontalScrollIndicator={false}
@@ -228,6 +228,7 @@ export default function ScheduleScreen({ navigation }: ScheduleScreenProps) {
                 ))}
               </ScrollView>
             </View>
+            */}
 
             {/* Schedule Content */}
             <ScrollView
@@ -272,7 +273,7 @@ export default function ScheduleScreen({ navigation }: ScheduleScreenProps) {
           </>
         ) : (
           <View style={styles.emptyContainer}>
-            <View style={styles.content}>
+            <View style={styles.emptyContent}>
               <View style={styles.emptyStateContainer}>
                 <Text style={styles.emptyTitle}>여행 기록이 아직 없네요</Text>
                 <Text style={styles.emptySubtitle}>
@@ -378,8 +379,6 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
   },
   contentContainer: {
     paddingHorizontal: 24,
@@ -388,12 +387,15 @@ const styles = StyleSheet.create({
   },
   emptyContainer: {
     flex: 1,
+    justifyContent: "space-between",
+  },
+  emptyContent: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
   },
   emptyStateContainer: {
     alignItems: "center",
-    justifyContent: "center",
-    flex: 1,
-    marginTop: -100, // 상단 헤더 높이를 고려하여 약간 위로 조정
   },
   emptyTitle: {
     fontFamily: "Inter",
