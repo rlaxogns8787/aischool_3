@@ -19,6 +19,7 @@ import CalendarIcon from "../assets/calendar.svg";
 import SunIcon from "../assets/sun.svg";
 import CloudIcon from "../assets/cloud.svg";
 import LocationIcon from "../assets/location.svg";
+import TrashIcon from "../assets/trash.svg";
 import { Schedule } from "../types/schedule";
 import {
   getCurrentWeather,
@@ -55,11 +56,11 @@ export default function ScheduleScreen({ navigation }: ScheduleScreenProps) {
         const formattedSchedules: Schedule[] = schedulesArray.map(
           (schedule: any) => ({
             id: schedule.tripId,
-            destination: schedule.title, // 목적지 정보가 없으므로 임의로 설정
+            destination: schedule.title,
             title: schedule.title,
             startDate: schedule.startDate,
             endDate: schedule.endDate,
-            travelStyle: schedule.keywords,
+            travelStyle: schedule.travelStyle || schedule.keywords || [],
             activities: schedule.days
               ? schedule.days.flatMap((day: any) =>
                   day.places.map((place: any) => place.title)
@@ -264,21 +265,15 @@ export default function ScheduleScreen({ navigation }: ScheduleScreenProps) {
                         {schedule.startDate} - {schedule.endDate}
                       </Text>
                     </View>
-                    <TouchableOpacity
-                      style={styles.detailButton}
-                      onPress={() =>
-                        navigation.navigate("ScheduleDetail", { schedule })
-                      }
-                    >
-                      <Text style={styles.buttonText}>일정 자세히 보기</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                      style={styles.deleteButton}
-                      onPress={() => deleteSchedule(schedule.id)}
-                    >
-                      <Text style={styles.deleteButtonText}>삭제</Text>
-                    </TouchableOpacity>
                   </View>
+                  <TouchableOpacity
+                    style={styles.detailButton}
+                    onPress={() =>
+                      navigation.navigate("ScheduleDetail", { schedule })
+                    }
+                  >
+                    <Text style={styles.buttonText}>일정 자세히 보기</Text>
+                  </TouchableOpacity>
                 </TouchableOpacity>
               ))
             : renderEmptyState()}
@@ -513,10 +508,6 @@ const styles = StyleSheet.create({
   scheduleContent: {
     padding: 16,
     paddingHorizontal: 24,
-    gap: 16,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
   },
   scheduleTextContainer: {
     flex: 1,
@@ -528,6 +519,7 @@ const styles = StyleSheet.create({
     lineHeight: 17,
     letterSpacing: -0.01 * 14,
     color: "#FFFFFF",
+    marginBottom: 4, // 제목과 날짜 사이 간격
   },
   date: {
     fontFamily: "SF Pro Text",
@@ -555,6 +547,8 @@ const styles = StyleSheet.create({
     padding: 16,
     backgroundColor: "rgba(255, 255, 255, 0.2)",
     borderRadius: 300,
+    marginHorizontal: 24,
+    marginBottom: 16, // 버튼 하단 여백
   },
   bottomButtonContainer: {
     paddingHorizontal: 40,

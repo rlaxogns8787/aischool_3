@@ -5,11 +5,14 @@ import {
   StyleSheet,
   TouchableOpacity,
   ScrollView,
+  Alert,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { ArrowLeft } from "lucide-react-native";
 import { Schedule } from "../types/schedule";
 import { useRoute, RouteProp, useNavigation } from "@react-navigation/native";
+import TrashIcon from "../assets/trash.svg";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 type RouteParams = {
   ScheduleDetail: {
@@ -22,6 +25,44 @@ export default function ScheduleDetail() {
   const navigation = useNavigation();
   const { schedule } = route.params;
 
+  const deleteSchedule = async (id: string) => {
+    Alert.alert("일정 삭제", "이 일정을 삭제하시겠습니까?", [
+      {
+        text: "취소",
+        style: "cancel",
+      },
+      {
+        text: "삭제",
+        style: "destructive",
+        onPress: async () => {
+          try {
+            const storedSchedules = await AsyncStorage.getItem(
+              "confirmedSchedule"
+            );
+            if (storedSchedules) {
+              const parsedSchedules = JSON.parse(storedSchedules);
+              const schedulesArray = Array.isArray(parsedSchedules)
+                ? parsedSchedules
+                : [parsedSchedules];
+
+              const updatedSchedules = schedulesArray.filter(
+                (item) => item.id !== id && item.tripId !== id
+              );
+
+              await AsyncStorage.setItem(
+                "confirmedSchedule",
+                JSON.stringify(updatedSchedules)
+              );
+              navigation.goBack();
+            }
+          } catch (error) {
+            console.error("Failed to delete schedule:", error);
+          }
+        },
+      },
+    ]);
+  };
+
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
@@ -29,7 +70,11 @@ export default function ScheduleDetail() {
           <ArrowLeft size={24} color="#000" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>여행 일정</Text>
-        <Text style={{ width: 24 }} />
+        <TouchableOpacity
+          onPress={() => deleteSchedule(schedule.id || schedule.tripId)}
+        >
+          <TrashIcon width={24} height={24} color="#FF4D4D" />
+        </TouchableOpacity>
       </View>
 
       <ScrollView style={styles.content}>

@@ -113,7 +113,12 @@ export default function HomeScreen() {
             "confirmedSchedule"
           );
           if (storedSchedule) {
-            setSchedule(JSON.parse(storedSchedule));
+            const parsedSchedule = JSON.parse(storedSchedule);
+            // travelStyle이 없는 경우 keywords를 사용하거나 기본값 설정
+            if (!parsedSchedule.travelStyle && parsedSchedule.keywords) {
+              parsedSchedule.travelStyle = parsedSchedule.keywords;
+            }
+            setSchedule(parsedSchedule);
           }
         } catch (error) {
           console.error("Failed to load schedule from AsyncStorage:", error);
@@ -204,8 +209,8 @@ export default function HomeScreen() {
               </Text>
               <View style={styles.travelStyleContainer}>
                 {schedule &&
-                  schedule.keywords &&
-                  schedule.keywords.map((style, index) => (
+                  schedule.travelStyle &&
+                  schedule.travelStyle.map((style, index) => (
                     <View key={index} style={styles.styleTag}>
                       <Text style={styles.tagText}>{style}</Text>
                     </View>
