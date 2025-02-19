@@ -209,22 +209,26 @@ export default function AuthScreen({ navigation, route }: AuthScreenProps) {
 
   // 취향 옵션
   const preferenceOptions = [
-    "역사",
-    "미술",
-    "스포츠",
-    "건축",
-    "음악",
-    "요리",
-    "기술",
-    "디자인",
-    "과학",
-    "언어",
-    "패션",
-    "K-POP",
-    "문학",
-    "수학",
-    "자동차",
-  ];
+  "역사",
+  "문화",
+  "예술",
+  "디자인",
+  "건축",
+  "음악",
+  "공연",
+  "K-POP",
+  "엔터테인먼트",
+  "문학",
+  "과학",
+  "수학",
+  "기술",
+  "경제",
+  "스포츠",
+  "자동차",
+  "요리",
+  "음식",
+  "패션"
+];
 
   const isSocialSignUp = route.params?.provider;
 
