@@ -77,7 +77,6 @@ const styles = StyleSheet.create({
   },
   emptyStateContainer: {
     alignItems: "center",
-    marginTop: -100,
   },
   emptyTitle: {
     fontFamily: "Inter",
