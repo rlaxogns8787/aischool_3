@@ -1,20 +1,19 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import {
   View,
   Text,
   StyleSheet,
   TouchableOpacity,
-  ScrollView,
   ActivityIndicator,
   ImageBackground,
-  Platform,
   StatusBar,
   Dimensions,
+  Platform,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { LinearGradient } from "expo-linear-gradient";
-import { BlurView } from "expo-blur";
 import * as Location from "expo-location";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { useFocusEffect } from "@react-navigation/native";
 import MenuIcon from "../assets/menu.svg";
 import CalendarIcon from "../assets/calendar.svg";
 import FlyArrowIcon from "../assets/flyarrow.svg";
@@ -70,11 +69,10 @@ export default function HomeScreen() {
   const [weather, setWeather] = useState<WeatherData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  // 랜덤 문구를 위한 state 추가
   const [weatherPhrase, setWeatherPhrase] = useState("");
+  const [schedule, setSchedule] = useState<any>(null);
 
   useEffect(() => {
-    // 컴포넌트 마운트 시 랜덤 문구 선택
     const randomIndex = Math.floor(Math.random() * WEATHER_PHRASES.length);
     setWeatherPhrase(WEATHER_PHRASES[randomIndex]);
   }, []);
@@ -107,6 +105,25 @@ export default function HomeScreen() {
     loadWeatherData();
   }, []);
 
+  useFocusEffect(
+    useCallback(() => {
+      async function loadScheduleData() {
+        try {
+          const storedSchedule = await AsyncStorage.getItem(
+            "confirmedSchedule"
+          );
+          if (storedSchedule) {
+            setSchedule(JSON.parse(storedSchedule));
+          }
+        } catch (error) {
+          console.error("Failed to load schedule from AsyncStorage:", error);
+        }
+      }
+
+      loadScheduleData();
+    }, [])
+  );
+
   const isToday = (date: Date) => {
     const today = new Date();
     return date.toDateString() === today.toDateString();
@@ -119,198 +136,6 @@ export default function HomeScreen() {
       weekday: "short",
     });
   };
-
-  const styles = StyleSheet.create({
-    container: {
-      flex: 1,
-      width: SCREEN_WIDTH,
-      height: SCREEN_HEIGHT,
-    },
-    safeArea: {
-      flex: 1,
-    },
-    header: {
-      flexDirection: "row",
-      justifyContent: "space-between",
-      alignItems: "center",
-      padding: 16,
-      height: HEADER_HEIGHT,
-    },
-    headerIcon: {
-      width: 24,
-      height: 24,
-    },
-    content: {
-      flex: 1,
-      paddingHorizontal: 20,
-    },
-    title: {
-      fontSize: 28,
-      fontWeight: "600",
-      color: "#fff",
-      marginTop: 40,
-      lineHeight: 40,
-    },
-    weatherInfo: {
-      marginTop: 20,
-    },
-    locationContainer: {
-      flexDirection: "row",
-      alignItems: "center",
-      gap: 4,
-    },
-    location: {
-      fontFamily: "SF Pro Text",
-      fontSize: 15,
-      fontWeight: "500",
-      lineHeight: 18,
-      color: "#FFFFFF",
-    },
-    temperature: {
-      fontSize: 72,
-      fontWeight: "200",
-      color: "#fff",
-      marginTop: 10,
-    },
-    weatherPhrase: {
-      fontSize: 16,
-      color: "#fff",
-      marginTop: 5,
-      opacity: 0.8,
-    },
-    filterContainer: {
-      marginTop: 30,
-      marginBottom: 20,
-    },
-    filterTab: {
-      paddingHorizontal: 20,
-      paddingVertical: 10,
-      borderRadius: 20,
-      backgroundColor: "rgba(255, 255, 255, 0.2)",
-      marginRight: 10,
-    },
-    activeFilterTab: {
-      backgroundColor: "#fff",
-    },
-    filterText: {
-      color: "#fff",
-      fontSize: 16,
-    },
-    activeFilterText: {
-      color: "#007AFF",
-    },
-    travelCard: {
-      width: CARD_WIDTH,
-      height: CARD_HEIGHT,
-      alignSelf: "center",
-      marginBottom: 114,
-    },
-    cardHeader: {
-      flexDirection: "row",
-      justifyContent: "space-between",
-      alignItems: "center",
-      padding: 16,
-      height: 44,
-      backgroundColor: "rgba(75, 126, 208, 0.5)",
-      borderTopLeftRadius: 12,
-      borderTopRightRadius: 12,
-    },
-    travelStyleContainer: {
-      flexDirection: "row",
-      alignItems: "center",
-      gap: 4,
-    },
-    styleTag: {
-      flexDirection: "row",
-      justifyContent: "center",
-      alignItems: "center",
-      padding: 6,
-      paddingHorizontal: 8,
-      height: 24,
-      backgroundColor: "rgba(0, 0, 0, 0.1)",
-      borderRadius: 12,
-    },
-    tagText: {
-      fontFamily: "SF Pro Text",
-      fontWeight: "600",
-      fontSize: 10,
-      lineHeight: 12,
-      textAlign: "center",
-      letterSpacing: 0.05 * 10,
-      textTransform: "uppercase",
-      color: "#FFFFFF",
-      paddingHorizontal: 4,
-    },
-    timeLabel: {
-      fontSize: 12,
-      lineHeight: 14,
-      fontWeight: "500",
-      letterSpacing: -0.01,
-      color: "#FFFFFF",
-      textTransform: "lowercase",
-    },
-    cardContent: {
-      flexDirection: "row",
-      alignItems: "flex-start",
-      padding: 16,
-      height: 80,
-      backgroundColor: "rgba(75, 126, 208, 0.3)",
-      backdropFilter: "blur(45px)",
-      borderBottomLeftRadius: 12,
-      borderBottomRightRadius: 12,
-    },
-    cardTitle: {
-      flex: 1,
-      fontSize: 14,
-      lineHeight: 17,
-      fontWeight: "700",
-      letterSpacing: -0.01,
-      color: "#FFFFFF",
-      marginRight: 72,
-    },
-    arrowButton: {
-      width: 48,
-      height: 48,
-      borderRadius: 24,
-      backgroundColor: "rgba(255, 255, 255, 0.2)",
-      justifyContent: "center",
-      alignItems: "center",
-    },
-    bottomNav: {
-      flexDirection: "row",
-      justifyContent: "space-around",
-      paddingVertical: 20,
-      paddingBottom: Platform.OS === "ios" ? 20 : 10,
-      backgroundColor: "rgba(255, 255, 255, 0.1)",
-    },
-    navItem: {
-      alignItems: "center",
-    },
-    navText: {
-      color: "#fff",
-      fontSize: 12,
-      marginTop: 5,
-    },
-    errorText: {
-      color: "#fff",
-      fontSize: 16,
-      textAlign: "center",
-    },
-    travelCardContainer: {
-      paddingHorizontal: 20,
-      position: "absolute",
-      bottom: 0,
-      left: 0,
-      right: 0,
-    },
-    card: {
-      width: CARD_WIDTH,
-      height: CARD_HEIGHT,
-      backgroundColor: "rgba(255, 255, 255, 0.2)",
-      borderRadius: 16,
-      padding: 16,
-    },
-  });
 
   return (
     <ImageBackground
@@ -371,20 +196,26 @@ export default function HomeScreen() {
           <View style={styles.travelCard}>
             <View style={styles.cardHeader}>
               <Text style={styles.timeLabel}>
-                {isToday(scheduleData.startDate)
+                {schedule && isToday(new Date(schedule.startDate))
                   ? "오늘 예정"
-                  : formatDate(scheduleData.startDate)}
+                  : schedule
+                  ? formatDate(new Date(schedule.startDate))
+                  : ""}
               </Text>
               <View style={styles.travelStyleContainer}>
-                {scheduleData.travelStyle.map((style, index) => (
-                  <View key={index} style={styles.styleTag}>
-                    <Text style={styles.tagText}>{style}</Text>
-                  </View>
-                ))}
+                {schedule &&
+                  schedule.keywords &&
+                  schedule.keywords.map((style, index) => (
+                    <View key={index} style={styles.styleTag}>
+                      <Text style={styles.tagText}>{style}</Text>
+                    </View>
+                  ))}
               </View>
             </View>
             <View style={styles.cardContent}>
-              <Text style={styles.cardTitle}>{scheduleData.title}</Text>
+              <Text style={styles.cardTitle}>
+                {schedule ? schedule.title : ""}
+              </Text>
               <TouchableOpacity
                 style={styles.arrowButton}
                 onPress={() => {
@@ -400,3 +231,195 @@ export default function HomeScreen() {
     </ImageBackground>
   );
 }
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    width: SCREEN_WIDTH,
+    height: SCREEN_HEIGHT,
+  },
+  safeArea: {
+    flex: 1,
+  },
+  header: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    padding: 16,
+    height: HEADER_HEIGHT,
+  },
+  headerIcon: {
+    width: 24,
+    height: 24,
+  },
+  content: {
+    flex: 1,
+    paddingHorizontal: 20,
+  },
+  title: {
+    fontSize: 28,
+    fontWeight: "600",
+    color: "#fff",
+    marginTop: 40,
+    lineHeight: 40,
+  },
+  weatherInfo: {
+    marginTop: 20,
+  },
+  locationContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+  },
+  location: {
+    fontFamily: "SF Pro Text",
+    fontSize: 15,
+    fontWeight: "500",
+    lineHeight: 18,
+    color: "#FFFFFF",
+  },
+  temperature: {
+    fontSize: 72,
+    fontWeight: "200",
+    color: "#fff",
+    marginTop: 10,
+  },
+  weatherPhrase: {
+    fontSize: 16,
+    color: "#fff",
+    marginTop: 5,
+    opacity: 0.8,
+  },
+  filterContainer: {
+    marginTop: 30,
+    marginBottom: 20,
+  },
+  filterTab: {
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 20,
+    backgroundColor: "rgba(255, 255, 255, 0.2)",
+    marginRight: 10,
+  },
+  activeFilterTab: {
+    backgroundColor: "#fff",
+  },
+  filterText: {
+    color: "#fff",
+    fontSize: 16,
+  },
+  activeFilterText: {
+    color: "#007AFF",
+  },
+  travelCard: {
+    width: CARD_WIDTH,
+    height: CARD_HEIGHT,
+    alignSelf: "center",
+    marginBottom: 114,
+  },
+  cardHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    padding: 16,
+    height: 44,
+    backgroundColor: "rgba(75, 126, 208, 0.5)",
+    borderTopLeftRadius: 12,
+    borderTopRightRadius: 12,
+  },
+  travelStyleContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+  },
+  styleTag: {
+    flexDirection: "row",
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 6,
+    paddingHorizontal: 8,
+    height: 24,
+    backgroundColor: "rgba(0, 0, 0, 0.1)",
+    borderRadius: 12,
+  },
+  tagText: {
+    fontFamily: "SF Pro Text",
+    fontWeight: "600",
+    fontSize: 10,
+    lineHeight: 12,
+    textAlign: "center",
+    letterSpacing: 0.05 * 10,
+    textTransform: "uppercase",
+    color: "#FFFFFF",
+    paddingHorizontal: 4,
+  },
+  timeLabel: {
+    fontSize: 12,
+    lineHeight: 14,
+    fontWeight: "500",
+    letterSpacing: -0.01,
+    color: "#FFFFFF",
+    textTransform: "lowercase",
+  },
+  cardContent: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    padding: 16,
+    height: 80,
+    backgroundColor: "rgba(75, 126, 208, 0.3)",
+    backdropFilter: "blur(45px)",
+    borderBottomLeftRadius: 12,
+    borderBottomRightRadius: 12,
+  },
+  cardTitle: {
+    flex: 1,
+    fontSize: 14,
+    lineHeight: 17,
+    fontWeight: "700",
+    letterSpacing: -0.01,
+    color: "#FFFFFF",
+    marginRight: 72,
+  },
+  arrowButton: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: "rgba(255, 255, 255, 0.2)",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  bottomNav: {
+    flexDirection: "row",
+    justifyContent: "space-around",
+    paddingVertical: 20,
+    paddingBottom: Platform.OS === "ios" ? 20 : 10,
+    backgroundColor: "rgba(255, 255, 255, 0.1)",
+  },
+  navItem: {
+    alignItems: "center",
+  },
+  navText: {
+    color: "#fff",
+    fontSize: 12,
+    marginTop: 5,
+  },
+  errorText: {
+    color: "#fff",
+    fontSize: 16,
+    textAlign: "center",
+  },
+  travelCardContainer: {
+    paddingHorizontal: 20,
+    position: "absolute",
+    bottom: 0,
+    left: 0,
+    right: 0,
+  },
+  card: {
+    width: CARD_WIDTH,
+    height: CARD_HEIGHT,
+    backgroundColor: "rgba(255, 255, 255, 0.2)",
+    borderRadius: 16,
+    padding: 16,
+  },
+});

@@ -46,31 +46,44 @@ export default function ScheduleScreen({ navigation }: ScheduleScreenProps) {
         const parsedSchedules = JSON.parse(storedSchedules);
         console.log("Loaded schedules from AsyncStorage:", parsedSchedules); // 디버그용 로그
 
+        // parsedSchedules가 배열이 아닌 경우 배열로 변환
+        const schedulesArray = Array.isArray(parsedSchedules)
+          ? parsedSchedules
+          : [parsedSchedules];
+
         // Schedule 타입에 맞게 변환
-        const formattedSchedules: Schedule[] = [parsedSchedules].map(
+        const formattedSchedules: Schedule[] = schedulesArray.map(
           (schedule: any) => ({
             id: schedule.tripId,
-            destination: "서울", // 목적지 정보가 없으므로 임의로 설정
+            destination: schedule.title, // 목적지 정보가 없으므로 임의로 설정
             title: schedule.title,
             startDate: schedule.startDate,
             endDate: schedule.endDate,
             travelStyle: schedule.keywords,
-            activities: schedule.days.flatMap((day: any) =>
-              day.places.map((place: any) => place.title)
-            ),
-            budget: schedule.extraInfo.totalCost,
+            activities: schedule.days
+              ? schedule.days.flatMap((day: any) =>
+                  day.places.map((place: any) => place.title)
+                )
+              : [],
+            budget: schedule.extraInfo ? schedule.extraInfo.totalCost : 0,
             isAIRecommended: false, // AI 추천 여부 정보가 없으므로 임의로 설정
-            itinerary: schedule.days.map((day: any) => ({
-              date: day.date,
-              activities: day.places.map((place: any) => ({
-                time: place.time,
-                place: place.title,
-                description: place.description,
-                cost: place.cost,
-              })),
-            })),
-            totalBudget: schedule.extraInfo.totalBudget || 0, // totalBudget 추가
-            guideService: schedule.extraInfo.guideService || false, // guideService 추가
+            itinerary: schedule.days
+              ? schedule.days.map((day: any) => ({
+                  date: day.date,
+                  activities: day.places.map((place: any) => ({
+                    time: place.time,
+                    place: place.title,
+                    description: place.description,
+                    cost: place.cost,
+                  })),
+                }))
+              : [],
+            totalBudget: schedule.extraInfo
+              ? schedule.extraInfo.totalBudget
+              : 0, // totalBudget 추가
+            guideService: schedule.extraInfo
+              ? schedule.extraInfo.guideService
+              : false, // guideService 추가
           })
         );
 
@@ -252,18 +265,18 @@ export default function ScheduleScreen({ navigation }: ScheduleScreenProps) {
                       </Text>
                     </View>
                     <TouchableOpacity
-                      style={styles.deleteButton}
-                      onPress={() => deleteSchedule(schedule.id)}
-                    >
-                      <Text style={styles.deleteButtonText}>삭제</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity
                       style={styles.detailButton}
                       onPress={() =>
                         navigation.navigate("ScheduleDetail", { schedule })
                       }
                     >
                       <Text style={styles.buttonText}>일정 자세히 보기</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={styles.deleteButton}
+                      onPress={() => deleteSchedule(schedule.id)}
+                    >
+                      <Text style={styles.deleteButtonText}>삭제</Text>
                     </TouchableOpacity>
                   </View>
                 </TouchableOpacity>

@@ -29,7 +29,7 @@ export default function ScheduleDetail() {
           <ArrowLeft size={24} color="#000" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>여행 일정</Text>
-        <View style={{ width: 24 }} />
+        <Text style={{ width: 24 }} />
       </View>
 
       <ScrollView style={styles.content}>
