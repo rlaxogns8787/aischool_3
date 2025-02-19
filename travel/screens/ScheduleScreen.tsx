@@ -170,17 +170,6 @@ export default function ScheduleScreen({ navigation }: ScheduleScreenProps) {
     }
   };
 
-  const renderEmptyState = () => (
-    <View style={styles.emptyStateContainer}>
-      <Image
-        source={require("../assets/empty.png")}
-        style={styles.emptyImage}
-      />
-      <Text style={styles.emptyTitle}>아직 여행 예정되어 있지 않네요</Text>
-      <Text style={styles.emptySubtitle}>새로운 여행을 계획해보세요</Text>
-    </View>
-  );
-
   return (
     <View style={styles.container}>
       <LinearGradient
@@ -199,51 +188,54 @@ export default function ScheduleScreen({ navigation }: ScheduleScreenProps) {
           </TouchableOpacity>
         </View>
 
-        {/* Weather Info */}
-        <View style={styles.weatherContainer}>
-          <View style={styles.weatherHeader}>
-            <View>
-              <View style={styles.locationContainer}>
-                <LocationIcon width={16} height={16} color="#FFFFFF" />
-                <Text style={styles.location}>{weather?.location}</Text>
+        {schedules.length > 0 ? (
+          <>
+            {/* Weather Info */}
+            <View style={styles.weatherContainer}>
+              <View style={styles.weatherHeader}>
+                <View>
+                  <View style={styles.locationContainer}>
+                    <LocationIcon width={16} height={16} color="#FFFFFF" />
+                    <Text style={styles.location}>{weather?.location}</Text>
+                  </View>
+                  <Text style={styles.temperature}>
+                    {weather?.temperature}°
+                  </Text>
+                </View>
+                <View style={styles.weatherInfo}>
+                  <Text style={styles.highLow}>
+                    H:{weather?.high}° L:{weather?.low}°
+                  </Text>
+                </View>
               </View>
-              <Text style={styles.temperature}>{weather?.temperature}°</Text>
-            </View>
-            <View style={styles.weatherInfo}>
-              <Text style={styles.highLow}>
-                H:{weather?.high}° L:{weather?.low}°
-              </Text>
-            </View>
-          </View>
 
-          {/* Hourly Weather */}
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            style={styles.hourlyWeather}
-          >
-            {weather?.hourly.map((item, index) => (
-              <View key={index} style={styles.hourlyItem}>
-                <Text style={styles.hourlyTime}>{item.time}</Text>
-                {item.condition === "sunny" ? (
-                  <SunIcon width={24} height={24} color="#FFD409" />
-                ) : (
-                  <CloudIcon width={24} height={24} color="#FFFFFF" />
-                )}
-                <Text style={styles.hourlyTemp}>{item.temp}°</Text>
-              </View>
-            ))}
-          </ScrollView>
-        </View>
+              {/* Hourly Weather */}
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                style={styles.hourlyWeather}
+              >
+                {weather?.hourly.map((item, index) => (
+                  <View key={index} style={styles.hourlyItem}>
+                    <Text style={styles.hourlyTime}>{item.time}</Text>
+                    {item.condition === "sunny" ? (
+                      <SunIcon width={24} height={24} color="#FFD409" />
+                    ) : (
+                      <CloudIcon width={24} height={24} color="#FFFFFF" />
+                    )}
+                    <Text style={styles.hourlyTemp}>{item.temp}°</Text>
+                  </View>
+                ))}
+              </ScrollView>
+            </View>
 
-        {/* Schedule Content */}
-        <ScrollView
-          style={styles.content}
-          contentContainerStyle={styles.contentContainer}
-          showsVerticalScrollIndicator={false}
-        >
-          {schedules.length > 0
-            ? schedules.map((schedule) => (
+            {/* Schedule Content */}
+            <ScrollView
+              style={styles.content}
+              contentContainerStyle={styles.contentContainer}
+              showsVerticalScrollIndicator={false}
+            >
+              {schedules.map((schedule) => (
                 <TouchableOpacity
                   key={schedule.id}
                   style={styles.scheduleCard}
@@ -275,19 +267,29 @@ export default function ScheduleScreen({ navigation }: ScheduleScreenProps) {
                     <Text style={styles.buttonText}>일정 자세히 보기</Text>
                   </TouchableOpacity>
                 </TouchableOpacity>
-              ))
-            : renderEmptyState()}
-        </ScrollView>
-
-        {/* 하단 고정 버튼 */}
-        {/* <View style={styles.bottomButtonContainer}>
-          <TouchableOpacity
-            style={styles.detailButton}
-            onPress={() => navigation.navigate("Chat")}
-          >
-            <Text style={styles.buttonText}>일정 등록</Text>
-          </TouchableOpacity>
-        </View> */}
+              ))}
+            </ScrollView>
+          </>
+        ) : (
+          <View style={styles.emptyContainer}>
+            <View style={styles.content}>
+              <View style={styles.emptyStateContainer}>
+                <Text style={styles.emptyTitle}>여행 기록이 아직 없네요</Text>
+                <Text style={styles.emptySubtitle}>
+                  어디론가 떠나보는게 어떨까요?
+                </Text>
+              </View>
+            </View>
+            <View style={styles.buttonContainer}>
+              <TouchableOpacity
+                style={styles.registerButton}
+                onPress={() => navigation.navigate("Chat")}
+              >
+                <Text style={styles.buttonText}>일정 등록</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        )}
       </SafeAreaView>
     </View>
   );
@@ -376,41 +378,44 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
   },
   contentContainer: {
     paddingHorizontal: 24,
     paddingBottom: 48 + 24 + 83, // 버튼 높이(48) + 상단 마진(24) + 하단 탭 높이(83)
     paddingTop: 16, // 날씨 컨테이너와 첫 번째 카드 사이 간격
   },
-  emptyStateContainer: {
+  emptyContainer: {
     flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
+    justifyContent: "space-between",
   },
-  emptyImage: {
-    width: 120,
-    height: 120,
-    marginBottom: 24,
-    backgroundColor: "#EAF2FF",
-    borderRadius: 24,
+  emptyStateContainer: {
+    alignItems: "center",
+    marginTop: -100,
   },
   emptyTitle: {
+    fontFamily: "Inter",
     fontSize: 18,
     fontWeight: "800",
-    color: "#1F2024",
-    marginBottom: 8,
+    lineHeight: 22,
     letterSpacing: 0.005 * 18,
+    textAlign: "center",
+    color: "#FFFFFF",
+    marginBottom: 8,
   },
   emptySubtitle: {
+    fontFamily: "Inter",
     fontSize: 14,
-    color: "#71727A",
-    marginBottom: 32,
+    lineHeight: 20,
+    textAlign: "center",
+    color: "rgba(255, 255, 255, 0.8)",
+  },
+  buttonContainer: {
+    paddingHorizontal: 40,
+    paddingBottom: 72,
   },
   registerButton: {
-    position: "absolute",
-    bottom: 83 + 24, // 하단 탭 높이(83) + 24px 마진
-    left: 24,
-    right: 24,
     height: 48,
     backgroundColor: "rgba(255, 255, 255, 0.2)",
     borderRadius: 300,
