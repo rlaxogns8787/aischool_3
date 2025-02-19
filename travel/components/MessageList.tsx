@@ -16,6 +16,7 @@ import OptionCard from "./OptionCard";
 import OptionModal from "./OptionModal"; // OptionModal import 추가
 import StyleToggleButton from "./StyleToggleButton";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { addSchedule } from "../api/loginapi";
 
 const { width: screenWidth } = Dimensions.get("window");
 
@@ -248,7 +249,6 @@ export default function MessageList({
                     ]}
                     onPress={async () => {
                       if (!disabledButtons[message.id]) {
-                        // 🔹 개별 메시지의 버튼이 비활성화 상태가 아니면 실행
                         handleExit();
                         setSelectedOptions((prev) => ({
                           ...prev,
@@ -257,41 +257,32 @@ export default function MessageList({
                         setDisabledButtons((prev) => ({
                           ...prev,
                           [message.id]: true,
-                        })); // 🔹 해당 메시지 버튼 비활성화
+                        }));
 
                         // 🔹 일정 확정 시 AsyncStorage에 저장
                         try {
-                          const userData = await AsyncStorage.getItem(
-                            "userData"
-                          );
+                          const userData = await AsyncStorage.getItem("userData");
                           if (userData) {
-                            await AsyncStorage.setItem(
-                              "confirmedUserData",
-                              userData
-                            );
-                            console.log(
-                              "UserData -> confirmedUserData 에 저장됨:",
-                              userData
-                            );
+                            await AsyncStorage.setItem("confirmedUserData", userData);
+                            console.log("UserData -> confirmedUserData 에 저장됨:", userData);
                           }
 
-                          const formattedSchedule = await AsyncStorage.getItem(
-                            "formattedSchedule"
-                          );
+                          const formattedSchedule = await AsyncStorage.getItem("formattedSchedule");
                           if (formattedSchedule) {
-                            await AsyncStorage.setItem(
-                              "confirmedSchedule",
-                              formattedSchedule
-                            );
-                            console.log(
-                              "FormattedSchedule -> confirmedSchedule 에 저장됨:",
-                              formattedSchedule
-                            );
+                            const scheduleData = JSON.parse(formattedSchedule);
+                            
+                            // 🔹 timestamp 형식 변환
+                            scheduleData.timestamp = new Date().toISOString(); // 현재 시간을 ISO 8601 형식으로 변환
+
+                            await AsyncStorage.setItem("confirmedSchedule", JSON.stringify(scheduleData));
+                            console.log("FormattedSchedule -> confirmedSchedule 에 저장됨:", scheduleData);
+                            
+                            // 🔹 DB에 일정 추가
+                            await addSchedule(scheduleData); // DB에 일정 추가
+                            console.log("일정이 DB에 성공적으로 저장되었습니다.");
                           }
 
-                          console.log(
-                            "일정과 사용자 데이터가 성공적으로 저장되었습니다."
-                          );
+                          console.log("일정과 사용자 데이터가 성공적으로 저장되었습니다.");
                         } catch (error) {
                           console.error("데이터 저장 중 오류 발생:", error);
                         }
