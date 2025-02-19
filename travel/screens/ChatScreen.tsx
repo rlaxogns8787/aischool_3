@@ -79,9 +79,15 @@ export default function ChatScreen() {
   const [selectedEndDate, setSelectedEndDate] = useState<Date | null>(null);
   const [isSelectingEndDate, setIsSelectingEndDate] = useState(false);
   const [showScheduleButtons, setShowScheduleButtons] = useState(false);
-  const [selectedOption, setSelectedOption] = useState<"recreate" | "confirm" | null>(null);  
-  const [selectedOptions, setSelectedOptions] = useState<{ [key: string]: "recreate" | "confirm" | null }>({});
-  const [disabledButtons, setDisabledButtons] = useState<{ [key: string]: boolean }>({});
+  const [selectedOption, setSelectedOption] = useState<
+    "recreate" | "confirm" | null
+  >(null);
+  const [selectedOptions, setSelectedOptions] = useState<{
+    [key: string]: "recreate" | "confirm" | null;
+  }>({});
+  const [disabledButtons, setDisabledButtons] = useState<{
+    [key: string]: boolean;
+  }>({});
 
   // 여행 일정 데이터 AsyncStorage에서 가져와 TMapScreen으로 이동
   const handleShowMap = async () => {
@@ -104,8 +110,7 @@ export default function ChatScreen() {
   }, []);
 
   // 메시지 개수 확인
-  useEffect(() => {
-  }, [messages]);
+  useEffect(() => {}, [messages]);
 
   // 메시지 업데이트 헬퍼 함수
   const updateMessages = (newMessages: Message[], removePattern?: string) => {
@@ -305,9 +310,8 @@ export default function ChatScreen() {
 
       // ✅ 🔄 일정 재생성 요청 감지 및 AI 일정 생성
       if (text === "새로운 일정을 요청합니다.") {
-        
         const aiResponse = await chatWithAI("새로운 일정을 요청합니다.");
-        
+
         const aiMessage: Message = {
           id: Date.now().toString(),
           text: `🗓 새로운 일정이 생성되었습니다!\n\n${aiResponse}`,
@@ -539,16 +543,15 @@ export default function ChatScreen() {
 
   // ⏹ 일정 종료 함수
   const handleExit = () => {
-  
     // ✅ 일정 확정 메시지를 채팅에 추가
     setMessages((prev) => [
       ...prev,
-      { 
-        id: Date.now().toString(), 
-        text: "✅ 여행일정이 확정되었습니다!", 
-        isBot: true, 
-        timestamp: new Date().toISOString() 
-      }
+      {
+        id: Date.now().toString(),
+        text: "✅ 여행일정이 확정되었습니다!",
+        isBot: true,
+        timestamp: new Date().toISOString(),
+      },
     ]);
     setSelectedOption("confirm"); // ✅ 선택한 버튼 스타일 변경
     setShowScheduleButtons(false); // 버튼 숨기기
@@ -566,7 +569,7 @@ export default function ChatScreen() {
       },
     ]);
 
-     // 날짜 관련 상태 초기화
+    // 날짜 관련 상태 초기화
     setStartDate(new Date());
     setEndDate(new Date());
     setSelectedStartDate(null);
@@ -574,14 +577,14 @@ export default function ChatScreen() {
     setIsSelectingEndDate(false);
     setDatePickerVisible(false);
     setDatePickerMode("start");
-  
+
     // 1.5초 후 초기 메시지로 리셋
     setTimeout(() => {
       setMessages([INITIAL_MESSAGE]);
       setSelectedOptions({});
       setDisabledButtons({});
     }, 1500);
-  
+
     setShowScheduleButtons(false);
   };
 
@@ -589,9 +592,12 @@ export default function ChatScreen() {
   useEffect(() => {
     if (messages.length > 0) {
       const lastMessage = messages[messages.length - 1]; // 마지막 메시지 가져오기
-  
+
       // 🔹 일정 생성 완료 메시지 감지
-      if (lastMessage.text.includes("예산 정리") || lastMessage.text.includes("일정이 생성")) {
+      if (
+        lastMessage.text.includes("예산 정리") ||
+        lastMessage.text.includes("일정이 생성")
+      ) {
         setShowScheduleButtons(true);
         setMessages((prev) => {
           if (prev.some((msg) => msg.isLoading)) {
@@ -617,7 +623,6 @@ export default function ChatScreen() {
 
   // 🔄 일정 재생성 함수
   const handleRecreateSchedule = async () => {
-  
     // ✅ 기존 일정 버튼 숨기기
     setShowScheduleButtons(false);
     setSelectedOption(null);
@@ -634,7 +639,7 @@ export default function ChatScreen() {
 
     // ✅ 1초 대기 후 일정 생성 요청 (UI 반영 시간 확보)
     await new Promise((resolve) => setTimeout(resolve, 1000));
-      
+
     // ✅ 기존 사용자 선택 정보 찾기
     const tripInfo = {
       styles: messages
@@ -671,11 +676,11 @@ export default function ChatScreen() {
         .split("\n")[0]
         .split(", "),
     };
-    
+
     try {
       // ✅ AI 일정 요청
       const aiResponse = await generateTravelSchedule(tripInfo);
-  
+
       // ✅ AI 응답 메시지 추가 (로딩 메시지 대체)
       setMessages((prev) =>
         prev
@@ -1080,9 +1085,9 @@ export default function ChatScreen() {
             handleRestart={handleRestart}
             showScheduleButtons={showScheduleButtons}
             selectedOption={selectedOption}
-            setSelectedOptions={setSelectedOptions}  // ✅ 추가
-            disabledButtons={disabledButtons}        // ✅ 추가
-            setDisabledButtons={setDisabledButtons}  // ✅ 추가
+            setSelectedOptions={setSelectedOptions} // ✅ 추가
+            disabledButtons={disabledButtons} // ✅ 추가
+            setDisabledButtons={setDisabledButtons} // ✅ 추가
           />
         </View>
 
@@ -1127,9 +1132,9 @@ export default function ChatScreen() {
               is24Hour={true}
               display="inline"
               onChange={(event: DateTimePickerEvent, date?: Date) => {
-                console.log("Date selected:", date);
-                console.log("startDate:", startDate);
-                console.log("endDate:", endDate);
+                // console.log("Date selected:", date);
+                // console.log("startDate:", startDate);
+                // console.log("endDate:", endDate);
                 if (event.type === "set" && date) {
                   if (datePickerMode === "start") {
                     setStartDate(date);

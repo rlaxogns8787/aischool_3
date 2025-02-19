@@ -9,6 +9,7 @@ import {
   Platform,
   Alert,
 } from "react-native";
+import axios from 'axios';
 import { SafeAreaView } from "react-native-safe-area-context";
 import { ChevronLeft, Mic, ArrowLeft, Map } from "lucide-react-native";
 import MapIcon from "../assets/map.svg";
@@ -28,7 +29,7 @@ import Animated, {
   useSharedValue,
 } from "react-native-reanimated";
 import * as Location from "expo-location";
-import { Audio } from "expo-av";
+import { Audio, InterruptionModeAndroid, InterruptionModeIOS } from "expo-av";
 import * as FileSystem from "expo-file-system";
 import { encode as btoa } from "base-64";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -48,9 +49,10 @@ const AZURE_OPENAI_KEY =
 const DEPLOYMENT_NAME = "gpt-4o";
 
 //Azure AI Search 키와 인덱스
-const SEARCH_ENDPOINT = "https://ssapy-ai-search.search.windows.net";
-const SEARCH_KEY = "NGZcgM1vjwqKoDNPnFXcApBFttxWmGRLmnukKldPcTAzSeBjHCk6";
-const ATTRACTION_INDEX = "attraction";
+const SEARCH_ENDPOINT = 'https://ssapy-ai-search.search.windows.net';
+const SEARCH_KEY = 'NGZcgM1vjwqKoDNPnFXcApBFttxWmGRLmnukKldPcTAzSeBjHCk6';
+const ATTRACTION_INDEX = 'attraction_3';
+
 
 // type Interest = "건축" | "역사" | "문화" | "요리" | "자연";
 
@@ -92,6 +94,8 @@ export default function TourScreen() {
   const [currentLocation, setCurrentLocation] =
     useState<Location.LocationObject | null>(null);
   const [isGuiding, setIsGuiding] = useState(false);
+  const [nearbySpots, setNearbySpots] = useState([]);
+  const [currentSpotGuide, setCurrentSpotGuide] = useState("");
   const [pausedGuideText, setPausedGuideText] = useState<string | null>(null);
   const [showVoiceModal, setShowVoiceModal] = useState(false);
   const [selectedVoice, setSelectedVoice] = useState<VoiceType>({
@@ -192,24 +196,26 @@ export default function TourScreen() {
       console.log("오디오 초기화 시작");
       try {
         const permission = await Audio.requestPermissionsAsync();
+        console.log("오디오 권한 요청 결과:", permission);
         if (!permission.granted) {
           Alert.alert("오류", "오디오 권한이 필요합니다.");
           return;
         }
+        console.log("오디오 모드 설정 시작");
         await Audio.setAudioModeAsync({
           allowsRecordingIOS: true,
           playsInSilentModeIOS: true,
           staysActiveInBackground: true,
-          interruptionModeIOS: Audio.InterruptionModeIOS.MixWithOthers,
-          interruptionModeAndroid: Audio.InterruptionModeAndroid.DuckOthers,
+          interruptionModeIOS: InterruptionModeIOS.MixWithOthers, // 수정
+          interruptionModeAndroid: InterruptionModeAndroid.DuckOthers, // 수정
           shouldDuckAndroid: true,
           playThroughEarpieceAndroid: false,
         });
-        console.log("오디오 초기화 성공");
+        console.log("오디오 모드 설정 성공");
         setIsAudioReady(true);
       } catch (error) {
         console.error("Audio initialization error:", error);
-        Alert.alert("오류", "오디오 초기화에 실패했습니다.");
+        Alert.alert("오류", `오디오 초기화에 실패했습니다: ${error.message}`);
       }
     };
     initializeAudio();
@@ -359,6 +365,32 @@ export default function TourScreen() {
     }
   };
 
+  // [2] Azure AI Search: 관심사 + 위치 기반 관광지 추천 함수
+  const fetchNearbySpots = async (latitude, longitude) => {
+    try {
+      const response = await axios.post(
+        `${SEARCH_ENDPOINT}/indexes/${ATTRACTION_INDEX}/docs/search?api-version=2021-04-30-Preview`,
+        {
+          search: "*",
+          filter: `geo.distance(CTLSTT_LA_LO, geography'POINT(${longitude} ${latitude})') le 20000`,
+          select: "AREA_CLTUR_TRRSRT_NM, SUMRY_CN",
+          top: 3,
+        },
+        {
+          headers: {
+            'Content-Type': 'application/json',
+            'api-key': SEARCH_KEY,
+          },
+        }
+      );
+
+      generateTourGuide(response.data.value);
+    } catch (error) {
+      console.error('Nearby spots search failed:', error);
+    }
+  };
+
+
   // 위치 추적 useEffect
   useEffect(() => {
     (async () => {
@@ -369,22 +401,16 @@ export default function TourScreen() {
         return;
       }
       console.log("위치 권한 허용됨");
-      const fakeLocation: Location.LocationObject = {
-        coords: {
-          latitude: 37.579617,
-          longitude: 126.977041,
-          altitude: null,
-          accuracy: null,
-          altitudeAccuracy: null,
-          heading: null,
-          speed: null,
-        },
-        timestamp: Date.now(),
-      };
-      console.log("가짜 위치 생성:", fakeLocation);
-      setCurrentLocation(fakeLocation);
-      checkNearbySpots(fakeLocation);
-      return () => {};
+      // 실제 위치 가져오기
+      const realLocation = await Location.getCurrentPositionAsync({
+        accuracy: Location.Accuracy.High,
+      });
+      console.log("실제 위치 정보:", realLocation);
+      setCurrentLocation(realLocation);
+      checkNearbySpots(realLocation);
+      // ✅ AI Search 기능 추가 부분 시작
+      const { latitude, longitude } = realLocation.coords;
+      fetchNearbySpots(latitude, longitude);
     })();
   }, []);
 
@@ -465,79 +491,77 @@ export default function TourScreen() {
     navigation.navigate("Map");
   };
 
-  const fetchNearbyPlaces = async ({ latitude, longitude }) => {
-    try {
-      const response = await fetch(
-        `${AZURE_SEARCH_ENDPOINT}/indexes/places/docs?api-version=2023-07-01&$filter=geo.distance(location, geography'POINT(${longitude} ${latitude})') lt 1`,
-        {
-          headers: { "api-key": AZURE_SEARCH_API_KEY },
-        }
-      );
-      const data = await response.json();
 
-      if (!data.value || !Array.isArray(data.value)) {
-        throw new Error("Invalid response format: value must be an array");
-      }
-      generateTourGuide(data.value);
-    } catch (error) {
-      console.error("AI Search error:", error);
-      setTourGuide("AI Search에서 데이터를 불러오는 데 실패했습니다.");
-    }
-  };
-
-  const generateTourGuide = async (nearbyPlaces) => {
-    setIsLoading(true);
-    try {
-      const placeDescriptions = nearbyPlaces
-        .map((place) => `${place.AREA_CLTUR_TRRSRT_NM}: ${place.SUMRY_CN}`)
-        .join("\n");
-      const messages = [
+  // generateTourGuide 함수 수정: Syntax Error 해결 및 Azure AI Search 인덱스 추가
+  const generateTourGuide = async (spots) => {
+    const spotNames = spots.map(s => s.AREA_CLTUR_TRRSRT_NM).join(', ');
+    const body = {
+      messages: [
         {
           role: "system",
-          content: `다음 내용을 기반으로 관광지 가이드를 진행해줘. \n${placeDescriptions}`,
+          content: `당신은 사용자에게 전문적이고 흥미있는 관광 가이드를 진행해주는 가이드 도우미입니다.
+          (${spotNames})에 대해 전문적이고 흥미로운 설명을 제공해주세요.
+          주의사항:
+          1) 최대 200자 내외의 짧은 해설을 지향.
+          2) 장소의 역사/배경 + 재미있는 TMI(1~2줄) 포함.
+          3) 너무 긴 문장보다, 짧은 문장 중심.
+          4) 필요 시 감탄사나 비유적 표현을 적절히 사용.`
         },
         {
           role: "user",
-          content: "근처 관광지에 대해 안내해주세요.",
-        },
-      ];
+          content: `${spotNames}에 대한 관광 가이드를 진행해줘`
+        }
+      ],
+      past_messages: 10,
+      temperature: 0.7,
+      top_p: 0.95,
+      frequency_penalty: 0,
+      presence_penalty: 0,
+      max_tokens: 800,
+      data_sources: [
+        {
+          type: "azure_search",
+          parameters: {
+            endpoint: "https://ssapy-ai-search.search.windows.net",
+            semantic_configuration: "attraction3-semantic",
+            query_type: "semantic",
+            in_scope: true,
+            role_information: "사용자에게 전문적이고 흥미있는 관광 가이드를 진행해주는 가이드 도우미입니다.",
+            filter: null,
+            strictness: 1,
+            top_n_documents: 5,
+            key: "NGZcgM1vjwqKoDNPnFXcApBFttxWmGRLmnukKldPcTAzSeBjHCk6",
+            indexName: "attraction_3"
+          }
+        }
+      ]
+    };
 
+    try {
       const response = await fetch(
         `${AZURE_OPENAI_ENDPOINT}/openai/deployments/${DEPLOYMENT_NAME}/chat/completions?api-version=2024-02-15-preview`,
         {
           method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "api-key": AZURE_OPENAI_KEY,
-          },
-          body: JSON.stringify({
-            messages,
-            max_tokens: 500,
-            temperature: 0.7,
-            top_p: 0.95,
-            frequency_penalty: 0,
-            presence_penalty: 0,
-          }),
+          headers: { "Content-Type": "application/json", "api-key": AZURE_OPENAI_KEY },
+          body: JSON.stringify(body)
         }
       );
 
-      if (!response.ok) {
-        throw new Error("Failed to generate tour guide");
-      }
+      if (!response.ok) throw new Error("Failed to generate tour guide");
 
       const data = await response.json();
-      const content = data.choices[0].message.content;
-      setTourGuide("");
+      const content = data.choices[0]?.message?.content || "가이드를 불러오지 못했습니다.";
+      setTourGuide(content);
       animateText(content);
-      return content;
     } catch (error) {
-      console.error("Error generating tour guide:", error);
+      console.error("Error generating tour guide with search index:", error);
       setTourGuide("죄송합니다. 설명을 불러오는데 실패했습니다.");
-      return "설명 생성 실패";
     } finally {
       setIsLoading(false);
     }
   };
+
+
 
   // speakText 함수 (TTS 실행)
   const speakText = (text: string) => {

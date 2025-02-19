@@ -9,7 +9,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { ArrowLeft } from "lucide-react-native";
 import { Schedule } from "../types/schedule";
-import { useRoute, RouteProp } from "@react-navigation/native";
+import { useRoute, RouteProp, useNavigation } from "@react-navigation/native";
 
 type RouteParams = {
   ScheduleDetail: {
@@ -19,6 +19,7 @@ type RouteParams = {
 
 export default function ScheduleDetail() {
   const route = useRoute<RouteProp<RouteParams, "ScheduleDetail">>();
+  const navigation = useNavigation();
   const { schedule } = route.params;
 
   return (
@@ -28,7 +29,7 @@ export default function ScheduleDetail() {
           <ArrowLeft size={24} color="#000" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>여행 일정</Text>
-        <View style={{ width: 24 }} />
+        <Text style={{ width: 24 }} />
       </View>
 
       <ScrollView style={styles.content}>
