@@ -41,13 +41,9 @@ export const loginUser = async (userData) => {
 };
 
 /**
- * 사용자 정보 업데이트 API 요청 (토큰 인증 제거)
+ * 사용자 정보 업데이트 API 요청
  */
-export const updateUserInfo = async (
-  field: string,
-  value: any,
-  password?: any
-) => {
+export const updateUserInfo = async (field, value, password?) => {
   try {
     const userData = await AsyncStorage.getItem("userData");
     if (!userData) {
@@ -61,16 +57,20 @@ export const updateUserInfo = async (
       throw new Error("username이 없습니다.");
     }
 
-    // 서버에서 요구하는 형식에 맞춰 요청 데이터 구성
-    const updateData: any = {
-      username: username, // username 필드 추가
-      [field]: value,
+    // 서버에 보낼 데이터 구성
+    let updateData = {
+      username, // username 추가
+      field,
+      value,
     };
 
-    // 비밀번호 변경의 경우 추가 데이터 포함
+    // 비밀번호 변경의 경우
     if (password) {
-      updateData.oldPassword = password.oldPassword;
-      updateData.newPassword = password.newPassword;
+      updateData = {
+        ...updateData,
+        oldPassword: password.oldPassword,
+        newPassword: password.newPassword,
+      };
     }
 
     const response = await axios.put(
@@ -78,12 +78,22 @@ export const updateUserInfo = async (
       updateData
     );
 
-    // 응답 데이터에서 user_info가 있으면 AsyncStorage 업데이트
-    if (response.data.user_info) {
-      await AsyncStorage.setItem(
-        "userData",
-        JSON.stringify(response.data.user_info)
-      );
+    console.log("Update response:", response.data);
+
+    if (response.data.message === "User information updated successfully") {
+      // 로컬 userData 업데이트
+      const currentUserData = JSON.parse(userData);
+      let updatedUserData = { ...currentUserData };
+
+      // preferences나 music_genres 업데이트인 경우
+      if (field === "preferences" || field === "music_genres") {
+        updatedUserData[field] = value; // 새로운 값으로 업데이트
+      } else {
+        updatedUserData[field] = value;
+      }
+
+      await AsyncStorage.setItem("userData", JSON.stringify(updatedUserData));
+      return { success: true, message: response.data.message };
     }
 
     return response.data;

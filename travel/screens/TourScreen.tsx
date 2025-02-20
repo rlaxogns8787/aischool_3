@@ -11,7 +11,15 @@ import {
 } from "react-native";
 import axios from "axios";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { ChevronLeft, Mic, ArrowLeft, Map } from "lucide-react-native";
+import {
+  ChevronLeft,
+  Mic,
+  ArrowLeft,
+  Map,
+  Music,
+  Play,
+  Pause,
+} from "lucide-react-native";
 import MapIcon from "../assets/map.svg";
 import * as Speech from "expo-speech";
 import * as sdk from "microsoft-cognitiveservices-speech-sdk";
@@ -36,9 +44,39 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useAuth } from "../contexts/AuthContext";
 import { getSchedules } from "../api/loginapi";
 import { MusicService } from "../services/musicService";
+import VoiceIcon from "../assets/voice.svg";
+import SongIcon from "../assets/song.svg";
 
+// 상단에 타입 정의 추가
+interface VoiceCharacterType {
+  [key: string]: {
+    personality: string;
+    style: string;
+    tone: string;
+    examples: string;
+    formatMessage: (text: string) => string;
+  };
+}
+
+// User 타입 정의 추가
+interface User {
+  preferences?: string[];
+  birthYear?: number;
+  musicGenres?: string[];
+}
+
+// 음성 관련 타입 수정
+interface VoiceResponse {
+  text: string;
+  additionalData?: any;
+}
+
+// 기존 TourScreenProps 수정
 type TourScreenProps = {
-  navigation: any;
+  navigation: {
+    navigate: (screen: string) => void;
+    goBack: () => void;
+  };
 };
 
 // Azure Speech Services 키와 리전 설정
@@ -210,8 +248,14 @@ interface TourState {
   showNextButton: boolean;
 }
 
+// 새로운 타입 추가
+interface UserData {
+  birthYear: number;
+  musicGenres: string[];
+}
+
 export default function TourScreen() {
-  const navigation = useNavigation();
+  const navigation = useNavigation<any>();
   const [displayedText, setDisplayedText] = useState("");
   const [fullText, setFullText] = useState("");
   const [isRecording, setIsRecording] = useState(false);
@@ -249,6 +293,16 @@ export default function TourScreen() {
   });
   const [currentBGM, setCurrentBGM] = useState<string | null>(null);
   const musicService = useRef(new MusicService());
+  const [userPreferences, setUserPreferences] = useState<string[]>([]);
+  const [userMusicGenres, setUserMusicGenres] = useState<string[]>([]);
+  const [showMusicButton, setShowMusicButton] = useState(false);
+  const [showMusicSection, setShowMusicSection] = useState(false);
+  const [currentSong, setCurrentSong] = useState<{
+    title: string;
+    artist: string;
+  } | null>(null);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [userData, setUserData] = useState<UserData | null>(null);
 
   // 사용자 관심사를 DB에서 가져오기(기본값은 '전체'설정)
   const userPreference = user?.preferences?.[0] || "전체";
@@ -423,7 +477,7 @@ export default function TourScreen() {
   };
 
   // Azure TTS 함수: REST API와 expo-av를 이용해 음성 합성 및 재생 (한 번만 실행)
-  const startSpeaking = async (text: string) => {
+  const startSpeaking = async (text: string | VoiceResponse) => {
     console.log("startSpeaking 호출, text:", text);
     if (!text) {
       console.error("No text provided for TTS");
@@ -431,15 +485,13 @@ export default function TourScreen() {
     }
 
     try {
-      setIsLoadingStory(true); // 로딩 상태 시작
+      setIsLoadingStory(true);
+      setShowMusicSection(false); // 음성 재생 시작할 때 음악 섹션 숨기기
       console.log("Starting Azure TTS (REST) with voice:", selectedVoice.id);
       setIsSpeaking(true);
 
       // 텍스트 전처리
-      const processedText = text
-        .trim()
-        .replace(/undefined/g, "")
-        .replace(/\n{3,}/g, "\n\n");
+      const processedText = typeof text === "string" ? text : text.text;
 
       // TTS 토큰 발급 및 설정
       const tokenResponse = await fetch(
@@ -505,9 +557,9 @@ export default function TourScreen() {
 
       // 음성 파일의 재생 시간 가져오기
       const status = await soundObject.getStatusAsync();
-      const durationMillis = status.durationMillis || 0;
+      const durationMillis = status.isLoaded ? status.durationMillis : 0;
 
-      setIsLoadingStory(false); // 로딩 상태 종료
+      setIsLoadingStory(false);
 
       // 텍스트 애니메이션 시작 (약간의 지연을 두고 시작)
       setTimeout(() => {
@@ -518,9 +570,13 @@ export default function TourScreen() {
       await soundObject.playAsync();
 
       soundObject.setOnPlaybackStatusUpdate((status) => {
-        if (status.didJustFinish) {
+        if (status.isLoaded && status.didJustFinish) {
           setIsSpeaking(false);
           soundObject.unloadAsync();
+          // 웰컴 메시지가 아닐 때만 음악 섹션 표시
+          if (!isInitializing) {
+            setShowMusicSection(true);
+          }
         }
       });
 
@@ -528,7 +584,7 @@ export default function TourScreen() {
     } catch (error) {
       console.error("TTS setup error:", error);
       setIsSpeaking(false);
-      setIsLoadingStory(false); // 에러 발생 시에도 로딩 상태 종료
+      setIsLoadingStory(false);
       throw error;
     }
   };
@@ -576,7 +632,9 @@ export default function TourScreen() {
 
       const schedule = JSON.parse(confirmedScheduleStr) as Schedule;
       const today = new Date().toISOString().split("T")[0];
-      const todaySchedule = schedule.days.find((day) => day.date === today);
+      const todaySchedule = schedule.days.find(
+        (day: { date: string }) => day.date === today
+      );
 
       if (!todaySchedule || !todaySchedule.places.length) {
         console.log("오늘의 일정이 없습니다.");
@@ -601,7 +659,7 @@ export default function TourScreen() {
         );
 
         return placeDistance < nearestDistance ? place : nearest;
-      }, null);
+      }, todaySchedule.places[0]);
 
       if (nearestPlace) {
         return {
@@ -644,7 +702,7 @@ export default function TourScreen() {
   };
 
   // [2] Azure AI Search: 관심사 + 위치 기반 관광지 추천 함수
-  const fetchNearbySpots = async (latitude, longitude) => {
+  const fetchNearbySpots = async (latitude: number, longitude: number) => {
     try {
       const response = await axios.post(
         `${SEARCH_ENDPOINT}/indexes/${ATTRACTION_INDEX}/docs/search?api-version=2021-04-30-Preview`,
@@ -702,8 +760,9 @@ export default function TourScreen() {
 
       // 오늘 날짜의 일정 찾기
       const today = new Date().toISOString().split("T")[0];
-      const todaySchedule = response.schedules.find((schedule) =>
-        schedule.days.some((day) => day.date === today)
+      const todaySchedule = response.schedules.find(
+        (schedule: ServerSchedule) =>
+          schedule.days.some((day: { date: string }) => day.date === today)
       );
 
       if (todaySchedule) {
@@ -715,9 +774,12 @@ export default function TourScreen() {
 
         // 가이드 텍스트 생성
         const guideText = todaySchedule.days
-          .map((day) =>
+          .map((day: { places: any[] }) =>
             day.places
-              .map((place) => `${place.title}: ${place.description}`)
+              .map(
+                (place: { title: string; description: string }) =>
+                  `${place.title}: ${place.description}`
+              )
               .join("\n")
           )
           .join("\n\n");
@@ -779,7 +841,7 @@ export default function TourScreen() {
 
   const handleMapPress = () => {
     console.log("handleMapPress 호출");
-    navigation.navigate("Map");
+    navigation.navigate("Map" as never);
   };
 
   // generateTourGuide 함수 수정
@@ -795,9 +857,14 @@ export default function TourScreen() {
   ) => {
     try {
       setIsLoadingStory(true);
-
       const spotNames = spots.map((s) => s.AREA_CLTUR_TRRSRT_NM).join(", ");
       const selectedCharacter = characterTraits[selectedVoice.id];
+
+      // 사용자 관심사를 기반으로 이야기 생성
+      const userInterests = userPreferences.join(", ");
+      let prompt = `당신은 ${selectedCharacter.personality}입니다. `;
+      prompt += `방문객이 ${userInterests}에 관심이 많습니다. `;
+      prompt += `${spotNames}에 대해 방문객의 관심사를 고려하여 설명해주세요.`;
 
       // 실제 일정 데이터 가져오기
       const storedSchedule = await AsyncStorage.getItem("confirmedSchedule");
@@ -808,7 +875,9 @@ export default function TourScreen() {
 
       const schedule: Schedule = JSON.parse(storedSchedule);
       const today = new Date().toISOString().split("T")[0];
-      const todaySchedule = schedule.days.find((day) => day.date === today);
+      const todaySchedule = schedule.days.find(
+        (day: { date: string }) => day.date === today
+      );
 
       if (!todaySchedule) {
         console.log("오늘의 일정을 찾을 수 없습니다.");
@@ -817,7 +886,7 @@ export default function TourScreen() {
 
       // 현재 장소 정보 찾기
       const currentPlace = todaySchedule.places.find(
-        (place) => place.title === spotNames
+        (place: { title: string }) => place.title === spotNames
       );
 
       if (!currentPlace) {
@@ -925,12 +994,24 @@ Additional context: ${currentPlace.description}`,
         tourState.currentDayIndex === scheduleData.days.length - 1;
 
       if (!isLastPlace || !isLastDay) {
-        content += "\n\n다음 장소로 이동해볼까요?";
+        content += "\n\n노래를 들으면서 다음 장소로 이동해보세요!";
         setTourState((prev) => ({ ...prev, showNextButton: true }));
       }
 
       setTourGuide("");
       await startSpeaking(content);
+
+      // 이야기가 끝나면 음악 섹션 표시 및 음악 재생
+      setShowMusicSection(true);
+      if (userMusicGenres.length > 0 && userData) {
+        const randomGenre =
+          userMusicGenres[Math.floor(Math.random() * userMusicGenres.length)];
+        const songInfo = await handleTransitMusic(randomGenre);
+        if (songInfo) {
+          setCurrentSong(songInfo);
+          setIsPlaying(true);
+        }
+      }
 
       return content;
     } catch (error) {
@@ -1026,8 +1107,9 @@ Additional context: ${currentPlace.description}`,
         const today = new Date().toISOString().split("T")[0];
 
         if (response && response.schedules && response.schedules.length > 0) {
-          const todaySchedule = response.schedules.find((schedule) =>
-            schedule.days.some((day) => day.date === today)
+          const todaySchedule = response.schedules.find(
+            (schedule: ServerSchedule) =>
+              schedule.days.some((day: { date: string }) => day.date === today)
           );
 
           if (todaySchedule) {
@@ -1042,7 +1124,7 @@ Additional context: ${currentPlace.description}`,
         setIsInitializing(false); // 초기 로딩 상태 종료
 
         // 웰컴 메시지 시작
-        await startSpeaking(welcomeMessage);
+        await welcomeMessage();
       } catch (error) {
         console.error("Error in initializeTourGuide:", error);
         setIsInitializing(false);
@@ -1057,8 +1139,19 @@ Additional context: ${currentPlace.description}`,
     };
   }, []);
 
-  // TourScreen 컴포넌트 내부 상태 선언부에 추가
-  const [welcomeMessage] = useState("안녕하세요! 여행을 시작해볼까요?");
+  // welcomeMessage 함수 수정
+  const welcomeMessage = async () => {
+    try {
+      setIsInitializing(true);
+      setShowMusicSection(false); // 웰컴 메시지 시작할 때 음악 섹션 숨기기
+      const message = "안녕하세요! 여행을 시작해볼까요?";
+      await startSpeaking(message);
+      setIsInitializing(false);
+    } catch (error) {
+      console.error("Welcome message error:", error);
+      setIsInitializing(false);
+    }
+  };
 
   // cleanup 함수 수정
   const cleanup = () => {
@@ -1066,14 +1159,25 @@ Additional context: ${currentPlace.description}`,
     Speech.stop();
 
     // 현재 재생 중인 모든 음성 객체 정리
-    Audio.Sound.createAsync = async () => {
+    const originalCreateAsync = Audio.Sound.createAsync;
+    Audio.Sound.createAsync = async (
+      source: Audio.AVPlaybackSource,
+      initialStatus?: Audio.AVPlaybackStatusToSet,
+      onPlaybackStatusUpdate?:
+        | ((status: Audio.AVPlaybackStatus) => void)
+        | null,
+      downloadFirst?: boolean
+    ): Promise<Audio.SoundObject> => {
       const sound = new Audio.Sound();
       try {
         await sound.unloadAsync();
       } catch (error) {
         console.error("Sound cleanup error:", error);
       }
-      return { sound, status: {} };
+      return {
+        sound,
+        status: { isLoaded: true } as Audio.AVPlaybackStatus,
+      };
     };
 
     // 텍스트 애니메이션 타이머 정리
@@ -1092,6 +1196,7 @@ Additional context: ${currentPlace.description}`,
     setTourGuide(""); // 텍스트 내용도 초기화
     setPausedGuideText(null);
     setIsLoadingStory(false);
+    setShowMusicSection(false); // 컴포넌트 정리 시 음악 섹션 숨기기
   };
 
   // 뒤로가기 핸들러
@@ -1103,9 +1208,9 @@ Additional context: ${currentPlace.description}`,
   // 장소에 도착했을 때 BGM 재생
   const handleLocationArrival = async (location: string) => {
     try {
-      const videoId = await musicService.current.playLocationBGM(location);
-      if (videoId) {
-        setCurrentBGM(videoId);
+      const response = await musicService.current.playLocationBGM(location);
+      if (response && response.videoId) {
+        setCurrentBGM(response.videoId);
       }
     } catch (error) {
       console.error("BGM playback error:", error);
@@ -1115,14 +1220,24 @@ Additional context: ${currentPlace.description}`,
   // 이동 중 사용자 취향 음악 재생
   const handleTransitMusic = async (userGenre: string) => {
     try {
-      const videoId = await musicService.current.playUserPreferredMusic(
-        userGenre
-      );
-      if (videoId) {
-        setCurrentBGM(videoId);
+      if (!userData) return null;
+
+      const songInfo = await musicService.current.playUserPreferredMusic({
+        birthYear: userData.birthYear,
+        musicGenre: userGenre,
+      });
+
+      if (songInfo.videoId) {
+        setCurrentBGM(songInfo.videoId);
+        return {
+          title: songInfo.title,
+          artist: songInfo.artist,
+        };
       }
+      return null;
     } catch (error) {
       console.error("Transit music error:", error);
+      return null;
     }
   };
 
@@ -1132,6 +1247,73 @@ Additional context: ${currentPlace.description}`,
       musicService.current.stop();
     };
   }, []);
+
+  // 사용자 취향 정보 로드하는 함수 추가
+  const loadUserPreferences = async () => {
+    try {
+      const userData = await AsyncStorage.getItem("userData");
+      if (userData) {
+        const parsedData = JSON.parse(userData);
+        setUserPreferences(parsedData.preferences || []);
+        setUserMusicGenres(parsedData.music_genres || []);
+        setUserData({
+          birthYear: parsedData.birthYear || 2000, // 기본값 설정
+          musicGenres: parsedData.music_genres || [],
+        });
+      }
+    } catch (error) {
+      console.error("Error loading user preferences:", error);
+    }
+  };
+
+  // 음악 재생 버튼 컴포넌트 추가
+  const MusicButton = () => (
+    <TouchableOpacity
+      style={styles.musicButton}
+      onPress={() => {
+        if (userMusicGenres.length > 0) {
+          const randomGenre =
+            userMusicGenres[Math.floor(Math.random() * userMusicGenres.length)];
+          handleTransitMusic(randomGenre);
+        }
+      }}
+    >
+      <Music size={24} color="#FFFFFF" />
+      <Text style={styles.musicButtonText}>음악 재생</Text>
+    </TouchableOpacity>
+  );
+
+  // 음악 재생/일시정지 핸들러 추가
+  const handlePlayPause = async () => {
+    try {
+      if (isPlaying) {
+        await musicService.current.pause();
+        setIsPlaying(false);
+      } else {
+        if (userMusicGenres.length > 0) {
+          const randomGenre =
+            userMusicGenres[Math.floor(Math.random() * userMusicGenres.length)];
+          const songInfo = await handleTransitMusic(randomGenre);
+          setCurrentSong(songInfo);
+          setIsPlaying(true);
+        }
+      }
+    } catch (error) {
+      console.error("Music playback error:", error);
+    }
+  };
+
+  // handleVoiceCommand 함수 수정
+  const handleVoiceCommand = async (text: string) => {
+    try {
+      const response = await processQuery(text);
+      if (response && response.text) {
+        await startSpeaking(response);
+      }
+    } catch (error) {
+      console.error("Voice command error:", error);
+    }
+  };
 
   if (!isAudioReady) {
     return (
@@ -1169,21 +1351,17 @@ Additional context: ${currentPlace.description}`,
           <Text style={styles.loadingText}>잠시만 기다려주세요...</Text>
         </View>
       ) : (
-        <ScrollView
-          ref={scrollViewRef}
-          style={styles.guideContainer}
-          contentContainerStyle={styles.guideContent}
-          showsVerticalScrollIndicator={false}
-          onContentSizeChange={() =>
-            scrollViewRef.current?.scrollToEnd({ animated: true })
-          }
-        >
-          {tourGuide ? (
-            <View style={styles.textContainer}>
-              <Text style={styles.guideText}>{tourGuide}</Text>
-            </View>
-          ) : null}
-        </ScrollView>
+        <View style={styles.guideContainer}>
+          <ScrollView
+            style={styles.guideContent}
+            ref={scrollViewRef}
+            onContentSizeChange={() => {
+              scrollViewRef.current?.scrollToEnd({ animated: true });
+            }}
+          >
+            <Text style={styles.guideText}>{tourGuide}</Text>
+          </ScrollView>
+        </View>
       )}
 
       <View style={styles.voiceVisualizerContainer}>
@@ -1199,7 +1377,7 @@ Additional context: ${currentPlace.description}`,
               style={styles.squareButton}
               onPress={() => setShowVoiceModal(true)}
             >
-              <View style={styles.square} />
+              <VoiceIcon width={24} height={24} />
             </TouchableOpacity>
 
             <View style={styles.micButtonContainer}>
@@ -1281,6 +1459,36 @@ Additional context: ${currentPlace.description}`,
           </View>
         </View>
       )}
+
+      {showMusicButton && !isLoadingStory && <MusicButton />}
+
+      {/* 음악 재생 섹션 */}
+      {showMusicSection && !isLoadingStory && !isInitializing && (
+        <View style={styles.musicSection}>
+          <View style={styles.musicContent}>
+            <View style={styles.musicInfo}>
+              <View style={styles.songIconContainer}>
+                <SongIcon width={20} height={20} color="#FFFFFF" />
+              </View>
+              {currentSong && (
+                <Text style={styles.songTitle} numberOfLines={1}>
+                  {currentSong.artist} - {currentSong.title}
+                </Text>
+              )}
+            </View>
+            <TouchableOpacity
+              style={styles.musicControlButton}
+              onPress={handlePlayPause}
+            >
+              {isPlaying ? (
+                <Pause size={16} color="#FFFFFF" />
+              ) : (
+                <Play size={16} color="#FFFFFF" />
+              )}
+            </TouchableOpacity>
+          </View>
+        </View>
+      )}
     </SafeAreaView>
   );
 }
@@ -1313,7 +1521,10 @@ const styles = StyleSheet.create({
   selectedInterest: { backgroundColor: "#007AFF" },
   interestText: { color: "#007AFF", fontSize: 16 },
   selectedInterestText: { color: "#fff" },
-  guideContainer: { flex: 1, marginBottom: 120 },
+  guideContainer: {
+    flex: 1,
+    marginBottom: 180, // 하단 여백 증가 (마이크 버튼 + 음악 섹션 높이)
+  },
   guideContent: { padding: 20 },
   textContainer: { flex: 1, padding: 16 },
   guideText: {
@@ -1330,7 +1541,9 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     backgroundColor: "transparent",
-    paddingBottom: Platform.OS === "ios" ? 20 : 10,
+    paddingBottom: Platform.OS === "ios" ? 32 : 24,
+    zIndex: 2, // 음악 섹션보다 위에 표시되도록
+    marginTop: 16,
   },
   voiceVisualizerContainer: {
     position: "absolute",
@@ -1441,12 +1654,6 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
   },
-  square: {
-    width: 40,
-    height: 40,
-    backgroundColor: "rgba(255, 255, 255, 0.3)",
-    borderRadius: 8,
-  },
   playButton: {
     width: 54,
     height: 40,
@@ -1544,5 +1751,75 @@ const styles = StyleSheet.create({
     color: "#FFFFFF",
     fontSize: 16,
     fontWeight: "500",
+  },
+  musicButton: {
+    position: "absolute",
+    bottom: 100,
+    right: 20,
+    backgroundColor: "#007AFF",
+    padding: 16,
+    borderRadius: 50,
+    flexDirection: "row",
+    alignItems: "center",
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
+  },
+  musicButtonText: {
+    color: "#FFFFFF",
+    marginLeft: 8,
+    fontSize: 16,
+    fontWeight: "600",
+  },
+  musicSection: {
+    position: "absolute",
+    bottom: 84,
+    left: 20,
+    right: 20,
+    backgroundColor: "rgba(255, 255, 255, 0.1)",
+    borderRadius: 8,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    zIndex: 1,
+    marginBottom: 24,
+  },
+  musicContent: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    height: 48,
+  },
+  musicInfo: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    flex: 1,
+  },
+  songIconContainer: {
+    width: 20,
+    height: 20,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  songTitle: {
+    color: "#FFFFFF",
+    fontSize: 14,
+    lineHeight: 18,
+    fontWeight: "400",
+    flex: 1,
+  },
+  musicControlButton: {
+    width: 32,
+    height: 32,
+    borderRadius: 100,
+    backgroundColor: "#4E7EB8",
+    justifyContent: "center",
+    alignItems: "center",
+    marginLeft: 6,
   },
 });
