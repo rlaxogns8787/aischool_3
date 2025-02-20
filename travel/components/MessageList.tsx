@@ -208,39 +208,7 @@ export default function MessageList({
               {/* ✅ 일정 생성 후 일정 재생성/확정 버튼 표시 */}
               {message.text.includes("일정이 생성되었습니다") && (
                 <View style={styles.optionsContainer}>
-                  <TouchableOpacity
-                    style={[
-                      styles.optionButton,
-                      selectedOptions[message.id] === "recreate" &&
-                        styles.optionButtonSelected,
-                    ]}
-                    onPress={() => {
-                      if (!disabledButtons[message.id]) {
-                        // 🔹 개별 메시지의 버튼이 비활성화 상태가 아니면 실행
-                        handleRecreateSchedule();
-                        setSelectedOptions((prev) => ({
-                          ...prev,
-                          [message.id]: "recreate",
-                        }));
-                        setDisabledButtons((prev) => ({
-                          ...prev,
-                          [message.id]: true,
-                        })); // 🔹 해당 메시지 버튼 비활성화
-                      }
-                    }}
-                    disabled={disabledButtons[message.id]} // 🔹 개별 메시지의 버튼을 비활성화
-                  >
-                    <Text
-                      style={[
-                        styles.optionText,
-                        selectedOptions[message.id] === "recreate" &&
-                          styles.optionTextSelected,
-                      ]}
-                    >
-                      일정을 다시 짜주세요
-                    </Text>
-                  </TouchableOpacity>
-
+                  {/* 1. 일정이 마음에 들어요 */}
                   <TouchableOpacity
                     style={[
                       styles.optionButton,
@@ -261,34 +229,54 @@ export default function MessageList({
 
                         // 🔹 일정 확정 시 AsyncStorage에 저장
                         try {
-                          const userData = await AsyncStorage.getItem("userData");
+                          const userData = await AsyncStorage.getItem(
+                            "userData"
+                          );
                           if (userData) {
-                            await AsyncStorage.setItem("confirmedUserData", userData);
-                            console.log("UserData -> confirmedUserData 에 저장됨:", userData);
+                            await AsyncStorage.setItem(
+                              "confirmedUserData",
+                              userData
+                            );
+                            console.log(
+                              "UserData -> confirmedUserData 에 저장됨:",
+                              userData
+                            );
                           }
 
-                          const formattedSchedule = await AsyncStorage.getItem("formattedSchedule");
+                          const formattedSchedule = await AsyncStorage.getItem(
+                            "formattedSchedule"
+                          );
                           if (formattedSchedule) {
                             const scheduleData = JSON.parse(formattedSchedule);
-                            
+
                             // 🔹 timestamp 형식 변환
                             scheduleData.timestamp = new Date().toISOString(); // 현재 시간을 ISO 8601 형식으로 변환
 
-                            await AsyncStorage.setItem("confirmedSchedule", JSON.stringify(scheduleData));
-                            console.log("FormattedSchedule -> confirmedSchedule 에 저장됨:", scheduleData);
-                            
+                            await AsyncStorage.setItem(
+                              "confirmedSchedule",
+                              JSON.stringify(scheduleData)
+                            );
+                            console.log(
+                              "FormattedSchedule -> confirmedSchedule 에 저장됨:",
+                              scheduleData
+                            );
+
                             // 🔹 DB에 일정 추가
                             await addSchedule(scheduleData); // DB에 일정 추가
-                            console.log("일정이 DB에 성공적으로 저장되었습니다.");
+                            console.log(
+                              "일정이 DB에 성공적으로 저장되었습니다."
+                            );
                           }
 
-                          console.log("일정과 사용자 데이터가 성공적으로 저장되었습니다.");
+                          console.log(
+                            "일정과 사용자 데이터가 성공적으로 저장되었습니다."
+                          );
                         } catch (error) {
                           console.error("데이터 저장 중 오류 발생:", error);
                         }
                       }
                     }}
-                    disabled={disabledButtons[message.id]} // 🔹 개별 메시지의 버튼을 비활성화
+                    disabled={disabledButtons[message.id]}
                   >
                     <Text
                       style={[
@@ -301,33 +289,68 @@ export default function MessageList({
                     </Text>
                   </TouchableOpacity>
 
-                  {/* ✅ 추가: 처음부터 다시 할래요 버튼 */}
+                  {/* 2. 일정을 다시 짜주세요 */}
                   <TouchableOpacity
                     style={[
                       styles.optionButton,
-                      selectedOptions[message.id] === "restart" &&
-                        styles.optionButtonSelected, // ✅ 선택된 상태일 때 스타일 추가
+                      selectedOptions[message.id] === "recreate" &&
+                        styles.optionButtonSelected,
                     ]}
                     onPress={() => {
                       if (!disabledButtons[message.id]) {
-                        handleRestart(); // 기존 handleRestart 호출
+                        handleRecreateSchedule();
                         setSelectedOptions((prev) => ({
                           ...prev,
-                          [message.id]: "restart",
-                        })); // ✅ 선택된 옵션으로 'restart' 저장
+                          [message.id]: "recreate",
+                        }));
                         setDisabledButtons((prev) => ({
                           ...prev,
                           [message.id]: true,
-                        })); // ✅ 버튼 비활성화
+                        }));
                       }
                     }}
-                    disabled={disabledButtons[message.id]} // ✅ 비활성화 적용
+                    disabled={disabledButtons[message.id]}
                   >
                     <Text
                       style={[
                         styles.optionText,
+                        selectedOptions[message.id] === "recreate" &&
+                          styles.optionTextSelected,
+                      ]}
+                    >
+                      일정을 다시 짜주세요(재생성)
+                    </Text>
+                  </TouchableOpacity>
+
+                  {/* 3. 처음부터 다시 할래요 */}
+                  <TouchableOpacity
+                    style={[
+                      styles.optionButton,
+                      { borderColor: "#1F2024" },
+                      selectedOptions[message.id] === "restart" &&
+                        styles.optionButtonSelected,
+                    ]}
+                    onPress={() => {
+                      if (!disabledButtons[message.id]) {
+                        handleRestart();
+                        setSelectedOptions((prev) => ({
+                          ...prev,
+                          [message.id]: "restart",
+                        }));
+                        setDisabledButtons((prev) => ({
+                          ...prev,
+                          [message.id]: true,
+                        }));
+                      }
+                    }}
+                    disabled={disabledButtons[message.id]}
+                  >
+                    <Text
+                      style={[
+                        styles.optionText,
+                        { color: "#1F2024" },
                         selectedOptions[message.id] === "restart" &&
-                          styles.optionTextSelected, // ✅ 텍스트 스타일 변경
+                          styles.optionTextSelected,
                       ]}
                     >
                       처음부터 다시 할래요
