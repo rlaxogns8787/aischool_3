@@ -304,7 +304,7 @@ export default function TourScreen() {
 
   // animateText 함수 수정
   const animateText = (text: string, speakingDuration: number = 0) => {
-    console.log("animateText 시작:", text);
+    console.log("animateText 시작:", text, "재생시간:", speakingDuration);
     if (textTimeoutRef.current) clearTimeout(textTimeoutRef.current);
     setTourGuide("");
 
@@ -312,36 +312,24 @@ export default function TourScreen() {
     const sentences = text.split(/(?<=[.!?])\s+/);
     const totalCharacters = text.length;
 
-    // 전체 텍스트 애니메이션 시간을 음성 재생 시간과 맞춤
-    const animationDuration = speakingDuration || totalCharacters * 50; // 기본값으로 글자당 50ms
+    // 음성 재생 시간에 맞춰 애니메이션 속도 조절
+    const animationDuration = speakingDuration;
     const characterDelay = animationDuration / totalCharacters;
 
-    let currentSentenceIndex = 0;
-    let currentCharIndex = 0;
+    let currentIndex = 0;
     let fullText = "";
 
     const showNextCharacter = () => {
-      if (currentSentenceIndex < sentences.length) {
-        const currentSentence = sentences[currentSentenceIndex];
+      if (currentIndex < text.length) {
+        fullText += text[currentIndex];
+        setTourGuide(fullText);
+        currentIndex++;
 
-        if (currentCharIndex < currentSentence.length) {
-          fullText += currentSentence[currentCharIndex];
-          setTourGuide(fullText);
-          currentCharIndex++;
-          textTimeoutRef.current = setTimeout(
-            showNextCharacter,
-            characterDelay
-          );
-        } else {
-          fullText += "\n\n";
-          setTourGuide(fullText);
-          currentSentenceIndex++;
-          currentCharIndex = 0;
-          textTimeoutRef.current = setTimeout(
-            showNextCharacter,
-            characterDelay * 2
-          );
-        }
+        // 문장 끝에서 약간의 추가 딜레이
+        const isEndOfSentence = /[.!?]/.test(text[currentIndex - 1]);
+        const nextDelay = isEndOfSentence ? characterDelay * 2 : characterDelay;
+
+        textTimeoutRef.current = setTimeout(showNextCharacter, nextDelay);
       }
     };
 
@@ -440,6 +428,7 @@ export default function TourScreen() {
     }
 
     try {
+      setIsLoadingStory(true); // 로딩 상태 시작
       console.log("Starting Azure TTS (REST) with voice:", selectedVoice.id);
       setIsSpeaking(true);
 
@@ -515,8 +504,12 @@ export default function TourScreen() {
       const status = await soundObject.getStatusAsync();
       const durationMillis = status.durationMillis || 0;
 
-      // 텍스트 애니메이션 시작 (음성 재생 시간 전달)
-      animateText(processedText, durationMillis);
+      setIsLoadingStory(false); // 로딩 상태 종료
+
+      // 텍스트 애니메이션 시작 (약간의 지연을 두고 시작)
+      setTimeout(() => {
+        animateText(processedText, durationMillis);
+      }, 100);
 
       // 음성 재생
       await soundObject.playAsync();
@@ -532,6 +525,7 @@ export default function TourScreen() {
     } catch (error) {
       console.error("TTS setup error:", error);
       setIsSpeaking(false);
+      setIsLoadingStory(false); // 에러 발생 시에도 로딩 상태 종료
       throw error;
     }
   };
@@ -749,6 +743,8 @@ export default function TourScreen() {
     }
   ) => {
     try {
+      setIsLoadingStory(true); // 로딩 상태 시작
+
       const spotNames = spots.map((s) => s.AREA_CLTUR_TRRSRT_NM).join(", ");
       const selectedCharacter = characterTraits[selectedVoice.id];
 
@@ -875,6 +871,7 @@ Additional context: ${currentPlace.description}`,
       return content;
     } catch (error) {
       console.error("Error generating tour guide:", error);
+      setIsLoadingStory(false); // 에러 발생 시에도 로딩 상태 종료
       return "죄송합니다. 설명을 불러오는데 실패했습니다.";
     }
   };
@@ -957,12 +954,7 @@ Additional context: ${currentPlace.description}`,
   useEffect(() => {
     const initializeTourGuide = async () => {
       try {
-        setIsInitializing(true);
-        await startSpeaking(welcomeMessage);
-        setIsInitializing(false);
-
-        setIsLoadingStory(true);
-        await new Promise((resolve) => setTimeout(resolve, 2000));
+        setIsInitializing(true); // 초기 로딩 상태 시작
 
         // 서버에서 일정 데이터 불러오기
         const response = await getSchedules();
@@ -979,31 +971,15 @@ Additional context: ${currentPlace.description}`,
               "confirmedSchedule",
               JSON.stringify(todaySchedule)
             );
-
-            const contextMessage = `${todaySchedule.companion}와(과) 함께하는 여행이네요. 오늘은 ${todaySchedule.days[0].places.length}곳을 방문할 예정입니다.`;
-            await startSpeaking(contextMessage);
-
-            await new Promise((resolve) => setTimeout(resolve, 2000));
-
-            // 첫 번째 장소에 대한 상세 정보 전달
-            const firstPlace = todaySchedule.days[0].places[0];
-            await generateTourGuide(
-              [{ AREA_CLTUR_TRRSRT_NM: firstPlace.title }],
-              {
-                title: firstPlace.title,
-                description: firstPlace.description,
-                time: firstPlace.time,
-                order: 1,
-                totalPlaces: todaySchedule.days[0].places.length,
-              }
-            );
-            setIsGuiding(true);
           }
         }
+
+        setIsInitializing(false); // 초기 로딩 상태 종료
+
+        // 웰컴 메시지 시작
+        await startSpeaking(welcomeMessage);
       } catch (error) {
         console.error("Error in initializeTourGuide:", error);
-      } finally {
-        setIsLoadingStory(false);
         setIsInitializing(false);
       }
     };
@@ -1104,9 +1080,7 @@ Additional context: ${currentPlace.description}`,
             scrollViewRef.current?.scrollToEnd({ animated: true })
           }
         >
-          {isLoading ? (
-            <ActivityIndicator size="large" color="#fff" />
-          ) : tourGuide ? (
+          {tourGuide ? (
             <View style={styles.textContainer}>
               <Text style={styles.guideText}>{tourGuide}</Text>
             </View>
