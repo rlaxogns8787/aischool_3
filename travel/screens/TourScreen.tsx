@@ -34,6 +34,7 @@ import * as FileSystem from "expo-file-system";
 import { encode as btoa } from "base-64";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useAuth } from "../contexts/AuthContext";
+import { getSchedules } from "../api/loginapi";
 
 type TourScreenProps = {
   navigation: any;
@@ -54,18 +55,6 @@ const SEARCH_ENDPOINT = "https://ssapy-ai-search.search.windows.net";
 const SEARCH_KEY = "NGZcgM1vjwqKoDNPnFXcApBFttxWmGRLmnukKldPcTAzSeBjHCk6";
 const ATTRACTION_INDEX = "attraction_3";
 
-// type Interest = "건축" | "역사" | "문화" | "요리" | "자연";
-
-// 샘플 일정 타입 정의 (경복궁 관련 내용 그대로 유지)
-// interface SpotInfo {
-//   name: string;
-//   coords: {
-//     latitude: number;
-//     longitude: number;
-//   };
-//   description?: string;
-// }
-
 // 음성 타입 정의 (기존 그대로)
 interface VoiceType {
   name: string;
@@ -74,18 +63,44 @@ interface VoiceType {
   disabled?: boolean;
 }
 
-// 일정 데이터 타입 정의 추가
+// 일정 데이터 타입 정의 수정
 interface ScheduleDay {
+  dayIndex: number;
   date: string;
   places: {
+    order: number;
+    time: string;
     title: string;
-    description?: string;
-    // 필요한 다른 필드들...
+    description: string;
+    duration: string;
+    address: string;
+    cost: number;
+    coords: {
+      lat: number;
+      lng: number;
+    };
   }[];
 }
 
 interface Schedule {
+  tripId: string;
+  title: string;
+  companion: string;
+  startDate: string;
+  endDate: string;
+  duration: string;
+  budget: string;
+  transportation: string[];
+  keywords: string[];
+  summary: string;
   days: ScheduleDay[];
+  extraInfo: {
+    estimatedCost: {
+      type: string;
+      amount: number;
+    }[];
+    totalCost: number;
+  };
 }
 
 // characterTraits 타입 지정
@@ -147,6 +162,24 @@ const characterTraits: VoiceCharacterType = {
     },
   },
 };
+
+// 타입 정의 추가
+interface ServerSchedule {
+  tripId: string;
+  companion: string;
+  days: {
+    date: string;
+    places: {
+      title: string;
+      description?: string;
+      time?: string;
+    }[];
+  }[];
+}
+
+interface ScheduleResponse {
+  schedules: ServerSchedule[];
+}
 
 export default function TourScreen() {
   const navigation = useNavigation();
@@ -583,29 +616,47 @@ export default function TourScreen() {
   // 일정 데이터 불러오기 및 스토리텔링 시작
   const fetchSchedule = async () => {
     try {
-      const storedSchedule = await AsyncStorage.getItem("confirmedSchedule");
-      if (storedSchedule) {
-        const schedule = JSON.parse(storedSchedule);
-        if (schedule && schedule.days) {
-          const guideText = schedule.days
-            .map((day) =>
-              day.places
-                .map((place) => `${place.title}: ${place.description}`)
-                .join("\n")
-            )
-            .join("\n\n");
-          setTourGuide("");
-          animateText(guideText);
-          await startSpeaking(guideText);
-        } else {
-          throw new Error("Invalid schedule format");
-        }
+      // 서버에서 일정 데이터 불러오기
+      const response = await getSchedules();
+      if (!response || !response.schedules || response.schedules.length === 0) {
+        throw new Error("저장된 일정이 없습니다.");
+      }
+
+      // 오늘 날짜의 일정 찾기
+      const today = new Date().toISOString().split("T")[0];
+      const todaySchedule = response.schedules.find((schedule) =>
+        schedule.days.some((day) => day.date === today)
+      );
+
+      if (todaySchedule) {
+        // 일정이 있으면 로컬 스토리지에 저장
+        await AsyncStorage.setItem(
+          "confirmedSchedule",
+          JSON.stringify(todaySchedule)
+        );
+
+        // 가이드 텍스트 생성
+        const guideText = todaySchedule.days
+          .map((day) =>
+            day.places
+              .map((place) => `${place.title}: ${place.description}`)
+              .join("\n")
+          )
+          .join("\n\n");
+
+        setTourGuide("");
+        animateText(guideText);
+        await startSpeaking(guideText);
       } else {
-        throw new Error("No schedule found");
+        throw new Error("오늘의 일정이 없습니다.");
       }
     } catch (error) {
       console.error("Error fetching schedule:", error);
-      setTourGuide("일정을 불러오는 데 실패했습니다.");
+      setTourGuide(
+        error instanceof Error
+          ? error.message
+          : "일정을 불러오는 데 실패했습니다."
+      );
     }
   };
 
@@ -668,24 +719,39 @@ export default function TourScreen() {
       const spotNames = spots.map((s) => s.AREA_CLTUR_TRRSRT_NM).join(", ");
       const selectedCharacter = characterTraits[selectedVoice.id];
 
-      // 일정 정보를 포함한 프롬프트 생성
-      const scheduleContext = scheduleInfo
-        ? `This is the ${scheduleInfo.order}${
-            scheduleInfo.order === 1 ? "st" : "th"
-          } destination out of ${
-            scheduleInfo.totalPlaces
-          } places for today's schedule.
-Time: ${scheduleInfo.time || "Not specified"}
-Additional Info: ${scheduleInfo.description || "No additional information"}`
-        : "";
+      // 실제 일정 데이터 가져오기
+      const storedSchedule = await AsyncStorage.getItem("confirmedSchedule");
+      if (!storedSchedule) {
+        throw new Error("일정을 찾을 수 없습니다.");
+      }
+
+      const schedule: Schedule = JSON.parse(storedSchedule);
+      const today = new Date().toISOString().split("T")[0];
+      const todaySchedule = schedule.days.find((day) => day.date === today);
+
+      if (!todaySchedule) {
+        throw new Error("오늘의 일정을 찾을 수 없습니다.");
+      }
+
+      // 현재 장소 정보 찾기
+      const currentPlace = todaySchedule.places.find(
+        (place) => place.title === spotNames
+      );
+
+      if (!currentPlace) {
+        throw new Error("현재 장소 정보를 찾을 수 없습니다.");
+      }
 
       const body = {
         messages: [
           {
             role: "system",
             content: `You are a ${selectedCharacter.personality} tour guide.
-Your role is to provide an engaging and informative explanation about ${spotNames} for tourists who are interested in ${userPreference}. 
-${scheduleContext}
+Your role is to provide an engaging and informative explanation about ${currentPlace.title} for tourists who are interested in ${userPreference}. 
+
+Time: ${currentPlace.time}
+Duration: ${currentPlace.duration}
+Location: ${currentPlace.address}
 
 Your explanation style should align with ${selectedCharacter.style}, and your tone should remain ${selectedCharacter.tone}. 
 The explanation must include:
@@ -712,10 +778,14 @@ ${selectedCharacter.examples}`,
           },
           {
             role: "user",
-            content: `Please describe ${spotNames} from the perspective of ${userPreference}, considering it's part of today's travel schedule. 
-Each sentence must provide completely new information without any repetition of concepts.
-Organize the information in clear paragraphs with line breaks.
-The response should be in Korean.`,
+            content: `Please describe ${
+              currentPlace.title
+            }, considering it's the ${scheduleInfo?.order}${
+              scheduleInfo?.order === 1 ? "st" : "th"
+            } destination out of ${
+              scheduleInfo?.totalPlaces
+            } places for today's schedule.
+Additional context: ${currentPlace.description}`,
           },
         ],
         temperature: 0.7,
@@ -805,28 +875,32 @@ The response should be in Korean.`,
         await startSpeaking(welcomeMessage);
         setIsInitializing(false);
 
-        setIsLoadingStory(true); // 이야기 로딩 시작
+        setIsLoadingStory(true);
         await new Promise((resolve) => setTimeout(resolve, 2000));
 
-        const tripInfoStr = await AsyncStorage.getItem("scheduleData");
-        const confirmedScheduleStr = await AsyncStorage.getItem(
-          "confirmedSchedule"
-        );
+        // 서버에서 일정 데이터 불러오기
+        const response = await getSchedules();
+        const today = new Date().toISOString().split("T")[0];
 
-        if (tripInfoStr && confirmedScheduleStr) {
-          const tripInfo = JSON.parse(tripInfoStr);
-          const schedule = JSON.parse(confirmedScheduleStr) as Schedule;
-          const today = new Date().toISOString().split("T")[0];
-          const todaySchedule = schedule.days.find((day) => day.date === today);
+        if (response && response.schedules && response.schedules.length > 0) {
+          const todaySchedule = response.schedules.find((schedule) =>
+            schedule.days.some((day) => day.date === today)
+          );
 
-          if (todaySchedule && todaySchedule.places.length > 0) {
-            const contextMessage = `${tripInfo.companion}와(과) 함께하는 여행이네요. 오늘은 ${todaySchedule.places.length}곳을 방문할 예정입니다.`;
+          if (todaySchedule) {
+            // 일정이 있으면 로컬 스토리지에 저장
+            await AsyncStorage.setItem(
+              "confirmedSchedule",
+              JSON.stringify(todaySchedule)
+            );
+
+            const contextMessage = `${todaySchedule.companion}와(과) 함께하는 여행이네요. 오늘은 ${todaySchedule.days[0].places.length}곳을 방문할 예정입니다.`;
             await startSpeaking(contextMessage);
 
             await new Promise((resolve) => setTimeout(resolve, 2000));
 
             // 첫 번째 장소에 대한 상세 정보 전달
-            const firstPlace = todaySchedule.places[0];
+            const firstPlace = todaySchedule.days[0].places[0];
             await generateTourGuide(
               [{ AREA_CLTUR_TRRSRT_NM: firstPlace.title }],
               {
@@ -834,7 +908,7 @@ The response should be in Korean.`,
                 description: firstPlace.description,
                 time: firstPlace.time,
                 order: 1,
-                totalPlaces: todaySchedule.places.length,
+                totalPlaces: todaySchedule.days[0].places.length,
               }
             );
             setIsGuiding(true);
@@ -843,7 +917,7 @@ The response should be in Korean.`,
       } catch (error) {
         console.error("Error in initializeTourGuide:", error);
       } finally {
-        setIsLoadingStory(false); // 이야기 로딩 완료
+        setIsLoadingStory(false);
         setIsInitializing(false);
       }
     };
