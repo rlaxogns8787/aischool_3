@@ -117,8 +117,8 @@ export default function HomeScreen() {
           }
           // 변환: keywords 데이터를 travelStyle로 변환
           const transformedScheduleData = {
-            ...scheduleData[0], // 첫 번째 요소를 사용
-            travelStyle: scheduleData[0].keywords || [], // keywords가 없으면 빈 배열로 설정
+            ...scheduleData[0],
+            travelStyle: scheduleData[0].keywords || [], // keywords가 없는 경우 빈 배열 반환
           };
           setSchedule(transformedScheduleData);
         } catch (error) {
@@ -209,8 +209,9 @@ export default function HomeScreen() {
                     : formatDate(new Date(schedule.startDate))}
                 </Text>
                 <View style={styles.travelStyleContainer}>
-                  {schedule.travelStyle &&
-                    schedule.travelStyle.map((style: string, index: number) => (
+                  {(schedule.travelStyle || [])
+                    .slice(0, 3)
+                    .map((style: string, index: number) => (
                       <View key={index} style={styles.styleTag}>
                         <Text style={styles.tagText}>{style}</Text>
                       </View>

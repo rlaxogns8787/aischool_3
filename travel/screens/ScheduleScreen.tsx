@@ -60,10 +60,10 @@ export default function ScheduleScreen({ navigation }: ScheduleScreenProps) {
           title: schedule.title, // 일정 제목
           startDate: schedule.startDate, // 시작 날짜
           endDate: schedule.endDate, // 종료 날짜
-          travelStyle: schedule.keywords, // 여행 스타일 (키워드)
+          travelStyle: schedule.keywords || [], // keywords가 없는 경우 빈 배열 반환
           activities: schedule.days
-            ? schedule.days.flatMap((day: any) =>
-                day.places.map((place: any) => place.title) // 각 날의 활동 제목을 평면화하여 배열로 만듭니다.
+            ? schedule.days.flatMap(
+                (day: any) => day.places.map((place: any) => place.title) // 각 날의 활동 제목을 평면화하여 배열로 만듭니다.
               )
             : [], // 일정이 없는 경우 빈 배열 반환
           budget: schedule.extraInfo ? schedule.extraInfo.totalCost : 0, // 예산 정보 (총 비용)
@@ -79,9 +79,7 @@ export default function ScheduleScreen({ navigation }: ScheduleScreenProps) {
                 })),
               }))
             : [], // 일정이 없는 경우 빈 배열 반환
-          totalBudget: schedule.extraInfo
-            ? schedule.extraInfo.totalBudget
-            : 0, // 총 예산 정보 (기본값 0)
+          totalBudget: schedule.extraInfo ? schedule.extraInfo.totalBudget : 0, // 총 예산 정보 (기본값 0)
           guideService: schedule.extraInfo
             ? schedule.extraInfo.guideService
             : false, // 가이드 서비스 여부 (기본값 false)
@@ -90,7 +88,6 @@ export default function ScheduleScreen({ navigation }: ScheduleScreenProps) {
 
       // 변환된 일정을 상태에 저장
       setSchedules(formattedSchedules);
-
     } catch (error) {
       // 에러 발생 시 콘솔에 에러 메시지 출력
       console.error("Failed to load schedules from database:", error);
@@ -155,8 +152,6 @@ export default function ScheduleScreen({ navigation }: ScheduleScreenProps) {
 
   //   loadWeatherForecast();
   // }, [schedules]);
-
-
 
   return (
     <View style={styles.container}>
@@ -233,11 +228,13 @@ export default function ScheduleScreen({ navigation }: ScheduleScreenProps) {
                   }
                 >
                   <View style={styles.scheduleHeader}>
-                    {schedule.travelStyle.map((style, index) => (
-                      <View key={index} style={styles.styleTag}>
-                        <Text style={styles.tagText}>{style}</Text>
-                      </View>
-                    ))}
+                    {(schedule.travelStyle || [])
+                      .slice(0, 3)
+                      .map((style, index) => (
+                        <View key={index} style={styles.styleTag}>
+                          <Text style={styles.tagText}>{style}</Text>
+                        </View>
+                      ))}
                   </View>
                   <View style={styles.scheduleContent}>
                     <View style={styles.scheduleTextContainer}>
