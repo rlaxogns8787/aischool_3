@@ -22,7 +22,11 @@ import {
   getCurrentWeather,
   type WeatherData,
 } from "../services/weatherService";
-import { useNavigation, NavigationProp } from "@react-navigation/native";
+import {
+  useNavigation,
+  NavigationProp,
+  DrawerNavigationProp,
+} from "@react-navigation/native";
 import { getSchedules } from "../api/loginapi";
 
 // 임시 데이터
@@ -56,7 +60,7 @@ type RootStackParamList = {
   Tour: undefined;
 };
 
-type HomeScreenNavigationProp = NavigationProp<RootStackParamList>;
+type HomeScreenNavigationProp = DrawerNavigationProp<RootStackParamList>;
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
 
@@ -94,7 +98,6 @@ export default function HomeScreen() {
       const [address] = await Location.reverseGeocodeAsync({
         latitude: location.coords.latitude,
         longitude: location.coords.longitude,
-        language: "ko", // 한국어로 결과 받기
       });
 
       // 주소 구성 (국가에 따라 다르게 처리)
@@ -427,7 +430,6 @@ const styles = StyleSheet.create({
     padding: 16,
     height: 80,
     backgroundColor: "rgba(75, 126, 208, 0.3)",
-    backdropFilter: "blur(45px)",
     borderBottomLeftRadius: 12,
     borderBottomRightRadius: 12,
   },
