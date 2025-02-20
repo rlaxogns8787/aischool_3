@@ -60,9 +60,9 @@ interface VoiceCharacterType {
 
 // User 타입 정의 추가
 interface User {
-  preferences?: string[];
-  birthYear?: number;
-  musicGenres?: string[];
+  preferences: string[];
+  birthYear: number;
+  musicGenres: string[];
 }
 
 // 음성 관련 타입 수정
@@ -254,6 +254,25 @@ interface UserData {
   musicGenres: string[];
 }
 
+// Audio 타입 정의 추가
+type AVPlaybackSource = {
+  uri?: string;
+  headers?: Record<string, string>;
+  overrideFileExtensionAndroid?: string;
+};
+
+type AVPlaybackStatus = {
+  isLoaded: boolean;
+  // 다른 필요한 속성들 추가
+};
+
+type AVPlaybackStatusToSet = Partial<AVPlaybackStatus>;
+
+type SoundObject = {
+  sound: Audio.Sound;
+  status: AVPlaybackStatus;
+};
+
 export default function TourScreen() {
   const navigation = useNavigation<any>();
   const [displayedText, setDisplayedText] = useState("");
@@ -348,9 +367,9 @@ export default function TourScreen() {
       // 현재 표시된 텍스트가 있다면 새로운 음성으로 다시 읽기
       if (tourGuide) {
         await startSpeaking(tourGuide);
-      } else if (welcomeMessage) {
-        // 환영 메시지가 표시중이라면 환영 메시지를 새로운 음성으로 읽기
-        await startSpeaking(welcomeMessage);
+      } else {
+        // 환영 메시지 다시 읽기
+        await welcomeMessage();
       }
     } catch (error) {
       console.error("Voice selection error:", error);
@@ -409,23 +428,24 @@ export default function TourScreen() {
           allowsRecordingIOS: true,
           playsInSilentModeIOS: true,
           staysActiveInBackground: true,
-          interruptionModeIOS: InterruptionModeIOS.MixWithOthers, // 수정
-          interruptionModeAndroid: InterruptionModeAndroid.DuckOthers, // 수정
+          interruptionModeIOS: InterruptionModeIOS.MixWithOthers,
+          interruptionModeAndroid: InterruptionModeAndroid.DuckOthers,
           shouldDuckAndroid: true,
           playThroughEarpieceAndroid: false,
         });
         console.log("오디오 모드 설정 성공");
         setIsAudioReady(true);
       } catch (error) {
-        console.error("Audio initialization error:", error);
-        Alert.alert("오류", `오디오 초기화에 실패했습니다: ${error.message}`);
+        const err = error as Error;
+        console.error("Audio initialization error:", err);
+        Alert.alert("오류", `오디오 초기화에 실패했습니다: ${err.message}`);
       }
     };
     initializeAudio();
   }, []);
 
   // Azure STT 함수 (Azure Speech SDK 사용)
-  const startAzureSTT = async () => {
+  const startAzureSTT = async (): Promise<string | null> => {
     console.log("startAzureSTT 시작");
     try {
       const { granted } = await Audio.requestPermissionsAsync();
@@ -439,37 +459,54 @@ export default function TourScreen() {
 
       console.log("녹음 시작...");
 
-      // 일정 시간 후 녹음 중지
-      setTimeout(async () => {
-        await recording.stopAndUnloadAsync();
-        const uri = recording.getURI();
-        console.log("녹음 완료, 파일 URI:", uri);
+      return new Promise((resolve, reject) => {
+        setTimeout(async () => {
+          try {
+            await recording.stopAndUnloadAsync();
+            const uri = recording.getURI();
+            console.log("녹음 완료, 파일 URI:", uri);
 
-        // 녹음된 파일을 Azure Speech SDK로 전달
-        const audioConfig = sdk.AudioConfig.fromWavFileInput(uri);
-        const speechConfig = sdk.SpeechConfig.fromSubscription(
-          SPEECH_KEY,
-          SPEECH_REGION
-        );
-        speechConfig.speechRecognitionLanguage = "ko-KR";
-        const recognizer = new sdk.SpeechRecognizer(speechConfig, audioConfig);
-
-        recognizer.recognizeOnceAsync(
-          (result) => {
-            if (result.text) {
-              console.log("STT 결과:", result.text);
-              handleVoiceCommand(result.text);
-            } else {
-              console.error("음성 인식에 실패했습니다.");
+            if (!uri) {
+              resolve(null);
+              return;
             }
-            recognizer.close();
-          },
-          (error) => {
-            console.error("STT error:", error);
-            recognizer.close();
+
+            // 녹음된 파일을 Azure Speech SDK로 전달
+            const audioConfig = sdk.AudioConfig.fromWavFileInput(
+              Buffer.from(uri)
+            );
+            const speechConfig = sdk.SpeechConfig.fromSubscription(
+              SPEECH_KEY,
+              SPEECH_REGION
+            );
+            speechConfig.speechRecognitionLanguage = "ko-KR";
+            const recognizer = new sdk.SpeechRecognizer(
+              speechConfig,
+              audioConfig
+            );
+
+            recognizer.recognizeOnceAsync(
+              (result) => {
+                if (result.text) {
+                  console.log("STT 결과:", result.text);
+                  resolve(result.text);
+                } else {
+                  console.error("음성 인식에 실패했습니다.");
+                  resolve(null);
+                }
+                recognizer.close();
+              },
+              (error) => {
+                console.error("STT error:", error);
+                recognizer.close();
+                reject(error);
+              }
+            );
+          } catch (error) {
+            reject(error);
           }
-        );
-      }, 5000); // 5초 동안 녹음
+        }, 5000);
+      });
     } catch (error) {
       console.error("STT initialization failed:", error);
       throw error;
@@ -1161,22 +1198,21 @@ Additional context: ${currentPlace.description}`,
     // 현재 재생 중인 모든 음성 객체 정리
     const originalCreateAsync = Audio.Sound.createAsync;
     Audio.Sound.createAsync = async (
-      source: Audio.AVPlaybackSource,
-      initialStatus?: Audio.AVPlaybackStatusToSet,
-      onPlaybackStatusUpdate?:
-        | ((status: Audio.AVPlaybackStatus) => void)
-        | null,
+      source: any, // 임시로 any 타입 사용
+      initialStatus?: AVPlaybackStatusToSet,
+      onPlaybackStatusUpdate?: ((status: AVPlaybackStatus) => void) | null,
       downloadFirst?: boolean
-    ): Promise<Audio.SoundObject> => {
+    ): Promise<SoundObject> => {
       const sound = new Audio.Sound();
       try {
         await sound.unloadAsync();
       } catch (error) {
-        console.error("Sound cleanup error:", error);
+        const err = error as Error;
+        console.error("Sound cleanup error:", err);
       }
       return {
         sound,
-        status: { isLoaded: true } as Audio.AVPlaybackStatus,
+        status: { isLoaded: true } as AVPlaybackStatus,
       };
     };
 
