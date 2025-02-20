@@ -120,15 +120,36 @@ const characterTraits: VoiceCharacterType = {
 
 오늘날에는 시민들의 휴식과 문화생활이 어우러진 복합문화공간으로 자리매김하였습니다.`,
     formatMessage: (text: string) => {
-      return text
-        .replace(/해|했어/g, "합니다|했습니다")
-        .replace(/야|이야/g, "입니다")
-        .replace(/볼까\?/g, "살펴보겠습니다")
-        .replace(/봐/g, "보세요")
-        .replace(/줄게/g, "드리겠습니다")
-        .replace(/있어/g, "있습니다")
-        .replace(/~+/g, "")
-        .replace(/!/g, ".");
+      return (
+        text
+          // 기본적인 종결어미 수정
+          .replace(/했어요?/g, "했습니다")
+          .replace(/야|이야/g, "입니다")
+          .replace(/볼까\?/g, "살펴보겠습니다")
+          .replace(/봐/g, "보세요")
+          .replace(/줄게/g, "드리겠습니다")
+          .replace(/있어/g, "있습니다")
+          // 부자연스러운 조사 수정
+          .replace(/(\S+)이 있습니다/g, "$1가 있습니다")
+          .replace(/(\S+)이 되었습니다/g, "$1가 되었습니다")
+          // 부자연스러운 문장 연결 수정
+          .replace(/(\S+)하고 (\S+)하다/g, "$1하고 $2합니다")
+          .replace(/(\S+)하며 (\S+)하다/g, "$1하며 $2합니다")
+          // 불필요한 문장 부호 정리
+          .replace(/~+/g, "")
+          .replace(/!/g, ".")
+          // 띄어쓰기 교정
+          .replace(/(\S+)을통해/g, "$1을 통해")
+          .replace(/(\S+)를통해/g, "$1를 통해")
+          .replace(/(\S+)에서는/g, "$1에서는 ")
+          // 문장 마무리 정리 (수정된 부분)
+          .replace(/([^.!?])$/g, "$1합니다.") // 문장 부호가 없을 때만 '합니다.' 추가
+          .replace(/\.{2,}/g, ".") // 두 개 이상의 연속된 마침표를 하나로
+          .replace(/\s+\./g, ".") // 마침표 앞의 불필요한 공백 제거
+          .replace(/합니다\.$/, ".") // 문장 끝의 불필요한 '합니다' 제거
+          .replace(/\.$\n*\.*$/g, ".") // 문장 끝의 불필요한 마침표 제거
+          .trim() // 앞뒤 공백 제거
+      );
     },
   },
   "ko-KR-HyunsuMultilingualNeural": {
@@ -146,13 +167,13 @@ const characterTraits: VoiceCharacterType = {
 주말마다 플리마켓이랑 버스킹도 열리는데, 로컬 감성 제대로 느낄 수 있어!`,
     formatMessage: (text: string) => {
       return text
-        .replace(/입니다|습니다/g, "야")
+        .replace(/합니다/g, "해")
+        .replace(/했습니다/g, "했어")
         .replace(/하겠습니다/g, "할게")
         .replace(/살펴보겠습니다/g, "볼까?")
         .replace(/있습니다/g, "있어")
         .replace(/였습니다/g, "였어")
         .replace(/드립니다/g, "줄게")
-        .replace(/합니다/g, "해")
         .replace(/니다/g, "야")
         .replace(/시오/g, "어")
         .replace(/보세요/g, "봐")
