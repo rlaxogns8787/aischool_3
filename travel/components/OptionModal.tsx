@@ -15,6 +15,8 @@ import CloseIcon from "../assets/close.svg";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import EmptyImage from "../assets/Image.svg"; // 기본 이미지 추가
 import Svg, { SvgProps } from "react-native-svg"; // SVG 렌더링을 위한 라이브러리 추가
+import defaultTravelImage1 from "../assets/default-travel-1.jpg"; // 이미지 파일 추가 필요
+import defaultTravelImage2 from "../assets/default-travel-2.jpg"; // 이미지 파일 추가 필요
 
 const { width: screenWidth } = Dimensions.get("window");
 
@@ -136,15 +138,15 @@ const OptionModal: React.FC<OptionModalProps> = ({
       }}
     >
       <View style={styles.modalContent}>
-        <TouchableOpacity style={styles.closeButton} onPress={onClose}>
-          <CloseIcon width={32} height={32} />
-        </TouchableOpacity>
         <View style={styles.headerContainer}>
+          <TouchableOpacity style={styles.closeButton} onPress={onClose}>
+            <CloseIcon width={32} height={32} />
+          </TouchableOpacity>
           <View style={styles.carouselContainer}>
             {schedule.images && schedule.images.length > 0 ? (
               <>
                 <Carousel
-                  data={schedule.images}
+                  data={schedule.images.slice(0, 2)}
                   renderItem={({ item }: { item: { uri: string } }) => (
                     <Image
                       source={{ uri: item.uri }}
@@ -159,7 +161,7 @@ const OptionModal: React.FC<OptionModalProps> = ({
                   autoplayDelay={5000}
                 />
                 <Pagination
-                  dotsLength={schedule.images.length}
+                  dotsLength={Math.min(schedule.images.length, 2)}
                   activeDotIndex={activeSlide}
                   containerStyle={styles.carouselIndicatorContainer}
                   dotStyle={styles.activeDot}
@@ -169,7 +171,32 @@ const OptionModal: React.FC<OptionModalProps> = ({
                 />
               </>
             ) : (
-              <EmptyImage width={screenWidth} height={180} />
+              <>
+                <Carousel
+                  data={[
+                    { uri: defaultTravelImage1 },
+                    { uri: defaultTravelImage2 },
+                  ]}
+                  renderItem={({ item }) => (
+                    <Image source={item.uri} style={styles.carouselImage} />
+                  )}
+                  sliderWidth={screenWidth}
+                  itemWidth={screenWidth}
+                  containerCustomStyle={styles.carouselContainer}
+                  onSnapToItem={(index) => setActiveSlide(index)}
+                  autoplay={true}
+                  autoplayDelay={5000}
+                />
+                <Pagination
+                  dotsLength={2}
+                  activeDotIndex={activeSlide}
+                  containerStyle={styles.carouselIndicatorContainer}
+                  dotStyle={styles.activeDot}
+                  inactiveDotStyle={styles.inactiveDot}
+                  inactiveDotOpacity={0.4}
+                  inactiveDotScale={0.6}
+                />
+              </>
             )}
           </View>
           <View style={styles.companionContainerLeft}>
@@ -206,14 +233,6 @@ const OptionModal: React.FC<OptionModalProps> = ({
                   data={dayPlan.places}
                   renderItem={({ item }) => (
                     <View style={styles.placeCard}>
-                      {item.image ? (
-                        <Image
-                          source={{ uri: item.image.uri }}
-                          style={styles.placeImage}
-                        />
-                      ) : (
-                        <EmptyImage width={80} height={60} />
-                      )}
                       <View style={styles.placeInfo}>
                         <Text style={styles.placeName}>{item.title}</Text>
                         <Text style={styles.placeAddress}>{item.address}</Text>
@@ -290,6 +309,7 @@ const styles = StyleSheet.create({
   carouselImage: {
     width: screenWidth,
     height: 180,
+    resizeMode: "cover",
   },
   carouselContainer: {
     height: 180,
@@ -378,22 +398,17 @@ const styles = StyleSheet.create({
   placeCard: {
     flexDirection: "row",
     alignItems: "center",
-    paddingLeft: 16,
+    // paddingLeft: 8,
     backgroundColor: "#F8F9FE",
     borderRadius: 16,
-    minWidth: 280, // 최소 너비 설정
-    minHeight: 101, // 최소 높이 설정
-    flex: 1, // 내부 내용에 맞게 확장
-  },
-  placeImage: {
-    width: 80,
-    height: 60,
-    borderRadius: 5,
+    minWidth: 280,
+    minHeight: 101,
+    flex: 1,
   },
   placeInfo: {
     flex: 1,
     padding: 16,
-    paddingLeft: 12,
+    paddingLeft: 16,
     gap: 8,
     width: 224,
     height: 101,

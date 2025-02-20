@@ -3,6 +3,7 @@ import { View, Text, TouchableOpacity, StyleSheet, Image } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import Svg, { SvgProps } from "react-native-svg"; // SVG 렌더링을 위한 라이브러리 추가
 import EmptyImage from "../assets/Image.svg"; // 기본 이미지 추가
+import defaultTravelImage from "../assets/default-travel-1.jpg"; // 기본 이미지 import
 
 type OptionCardProps = {
   onPress: () => void;
@@ -47,7 +48,7 @@ const OptionCard: React.FC<OptionCardProps> = ({ onPress }) => {
         {schedule.image ? (
           <Image source={{ uri: schedule.image }} style={styles.image} />
         ) : (
-          <EmptyImage width="100%" height="150" />
+          <Image source={defaultTravelImage} style={styles.image} />
         )}
         <View style={styles.companionContainer}>
           <Text style={styles.companion}>{schedule.companion}</Text>
@@ -87,6 +88,7 @@ const styles = StyleSheet.create({
   image: {
     width: "100%",
     height: 150,
+    resizeMode: "cover",
   },
   companionContainer: {
     position: "absolute",
