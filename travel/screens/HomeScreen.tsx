@@ -23,6 +23,7 @@ import {
   type WeatherData,
 } from "../services/weatherService";
 import { useNavigation, NavigationProp } from "@react-navigation/native";
+import { getSchedules } from "../api/loginapi";
 
 // 임시 데이터
 const scheduleData = {
@@ -109,19 +110,15 @@ export default function HomeScreen() {
     useCallback(() => {
       async function loadScheduleData() {
         try {
-          const storedSchedule = await AsyncStorage.getItem(
-            "confirmedSchedule"
-          );
-          if (storedSchedule) {
-            const parsedSchedule = JSON.parse(storedSchedule);
-            // travelStyle이 없는 경우 keywords를 사용하거나 기본값 설정
-            if (!parsedSchedule.travelStyle && parsedSchedule.keywords) {
-              parsedSchedule.travelStyle = parsedSchedule.keywords;
-            }
-            setSchedule(parsedSchedule);
-          }
+          const scheduleData = await getSchedules();
+          // 변환: keywords 데이터를 travelStyle로 변환
+          const transformedScheduleData = {
+            ...scheduleData,
+            travelStyle: scheduleData.keywords || [], // keywords가 없으면 빈 배열로 설정
+          };
+          setSchedule(transformedScheduleData);
         } catch (error) {
-          console.error("Failed to load schedule from AsyncStorage:", error);
+          console.error("Failed to load schedule from database:", error);
         }
       }
 
