@@ -105,7 +105,7 @@ export default function EditProfileScreen({
             Alert.alert("오류", "새 비밀번호가 일치하지 않습니다.");
             return;
           }
-          response = await updateUserInfo(field, "", {
+          response = await updateUserInfo("password", newPassword, {
             oldPassword,
             newPassword,
           });
@@ -117,28 +117,56 @@ export default function EditProfileScreen({
             Alert.alert("오류", "올바른 연도를 입력해주세요.");
             return;
           }
-          response = await updateUserInfo(field, yearValue);
+          response = await updateUserInfo("birthyear", yearValue, null);
           break;
 
         default:
-          response = await updateUserInfo(field, value);
+          response = await updateUserInfo(field, value, null);
       }
 
-      if (response.success) {
+      if (response.success || response.message?.includes("successfully")) {
+        const userData = await AsyncStorage.getItem("userData");
+        if (userData) {
+          const updatedUserData = JSON.parse(userData);
+          updatedUserData[field] = value;
+          await AsyncStorage.setItem(
+            "userData",
+            JSON.stringify(updatedUserData)
+          );
+        }
+
         Alert.alert("성공", "정보가 수정되었습니다.", [
           {
             text: "확인",
-            onPress: () => {
-              navigation.goBack();
-            },
+            onPress: () => navigation.goBack(),
           },
         ]);
       } else {
         throw new Error(response.message || "정보 업데이트에 실패했습니다.");
       }
     } catch (error: any) {
+      if (error.message?.includes("successfully")) {
+        const userData = await AsyncStorage.getItem("userData");
+        if (userData) {
+          const updatedUserData = JSON.parse(userData);
+          updatedUserData[field] = value;
+          await AsyncStorage.setItem(
+            "userData",
+            JSON.stringify(updatedUserData)
+          );
+        }
+
+        Alert.alert("성공", "정보가 수정되었습니다.", [
+          {
+            text: "확인",
+            onPress: () => navigation.goBack(),
+          },
+        ]);
+        return;
+      }
+
       console.error("Update error:", error);
-      if (error.message.includes("인증")) {
+      if (error.message?.includes("인증")) {
         Alert.alert("인증 오류", "다시 로그인해주세요.", [
           {
             text: "확인",

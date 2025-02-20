@@ -43,7 +43,11 @@ export const loginUser = async (userData) => {
 /**
  * 사용자 정보 업데이트 API 요청 (토큰 인증 제거)
  */
-export const updateUserInfo = async (field, value, password) => {
+export const updateUserInfo = async (
+  field: string,
+  value: any,
+  password?: any
+) => {
   try {
     const userData = await AsyncStorage.getItem("userData");
     if (!userData) {
@@ -51,30 +55,30 @@ export const updateUserInfo = async (field, value, password) => {
     }
 
     const userInfo = JSON.parse(userData);
-    const username = userInfo.username; // username 가져오기
+    const username = userInfo.username;
 
     if (!username) {
       throw new Error("username이 없습니다.");
     }
 
-    console.log("Sending update request:", { username, field, value });
-
     // 서버에서 요구하는 형식에 맞춰 요청 데이터 구성
-    const updateData = {
-      [field]: value, // 동적으로 field와 value로 구성
-      ...(password && {
-        oldPassword: password.oldPassword,
-        newPassword: password.newPassword,
-      }),
+    const updateData: any = {
+      username: username, // username 필드 추가
+      [field]: value,
     };
+
+    // 비밀번호 변경의 경우 추가 데이터 포함
+    if (password) {
+      updateData.oldPassword = password.oldPassword;
+      updateData.newPassword = password.newPassword;
+    }
 
     const response = await axios.put(
       `${BASE_URL}/user/${username}`,
       updateData
     );
 
-    console.log("Update response:", response.data);
-
+    // 응답 데이터에서 user_info가 있으면 AsyncStorage 업데이트
     if (response.data.user_info) {
       await AsyncStorage.setItem(
         "userData",
@@ -83,7 +87,7 @@ export const updateUserInfo = async (field, value, password) => {
     }
 
     return response.data;
-  } catch (error) {
+  } catch (error: any) {
     console.error("Update error details:", error);
     throw new Error(
       error.response?.data?.message || "정보 업데이트에 실패했습니다."
