@@ -60,7 +60,7 @@ type RootStackParamList = {
   Tour: undefined;
 };
 
-type HomeScreenNavigationProp = DrawerNavigationProp<RootStackParamList>;
+type HomeScreenNavigationProp = NavigationProp<RootStackParamList>;
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
 
@@ -160,18 +160,39 @@ export default function HomeScreen() {
         try {
           const scheduleData = await getSchedules();
           if (!scheduleData || scheduleData.length === 0) {
-            setSchedule(null); // scheduleData가 없을 경우 null로 설정
+            setSchedule(null);
             return;
           }
+
+          // 현재 날짜
+          const today = new Date();
+          today.setHours(0, 0, 0, 0);
+
+          // 일정들을 날짜 기준으로 정렬
+          const sortedSchedules = scheduleData.sort((a, b) => {
+            const dateA = new Date(a.startDate);
+            const dateB = new Date(b.startDate);
+
+            // 오늘 날짜와의 차이 계산
+            const diffA = Math.abs(dateA.getTime() - today.getTime());
+            const diffB = Math.abs(dateB.getTime() - today.getTime());
+
+            return diffA - diffB;
+          });
+
+          // 가장 가까운 일정 선택
+          const nearestSchedule = sortedSchedules[0];
+
           // 변환: keywords 데이터를 travelStyle로 변환
           const transformedScheduleData = {
-            ...scheduleData[0],
-            travelStyle: scheduleData[0].keywords || [], // keywords가 없는 경우 빈 배열 반환
+            ...nearestSchedule,
+            travelStyle: nearestSchedule.keywords || [],
           };
+
           setSchedule(transformedScheduleData);
         } catch (error) {
           console.error("Failed to load schedule from database:", error);
-          setSchedule(null); // 에러 발생 시 schedule을 null로 설정
+          setSchedule(null);
         }
       }
 
