@@ -530,6 +530,34 @@ export default function TourScreen() {
     }
   };
 
+  // checkNearbySpots 함수 수정
+  const checkNearbySpots = async (location: Location.LocationObject) => {
+    console.log("checkNearbySpots 호출, location:", location);
+    if (!isGuiding) {
+      try {
+        const nearbySpot = await findNearbySpot(location.coords);
+        if (nearbySpot) {
+          await generateTourGuide(
+            [{ AREA_CLTUR_TRRSRT_NM: nearbySpot.title }],
+            {
+              title: nearbySpot.title,
+              description: nearbySpot.description,
+              order: nearbySpot.order,
+              totalPlaces: nearbySpot.totalPlaces,
+            }
+          );
+          setIsGuiding(true);
+        } else {
+          // 근처 장소를 찾지 못했을 때 조용히 처리
+          console.log("근처에서 일정에 있는 장소를 찾지 못했습니다.");
+        }
+      } catch (error) {
+        // 에러 발생 시 조용히 처리
+        console.log("checkNearbySpots 처리 중 에러:", error);
+      }
+    }
+  };
+
   // findNearbySpot 함수 수정
   const findNearbySpot = async (
     userCoords: Location.LocationObject["coords"]
@@ -538,19 +566,39 @@ export default function TourScreen() {
       const confirmedScheduleStr = await AsyncStorage.getItem(
         "confirmedSchedule"
       );
-      if (!confirmedScheduleStr) return null;
+      if (!confirmedScheduleStr) {
+        console.log("저장된 일정이 없습니다.");
+        return null;
+      }
 
       const schedule = JSON.parse(confirmedScheduleStr) as Schedule;
       const today = new Date().toISOString().split("T")[0];
       const todaySchedule = schedule.days.find((day) => day.date === today);
 
-      if (!todaySchedule || !todaySchedule.places.length) return null;
+      if (!todaySchedule || !todaySchedule.places.length) {
+        console.log("오늘의 일정이 없습니다.");
+        return null;
+      }
 
       // 현재 위치와 가장 가까운 오늘의 일정 장소 찾기
-      const nearestPlace = todaySchedule.places.find((place) => {
-        // 실제 구현에서는 위치 기반 거리 계산 로직 추가
-        return true; // 임시로 첫 번째 장소 반환
-      });
+      const nearestPlace = todaySchedule.places.reduce((nearest, place) => {
+        if (!nearest) return place;
+
+        const placeDistance = calculateDistance(
+          userCoords.latitude,
+          userCoords.longitude,
+          place.coords.lat,
+          place.coords.lng
+        );
+        const nearestDistance = calculateDistance(
+          userCoords.latitude,
+          userCoords.longitude,
+          nearest.coords.lat,
+          nearest.coords.lng
+        );
+
+        return placeDistance < nearestDistance ? place : nearest;
+      }, null);
 
       if (nearestPlace) {
         return {
@@ -563,33 +611,33 @@ export default function TourScreen() {
 
       return null;
     } catch (error) {
-      console.error("Error finding nearby spot:", error);
+      console.log("findNearbySpot 처리 중 에러:", error);
       return null;
     }
   };
 
-  // checkNearbySpots 함수 수정
-  const checkNearbySpots = async (location: Location.LocationObject) => {
-    console.log("checkNearbySpots 호출, location:", location);
-    if (!isGuiding) {
-      const nearbySpot = await findNearbySpot(location.coords);
-      if (nearbySpot) {
-        try {
-          await generateTourGuide(
-            [{ AREA_CLTUR_TRRSRT_NM: nearbySpot.title }],
-            {
-              title: nearbySpot.title,
-              description: nearbySpot.description,
-              order: nearbySpot.order,
-              totalPlaces: nearbySpot.totalPlaces,
-            }
-          );
-          setIsGuiding(true);
-        } catch (error) {
-          console.error("Error in checkNearbySpots:", error);
-        }
-      }
-    }
+  // 거리 계산 함수 추가
+  const calculateDistance = (
+    lat1: number,
+    lon1: number,
+    lat2: number,
+    lon2: number
+  ) => {
+    const R = 6371; // 지구의 반경 (km)
+    const dLat = deg2rad(lat2 - lat1);
+    const dLon = deg2rad(lon2 - lon1);
+    const a =
+      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+      Math.cos(deg2rad(lat1)) *
+        Math.cos(deg2rad(lat2)) *
+        Math.sin(dLon / 2) *
+        Math.sin(dLon / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    return R * c; // 거리 (km)
+  };
+
+  const deg2rad = (deg: number) => {
+    return deg * (Math.PI / 180);
   };
 
   // [2] Azure AI Search: 관심사 + 위치 기반 관광지 추천 함수
@@ -847,8 +895,18 @@ Additional context: ${currentPlace.description}`,
         .replace(/undefined/g, "")
         .replace(/^\s+/, "")
         .replace(/\s+$/, "")
+        // 숫자와 단위가 줄바꿈으로 분리되는 것 방지
+        .replace(/(\d+)\.\s*\n\s*(\d+)([a-zA-Z가-힣]+)/g, "$1.$2$3")
+        // 불필요한 줄바꿈 정리
+        .replace(/([^.!?])\n+/g, "$1 ")
+        // 문장 끝에서 줄바꿈
         .replace(/([.!?])\s*/g, "$1\n\n")
-        .replace(/\n{3,}/g, "\n\n");
+        // 연속된 줄바꿈 정리
+        .replace(/\n{3,}/g, "\n\n")
+        // 단독 마침표 제거
+        .replace(/^\s*\.\s*$/gm, "")
+        // 마지막 빈줄 정리
+        .trim();
 
       // 마지막 장소가 아닌 경우에만 다음 장소 안내 추가
       const scheduleData: Schedule = JSON.parse(
@@ -1068,7 +1126,7 @@ Additional context: ${currentPlace.description}`,
       ) : isLoadingStory ? (
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color="#FFFFFF" />
-          <Text style={styles.loadingText}>이야기 준비 중...</Text>
+          <Text style={styles.loadingText}>잠시만 기다려주세요...</Text>
         </View>
       ) : (
         <ScrollView
