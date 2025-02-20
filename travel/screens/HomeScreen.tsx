@@ -78,26 +78,71 @@ export default function HomeScreen() {
     setWeatherPhrase(WEATHER_PHRASES[randomIndex]);
   }, []);
 
+  const getCurrentLocation = async () => {
+    try {
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== "granted") {
+        setError("위치 권한이 필요합니다");
+        return null;
+      }
+
+      const location = await Location.getCurrentPositionAsync({
+        accuracy: Location.Accuracy.High,
+      });
+
+      // 위도/경도로 실제 주소 가져오기
+      const [address] = await Location.reverseGeocodeAsync({
+        latitude: location.coords.latitude,
+        longitude: location.coords.longitude,
+        language: "ko", // 한국어로 결과 받기
+      });
+
+      // 주소 구성 (국가에 따라 다르게 처리)
+      let locationString = "";
+      if (address.country === "South Korea" || address.country === "대한민국") {
+        // 한국인 경우
+        locationString = `${address.region} ${
+          address.subregion || address.district || ""
+        }`.trim();
+      } else {
+        // 해외인 경우
+        locationString = [address.city, address.region, address.country]
+          .filter(Boolean)
+          .join(", ");
+      }
+
+      return {
+        coords: location.coords,
+        address: locationString,
+      };
+    } catch (error) {
+      console.error("Location error:", error);
+      return null;
+    }
+  };
+
   useEffect(() => {
     async function loadWeatherData() {
       try {
-        const { status } = await Location.requestForegroundPermissionsAsync();
-        if (status !== "granted") {
-          setError("위치 권한이 필요합니다");
+        const locationData = await getCurrentLocation();
+        if (!locationData) {
+          setError("위치를 가져올 수 없습니다");
           setIsLoading(false);
           return;
         }
 
-        const location = await Location.getCurrentPositionAsync({});
         const weatherData = await getCurrentWeather(
-          location.coords.latitude,
-          location.coords.longitude
+          locationData.coords.latitude,
+          locationData.coords.longitude
         );
 
-        setWeather(weatherData);
+        setWeather({
+          ...weatherData,
+          location: locationData.address, // 실제 주소로 위치 설정
+        });
       } catch (err) {
+        console.error("날씨 정보를 가져오는데 실패했습니다:", err);
         setError("날씨 정보를 가져오는데 실패했습니다");
-        console.error(err);
       } finally {
         setIsLoading(false);
       }
@@ -182,21 +227,25 @@ export default function HomeScreen() {
               <>
                 <View style={styles.locationContainer}>
                   <LocationIcon width={16} height={16} color="#FFFFFF" />
-                  <Text style={styles.location}>서울 잠실동</Text>
+                  <Text style={styles.location}>위치 정보 없음</Text>
                 </View>
-                <Text style={styles.temperature}>24°</Text>
-                <Text style={styles.weatherCondition}>맑음</Text>
-                <Text style={styles.tempRange}>최고 27° / 최저 19°</Text>
+                <Text style={styles.temperature}>--°</Text>
+                <Text style={styles.weatherCondition}>--</Text>
+                <Text style={styles.tempRange}>최고 --° / 최저 --°</Text>
               </>
             ) : weather ? (
               <>
                 <View style={styles.locationContainer}>
                   <LocationIcon width={16} height={16} color="#FFFFFF" />
-                  <Text style={styles.location}>{weather.location}</Text>
+                  <Text style={styles.location}>
+                    {weather.location || "위치 정보 없음"}
+                  </Text>
                 </View>
                 <Text style={styles.temperature}>{weather.temperature}°</Text>
                 <Text style={styles.weatherCondition}>{weather.condition}</Text>
-                <Text style={styles.tempRange}>최고 {weather.high}° / 최저 {weather.low}°</Text>
+                <Text style={styles.tempRange}>
+                  최고 {weather.high}° / 최저 {weather.low}°
+                </Text>
               </>
             ) : null}
           </View>
@@ -445,5 +494,5 @@ const styles = StyleSheet.create({
     color: "#fff",
     opacity: 0.8,
     marginTop: 2,
-  },  
+  },
 });
