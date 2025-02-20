@@ -7,6 +7,7 @@ import {
   TextInput,
   Alert,
   Platform,
+  ScrollView,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { ChevronLeft, RefreshCw } from "lucide-react-native";
@@ -19,8 +20,11 @@ type EditProfileScreenProps = {
   navigation: DrawerNavigationProp<any>;
   route: {
     params: {
-      field: "nickname" | "birthyear" | "gender" | "password";
-      currentValue?: string;
+      field: "nickname" | "birthyear" | "gender" | "password" | "preferences";
+      currentValue?:
+        | string
+        | string[]
+        | { preferences: string[]; music_genres: string[] };
     };
   };
 };
@@ -67,6 +71,41 @@ const generateRandomNickname = () => {
   return `${adjective} ${animal}`;
 };
 
+const preferenceOptions = [
+  "역사",
+  "미술",
+  "스포츠",
+  "건축",
+  "음악",
+  "요리",
+  "기술",
+  "디자인",
+  "과학",
+  "언어",
+  "패션",
+  "K-POP",
+  "문학",
+  "수학",
+  "자동차",
+];
+
+const musicGenreOptions = [
+  "팝송",
+  "OLD POP",
+  "K-POP",
+  "Billboard Top 100",
+  "클래식",
+  "록",
+  "힙합",
+  "R&B",
+  "어쿠스틱",
+  "EDM",
+  "포크",
+  "재즈",
+  "트로트",
+  "가곡",
+];
+
 export default function EditProfileScreen({
   navigation,
   route,
@@ -76,6 +115,16 @@ export default function EditProfileScreen({
   const [oldPassword, setOldPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [selectedPreferences, setSelectedPreferences] = useState<string[]>(
+    typeof currentValue === "object" && !Array.isArray(currentValue)
+      ? currentValue.preferences
+      : []
+  );
+  const [selectedMusicGenres, setSelectedMusicGenres] = useState<string[]>(
+    typeof currentValue === "object" && !Array.isArray(currentValue)
+      ? currentValue.music_genres
+      : []
+  );
 
   const getFieldTitle = () => {
     switch (field) {
@@ -87,6 +136,8 @@ export default function EditProfileScreen({
         return "성별";
       case "password":
         return "비밀번호 변경";
+      case "preferences":
+        return "관심사";
       default:
         return "";
     }
@@ -120,11 +171,50 @@ export default function EditProfileScreen({
           response = await updateUserInfo(field, yearValue);
           break;
 
+        case "preferences":
+          try {
+            // preferences 업데이트
+            const preferencesResponse = await updateUserInfo(
+              "preferences",
+              selectedPreferences
+            );
+
+            // music_genres 업데이트
+            const musicGenresResponse = await updateUserInfo(
+              "music_genres",
+              selectedMusicGenres
+            );
+
+            if (!preferencesResponse.success || !musicGenresResponse.success) {
+              throw new Error(
+                "취향 정보를 업데이트하지 못했습니다. 다시 시도해주세요."
+              );
+            }
+
+            Alert.alert("성공", "취향 정보가 수정되었습니다.", [
+              {
+                text: "확인",
+                onPress: () => {
+                  navigation.goBack();
+                },
+              },
+            ]);
+            return;
+          } catch (error) {
+            console.error("Update preferences error:", error);
+            Alert.alert(
+              "오류",
+              error.message ||
+                "취향 정보를 업데이트하지 못했습니다. 다시 시도해주세요."
+            );
+            return;
+          }
+
         default:
           response = await updateUserInfo(field, value);
       }
 
-      if (response.success) {
+      if (response?.success) {
         Alert.alert("성공", "정보가 수정되었습니다.", [
           {
             text: "확인",
@@ -134,7 +224,7 @@ export default function EditProfileScreen({
           },
         ]);
       } else {
-        throw new Error(response.message || "정보 업데이트에 실패했습니다.");
+        throw new Error("정보를 업데이트하지 못했습니다. 다시 시도해주세요.");
       }
     } catch (error: any) {
       console.error("Update error:", error);
@@ -148,7 +238,7 @@ export default function EditProfileScreen({
       } else {
         Alert.alert(
           "오류",
-          error.message || "서버 통신 중 오류가 발생했습니다."
+          error.message || "정보를 업데이트하지 못했습니다. 다시 시도해주세요."
         );
       }
     }
@@ -245,6 +335,77 @@ export default function EditProfileScreen({
             </View>
           </View>
         );
+      case "preferences":
+        return (
+          <ScrollView style={styles.preferencesContainer}>
+            <Text style={styles.sectionTitle}>
+              관심있는 주제 키워드를 선택해주세요
+            </Text>
+            <View style={styles.tagsContainer}>
+              {preferenceOptions.map((option) => (
+                <TouchableOpacity
+                  key={option}
+                  style={[
+                    styles.tagButton,
+                    selectedPreferences.includes(option) &&
+                      styles.tagButtonSelected,
+                  ]}
+                  onPress={() => {
+                    setSelectedPreferences((prev) =>
+                      prev.includes(option)
+                        ? prev.filter((item) => item !== option)
+                        : [...prev, option]
+                    );
+                  }}
+                >
+                  <Text
+                    style={[
+                      styles.tagButtonText,
+                      selectedPreferences.includes(option) &&
+                        styles.tagButtonTextSelected,
+                    ]}
+                  >
+                    {option}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+
+            <Text style={[styles.sectionTitle, { marginTop: 24 }]}>
+              좋아하는 음악 장르를 선택해주세요
+            </Text>
+            <View style={styles.tagsContainer}>
+              {musicGenreOptions.map((option) => (
+                <TouchableOpacity
+                  key={option}
+                  style={[
+                    styles.tagButton,
+                    selectedMusicGenres.includes(option) &&
+                      styles.tagButtonSelected,
+                  ]}
+                  onPress={() => {
+                    setSelectedMusicGenres((prev) =>
+                      prev.includes(option)
+                        ? prev.filter((item) => item !== option)
+                        : [...prev, option]
+                    );
+                  }}
+                >
+                  <Text
+                    style={[
+                      styles.tagButtonText,
+                      selectedMusicGenres.includes(option) &&
+                        styles.tagButtonTextSelected,
+                    ]}
+                  >
+                    {option}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+            <View style={{ height: 40 }} />
+          </ScrollView>
+        );
       default:
         return null;
     }
@@ -303,7 +464,7 @@ const styles = StyleSheet.create({
     fontWeight: "600",
   },
   content: {
-    padding: 16,
+    flex: 1,
   },
   inputContainer: {
     flexDirection: "row",
@@ -348,5 +509,42 @@ const styles = StyleSheet.create({
     borderColor: "#EEEEEE",
     borderRadius: 8,
     backgroundColor: "#FFFFFF",
+  },
+  preferencesContainer: {
+    flex: 1,
+    padding: 16,
+  },
+  tagsContainer: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+    marginBottom: 24,
+  },
+  tagButton: {
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 50,
+    borderWidth: 1,
+    borderColor: "#007AFF",
+    backgroundColor: "#FFFFFF",
+  },
+  tagButtonSelected: {
+    backgroundColor: "#007AFF",
+    borderColor: "#007AFF",
+  },
+  tagButtonText: {
+    fontSize: 14,
+    color: "#007AFF",
+    fontWeight: "500",
+  },
+  tagButtonTextSelected: {
+    color: "#FFFFFF",
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: "600",
+    color: "#000000",
+    marginBottom: 20,
+    marginTop: 16,
   },
 });

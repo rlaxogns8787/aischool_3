@@ -11,7 +11,15 @@ import {
 } from "react-native";
 import axios from "axios";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { ChevronLeft, Mic, ArrowLeft, Map } from "lucide-react-native";
+import {
+  ChevronLeft,
+  Mic,
+  ArrowLeft,
+  Map,
+  Music,
+  Play,
+  Pause,
+} from "lucide-react-native";
 import MapIcon from "../assets/map.svg";
 import * as Speech from "expo-speech";
 import * as sdk from "microsoft-cognitiveservices-speech-sdk";
@@ -35,9 +43,40 @@ import { encode as btoa } from "base-64";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useAuth } from "../contexts/AuthContext";
 import { getSchedules } from "../api/loginapi";
+import { MusicService } from "../services/musicService";
+import VoiceIcon from "../assets/voice.svg";
+import SongIcon from "../assets/song.svg";
 
+// 상단에 타입 정의 추가
+interface VoiceCharacterType {
+  [key: string]: {
+    personality: string;
+    style: string;
+    tone: string;
+    examples: string;
+    formatMessage: (text: string) => string;
+  };
+}
+
+// User 타입 정의 추가
+interface User {
+  preferences?: string[];
+  birthYear?: number;
+  musicGenres?: string[];
+}
+
+// 음성 관련 타입 수정
+interface VoiceResponse {
+  text: string;
+  additionalData?: any;
+}
+
+// 기존 TourScreenProps 수정
 type TourScreenProps = {
-  navigation: any;
+  navigation: {
+    navigate: (screen: string) => void;
+    goBack: () => void;
+  };
 };
 
 // Azure Speech Services 키와 리전 설정
@@ -120,15 +159,36 @@ const characterTraits: VoiceCharacterType = {
 
 오늘날에는 시민들의 휴식과 문화생활이 어우러진 복합문화공간으로 자리매김하였습니다.`,
     formatMessage: (text: string) => {
-      return text
-        .replace(/해|했어/g, "합니다|했습니다")
-        .replace(/야|이야/g, "입니다")
-        .replace(/볼까\?/g, "살펴보겠습니다")
-        .replace(/봐/g, "보세요")
-        .replace(/줄게/g, "드리겠습니다")
-        .replace(/있어/g, "있습니다")
-        .replace(/~+/g, "")
-        .replace(/!/g, ".");
+      return (
+        text
+          // 기본적인 종결어미 수정
+          .replace(/했어요?/g, "했습니다")
+          .replace(/야|이야/g, "입니다")
+          .replace(/볼까\?/g, "살펴보겠습니다")
+          .replace(/봐/g, "보세요")
+          .replace(/줄게/g, "드리겠습니다")
+          .replace(/있어/g, "있습니다")
+          // 부자연스러운 조사 수정
+          .replace(/(\S+)이 있습니다/g, "$1가 있습니다")
+          .replace(/(\S+)이 되었습니다/g, "$1가 되었습니다")
+          // 부자연스러운 문장 연결 수정
+          .replace(/(\S+)하고 (\S+)하다/g, "$1하고 $2합니다")
+          .replace(/(\S+)하며 (\S+)하다/g, "$1하며 $2합니다")
+          // 불필요한 문장 부호 정리
+          .replace(/~+/g, "")
+          .replace(/!/g, ".")
+          // 띄어쓰기 교정
+          .replace(/(\S+)을통해/g, "$1을 통해")
+          .replace(/(\S+)를통해/g, "$1를 통해")
+          .replace(/(\S+)에서는/g, "$1에서는 ")
+          // 문장 마무리 정리 (수정된 부분)
+          .replace(/([^.!?])$/g, "$1합니다.") // 문장 부호가 없을 때만 '합니다.' 추가
+          .replace(/\.{2,}/g, ".") // 두 개 이상의 연속된 마침표를 하나로
+          .replace(/\s+\./g, ".") // 마침표 앞의 불필요한 공백 제거
+          .replace(/합니다\.$/, ".") // 문장 끝의 불필요한 '합니다' 제거
+          .replace(/\.$\n*\.*$/g, ".") // 문장 끝의 불필요한 마침표 제거
+          .trim() // 앞뒤 공백 제거
+      );
     },
   },
   "ko-KR-HyunsuMultilingualNeural": {
@@ -146,13 +206,13 @@ const characterTraits: VoiceCharacterType = {
 주말마다 플리마켓이랑 버스킹도 열리는데, 로컬 감성 제대로 느낄 수 있어!`,
     formatMessage: (text: string) => {
       return text
-        .replace(/입니다|습니다/g, "야")
+        .replace(/합니다/g, "해")
+        .replace(/했습니다/g, "했어")
         .replace(/하겠습니다/g, "할게")
         .replace(/살펴보겠습니다/g, "볼까?")
         .replace(/있습니다/g, "있어")
         .replace(/였습니다/g, "였어")
         .replace(/드립니다/g, "줄게")
-        .replace(/합니다/g, "해")
         .replace(/니다/g, "야")
         .replace(/시오/g, "어")
         .replace(/보세요/g, "봐")
@@ -181,8 +241,21 @@ interface ScheduleResponse {
   schedules: ServerSchedule[];
 }
 
+// 상태 추가
+interface TourState {
+  currentDayIndex: number;
+  currentPlaceIndex: number;
+  showNextButton: boolean;
+}
+
+// 새로운 타입 추가
+interface UserData {
+  birthYear: number;
+  musicGenres: string[];
+}
+
 export default function TourScreen() {
-  const navigation = useNavigation();
+  const navigation = useNavigation<any>();
   const [displayedText, setDisplayedText] = useState("");
   const [fullText, setFullText] = useState("");
   const [isRecording, setIsRecording] = useState(false);
@@ -213,6 +286,23 @@ export default function TourScreen() {
   const { user } = useAuth();
   const [isInitializing, setIsInitializing] = useState(true);
   const [isLoadingStory, setIsLoadingStory] = useState(false);
+  const [tourState, setTourState] = useState<TourState>({
+    currentDayIndex: 0,
+    currentPlaceIndex: 0,
+    showNextButton: false,
+  });
+  const [currentBGM, setCurrentBGM] = useState<string | null>(null);
+  const musicService = useRef(new MusicService());
+  const [userPreferences, setUserPreferences] = useState<string[]>([]);
+  const [userMusicGenres, setUserMusicGenres] = useState<string[]>([]);
+  const [showMusicButton, setShowMusicButton] = useState(false);
+  const [showMusicSection, setShowMusicSection] = useState(false);
+  const [currentSong, setCurrentSong] = useState<{
+    title: string;
+    artist: string;
+  } | null>(null);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [userData, setUserData] = useState<UserData | null>(null);
 
   // 사용자 관심사를 DB에서 가져오기(기본값은 '전체'설정)
   const userPreference = user?.preferences?.[0] || "전체";
@@ -271,7 +361,7 @@ export default function TourScreen() {
 
   // animateText 함수 수정
   const animateText = (text: string, speakingDuration: number = 0) => {
-    console.log("animateText 시작:", text);
+    console.log("animateText 시작:", text, "재생시간:", speakingDuration);
     if (textTimeoutRef.current) clearTimeout(textTimeoutRef.current);
     setTourGuide("");
 
@@ -279,36 +369,24 @@ export default function TourScreen() {
     const sentences = text.split(/(?<=[.!?])\s+/);
     const totalCharacters = text.length;
 
-    // 전체 텍스트 애니메이션 시간을 음성 재생 시간과 맞춤
-    const animationDuration = speakingDuration || totalCharacters * 50; // 기본값으로 글자당 50ms
+    // 음성 재생 시간에 맞춰 애니메이션 속도 조절
+    const animationDuration = speakingDuration;
     const characterDelay = animationDuration / totalCharacters;
 
-    let currentSentenceIndex = 0;
-    let currentCharIndex = 0;
+    let currentIndex = 0;
     let fullText = "";
 
     const showNextCharacter = () => {
-      if (currentSentenceIndex < sentences.length) {
-        const currentSentence = sentences[currentSentenceIndex];
+      if (currentIndex < text.length) {
+        fullText += text[currentIndex];
+        setTourGuide(fullText);
+        currentIndex++;
 
-        if (currentCharIndex < currentSentence.length) {
-          fullText += currentSentence[currentCharIndex];
-          setTourGuide(fullText);
-          currentCharIndex++;
-          textTimeoutRef.current = setTimeout(
-            showNextCharacter,
-            characterDelay
-          );
-        } else {
-          fullText += "\n\n";
-          setTourGuide(fullText);
-          currentSentenceIndex++;
-          currentCharIndex = 0;
-          textTimeoutRef.current = setTimeout(
-            showNextCharacter,
-            characterDelay * 2
-          );
-        }
+        // 문장 끝에서 약간의 추가 딜레이
+        const isEndOfSentence = /[.!?]/.test(text[currentIndex - 1]);
+        const nextDelay = isEndOfSentence ? characterDelay * 2 : characterDelay;
+
+        textTimeoutRef.current = setTimeout(showNextCharacter, nextDelay);
       }
     };
 
@@ -399,7 +477,7 @@ export default function TourScreen() {
   };
 
   // Azure TTS 함수: REST API와 expo-av를 이용해 음성 합성 및 재생 (한 번만 실행)
-  const startSpeaking = async (text: string) => {
+  const startSpeaking = async (text: string | VoiceResponse) => {
     console.log("startSpeaking 호출, text:", text);
     if (!text) {
       console.error("No text provided for TTS");
@@ -407,14 +485,13 @@ export default function TourScreen() {
     }
 
     try {
+      setIsLoadingStory(true);
+      setShowMusicSection(false); // 음성 재생 시작할 때 음악 섹션 숨기기
       console.log("Starting Azure TTS (REST) with voice:", selectedVoice.id);
       setIsSpeaking(true);
 
       // 텍스트 전처리
-      const processedText = text
-        .trim()
-        .replace(/undefined/g, "")
-        .replace(/\n{3,}/g, "\n\n");
+      const processedText = typeof text === "string" ? text : text.text;
 
       // TTS 토큰 발급 및 설정
       const tokenResponse = await fetch(
@@ -480,18 +557,26 @@ export default function TourScreen() {
 
       // 음성 파일의 재생 시간 가져오기
       const status = await soundObject.getStatusAsync();
-      const durationMillis = status.durationMillis || 0;
+      const durationMillis = status.isLoaded ? status.durationMillis : 0;
 
-      // 텍스트 애니메이션 시작 (음성 재생 시간 전달)
-      animateText(processedText, durationMillis);
+      setIsLoadingStory(false);
+
+      // 텍스트 애니메이션 시작 (약간의 지연을 두고 시작)
+      setTimeout(() => {
+        animateText(processedText, durationMillis);
+      }, 100);
 
       // 음성 재생
       await soundObject.playAsync();
 
       soundObject.setOnPlaybackStatusUpdate((status) => {
-        if (status.didJustFinish) {
+        if (status.isLoaded && status.didJustFinish) {
           setIsSpeaking(false);
           soundObject.unloadAsync();
+          // 웰컴 메시지가 아닐 때만 음악 섹션 표시
+          if (!isInitializing) {
+            setShowMusicSection(true);
+          }
         }
       });
 
@@ -499,7 +584,36 @@ export default function TourScreen() {
     } catch (error) {
       console.error("TTS setup error:", error);
       setIsSpeaking(false);
+      setIsLoadingStory(false);
       throw error;
+    }
+  };
+
+  // checkNearbySpots 함수 수정
+  const checkNearbySpots = async (location: Location.LocationObject) => {
+    console.log("checkNearbySpots 호출, location:", location);
+    if (!isGuiding) {
+      try {
+        const nearbySpot = await findNearbySpot(location.coords);
+        if (nearbySpot) {
+          await generateTourGuide(
+            [{ AREA_CLTUR_TRRSRT_NM: nearbySpot.title }],
+            {
+              title: nearbySpot.title,
+              description: nearbySpot.description,
+              order: nearbySpot.order,
+              totalPlaces: nearbySpot.totalPlaces,
+            }
+          );
+          setIsGuiding(true);
+        } else {
+          // 근처 장소를 찾지 못했을 때 조용히 처리
+          console.log("근처에서 일정에 있는 장소를 찾지 못했습니다.");
+        }
+      } catch (error) {
+        // 에러 발생 시 조용히 처리
+        console.log("checkNearbySpots 처리 중 에러:", error);
+      }
     }
   };
 
@@ -511,19 +625,41 @@ export default function TourScreen() {
       const confirmedScheduleStr = await AsyncStorage.getItem(
         "confirmedSchedule"
       );
-      if (!confirmedScheduleStr) return null;
+      if (!confirmedScheduleStr) {
+        console.log("저장된 일정이 없습니다.");
+        return null;
+      }
 
       const schedule = JSON.parse(confirmedScheduleStr) as Schedule;
       const today = new Date().toISOString().split("T")[0];
-      const todaySchedule = schedule.days.find((day) => day.date === today);
+      const todaySchedule = schedule.days.find(
+        (day: { date: string }) => day.date === today
+      );
 
-      if (!todaySchedule || !todaySchedule.places.length) return null;
+      if (!todaySchedule || !todaySchedule.places.length) {
+        console.log("오늘의 일정이 없습니다.");
+        return null;
+      }
 
       // 현재 위치와 가장 가까운 오늘의 일정 장소 찾기
-      const nearestPlace = todaySchedule.places.find((place) => {
-        // 실제 구현에서는 위치 기반 거리 계산 로직 추가
-        return true; // 임시로 첫 번째 장소 반환
-      });
+      const nearestPlace = todaySchedule.places.reduce((nearest, place) => {
+        if (!nearest) return place;
+
+        const placeDistance = calculateDistance(
+          userCoords.latitude,
+          userCoords.longitude,
+          place.coords.lat,
+          place.coords.lng
+        );
+        const nearestDistance = calculateDistance(
+          userCoords.latitude,
+          userCoords.longitude,
+          nearest.coords.lat,
+          nearest.coords.lng
+        );
+
+        return placeDistance < nearestDistance ? place : nearest;
+      }, todaySchedule.places[0]);
 
       if (nearestPlace) {
         return {
@@ -536,37 +672,37 @@ export default function TourScreen() {
 
       return null;
     } catch (error) {
-      console.error("Error finding nearby spot:", error);
+      console.log("findNearbySpot 처리 중 에러:", error);
       return null;
     }
   };
 
-  // checkNearbySpots 함수 수정
-  const checkNearbySpots = async (location: Location.LocationObject) => {
-    console.log("checkNearbySpots 호출, location:", location);
-    if (!isGuiding) {
-      const nearbySpot = await findNearbySpot(location.coords);
-      if (nearbySpot) {
-        try {
-          await generateTourGuide(
-            [{ AREA_CLTUR_TRRSRT_NM: nearbySpot.title }],
-            {
-              title: nearbySpot.title,
-              description: nearbySpot.description,
-              order: nearbySpot.order,
-              totalPlaces: nearbySpot.totalPlaces,
-            }
-          );
-          setIsGuiding(true);
-        } catch (error) {
-          console.error("Error in checkNearbySpots:", error);
-        }
-      }
-    }
+  // 거리 계산 함수 추가
+  const calculateDistance = (
+    lat1: number,
+    lon1: number,
+    lat2: number,
+    lon2: number
+  ) => {
+    const R = 6371; // 지구의 반경 (km)
+    const dLat = deg2rad(lat2 - lat1);
+    const dLon = deg2rad(lon2 - lon1);
+    const a =
+      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+      Math.cos(deg2rad(lat1)) *
+        Math.cos(deg2rad(lat2)) *
+        Math.sin(dLon / 2) *
+        Math.sin(dLon / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    return R * c; // 거리 (km)
+  };
+
+  const deg2rad = (deg: number) => {
+    return deg * (Math.PI / 180);
   };
 
   // [2] Azure AI Search: 관심사 + 위치 기반 관광지 추천 함수
-  const fetchNearbySpots = async (latitude, longitude) => {
+  const fetchNearbySpots = async (latitude: number, longitude: number) => {
     try {
       const response = await axios.post(
         `${SEARCH_ENDPOINT}/indexes/${ATTRACTION_INDEX}/docs/search?api-version=2021-04-30-Preview`,
@@ -624,8 +760,9 @@ export default function TourScreen() {
 
       // 오늘 날짜의 일정 찾기
       const today = new Date().toISOString().split("T")[0];
-      const todaySchedule = response.schedules.find((schedule) =>
-        schedule.days.some((day) => day.date === today)
+      const todaySchedule = response.schedules.find(
+        (schedule: ServerSchedule) =>
+          schedule.days.some((day: { date: string }) => day.date === today)
       );
 
       if (todaySchedule) {
@@ -637,9 +774,12 @@ export default function TourScreen() {
 
         // 가이드 텍스트 생성
         const guideText = todaySchedule.days
-          .map((day) =>
+          .map((day: { places: any[] }) =>
             day.places
-              .map((place) => `${place.title}: ${place.description}`)
+              .map(
+                (place: { title: string; description: string }) =>
+                  `${place.title}: ${place.description}`
+              )
               .join("\n")
           )
           .join("\n\n");
@@ -701,7 +841,7 @@ export default function TourScreen() {
 
   const handleMapPress = () => {
     console.log("handleMapPress 호출");
-    navigation.navigate("Map");
+    navigation.navigate("Map" as never);
   };
 
   // generateTourGuide 함수 수정
@@ -716,30 +856,42 @@ export default function TourScreen() {
     }
   ) => {
     try {
+      setIsLoadingStory(true);
       const spotNames = spots.map((s) => s.AREA_CLTUR_TRRSRT_NM).join(", ");
       const selectedCharacter = characterTraits[selectedVoice.id];
+
+      // 사용자 관심사를 기반으로 이야기 생성
+      const userInterests = userPreferences.join(", ");
+      let prompt = `당신은 ${selectedCharacter.personality}입니다. `;
+      prompt += `방문객이 ${userInterests}에 관심이 많습니다. `;
+      prompt += `${spotNames}에 대해 방문객의 관심사를 고려하여 설명해주세요.`;
 
       // 실제 일정 데이터 가져오기
       const storedSchedule = await AsyncStorage.getItem("confirmedSchedule");
       if (!storedSchedule) {
-        throw new Error("일정을 찾을 수 없습니다.");
+        console.log("일정을 찾을 수 없습니다.");
+        return;
       }
 
       const schedule: Schedule = JSON.parse(storedSchedule);
       const today = new Date().toISOString().split("T")[0];
-      const todaySchedule = schedule.days.find((day) => day.date === today);
+      const todaySchedule = schedule.days.find(
+        (day: { date: string }) => day.date === today
+      );
 
       if (!todaySchedule) {
-        throw new Error("오늘의 일정을 찾을 수 없습니다.");
+        console.log("오늘의 일정을 찾을 수 없습니다.");
+        return;
       }
 
       // 현재 장소 정보 찾기
       const currentPlace = todaySchedule.places.find(
-        (place) => place.title === spotNames
+        (place: { title: string }) => place.title === spotNames
       );
 
       if (!currentPlace) {
-        throw new Error("현재 장소 정보를 찾을 수 없습니다.");
+        console.log("현재 장소 정보를 찾을 수 없습니다.");
+        return;
       }
 
       const body = {
@@ -818,17 +970,94 @@ Additional context: ${currentPlace.description}`,
         .replace(/undefined/g, "")
         .replace(/^\s+/, "")
         .replace(/\s+$/, "")
+        // 숫자와 단위가 줄바꿈으로 분리되는 것 방지
+        .replace(/(\d+)\.\s*\n\s*(\d+)([a-zA-Z가-힣]+)/g, "$1.$2$3")
+        // 불필요한 줄바꿈 정리
+        .replace(/([^.!?])\n+/g, "$1 ")
+        // 문장 끝에서 줄바꿈
         .replace(/([.!?])\s*/g, "$1\n\n")
-        .replace(/\n{3,}/g, "\n\n");
+        // 연속된 줄바꿈 정리
+        .replace(/\n{3,}/g, "\n\n")
+        // 단독 마침표 제거
+        .replace(/^\s*\.\s*$/gm, "")
+        // 마지막 빈줄 정리
+        .trim();
 
-      // 텍스트 설정 및 음성 재생 시작
+      // 마지막 장소가 아닌 경우에만 다음 장소 안내 추가
+      const scheduleData: Schedule = JSON.parse(
+        (await AsyncStorage.getItem("confirmedSchedule")) || "{}"
+      );
+      const currentDay = scheduleData.days[tourState.currentDayIndex];
+      const isLastPlace =
+        tourState.currentPlaceIndex === currentDay.places.length - 1;
+      const isLastDay =
+        tourState.currentDayIndex === scheduleData.days.length - 1;
+
+      if (!isLastPlace || !isLastDay) {
+        content += "\n\n노래를 들으면서 다음 장소로 이동해보세요!";
+        setTourState((prev) => ({ ...prev, showNextButton: true }));
+      }
+
       setTourGuide("");
       await startSpeaking(content);
 
+      // 이야기가 끝나면 음악 섹션 표시 및 음악 재생
+      setShowMusicSection(true);
+      if (userMusicGenres.length > 0 && userData) {
+        const randomGenre =
+          userMusicGenres[Math.floor(Math.random() * userMusicGenres.length)];
+        const songInfo = await handleTransitMusic(randomGenre);
+        if (songInfo) {
+          setCurrentSong(songInfo);
+          setIsPlaying(true);
+        }
+      }
+
       return content;
     } catch (error) {
-      console.error("Error generating tour guide:", error);
-      return "죄송합니다. 설명을 불러오는데 실패했습니다.";
+      console.log("Tour guide generation:", error);
+      setIsLoadingStory(false);
+      // 에러가 발생해도 조용히 처리
+      return;
+    }
+  };
+
+  // 다음 장소로 이동하는 함수 추가
+  const handleNextPlace = async () => {
+    try {
+      const storedSchedule: Schedule = JSON.parse(
+        (await AsyncStorage.getItem("confirmedSchedule")) || "{}"
+      );
+      let { currentDayIndex, currentPlaceIndex } = tourState;
+
+      const currentDay = storedSchedule.days[currentDayIndex];
+
+      if (currentPlaceIndex < currentDay.places.length - 1) {
+        // 같은 날의 다음 장소로 이동
+        currentPlaceIndex++;
+      } else if (currentDayIndex < storedSchedule.days.length - 1) {
+        // 다음 날의 첫 장소로 이동
+        currentDayIndex++;
+        currentPlaceIndex = 0;
+      }
+
+      setTourState({
+        currentDayIndex,
+        currentPlaceIndex,
+        showNextButton: false,
+      });
+
+      const nextPlace =
+        storedSchedule.days[currentDayIndex].places[currentPlaceIndex];
+      await generateTourGuide([{ AREA_CLTUR_TRRSRT_NM: nextPlace.title }], {
+        title: nextPlace.title,
+        description: nextPlace.description,
+        time: nextPlace.time,
+        order: currentPlaceIndex + 1,
+        totalPlaces: currentDay.places.length,
+      });
+    } catch (error) {
+      console.error("Error moving to next place:", error);
     }
   };
 
@@ -871,20 +1100,16 @@ Additional context: ${currentPlace.description}`,
   useEffect(() => {
     const initializeTourGuide = async () => {
       try {
-        setIsInitializing(true);
-        await startSpeaking(welcomeMessage);
-        setIsInitializing(false);
-
-        setIsLoadingStory(true);
-        await new Promise((resolve) => setTimeout(resolve, 2000));
+        setIsInitializing(true); // 초기 로딩 상태 시작
 
         // 서버에서 일정 데이터 불러오기
         const response = await getSchedules();
         const today = new Date().toISOString().split("T")[0];
 
         if (response && response.schedules && response.schedules.length > 0) {
-          const todaySchedule = response.schedules.find((schedule) =>
-            schedule.days.some((day) => day.date === today)
+          const todaySchedule = response.schedules.find(
+            (schedule: ServerSchedule) =>
+              schedule.days.some((day: { date: string }) => day.date === today)
           );
 
           if (todaySchedule) {
@@ -893,31 +1118,15 @@ Additional context: ${currentPlace.description}`,
               "confirmedSchedule",
               JSON.stringify(todaySchedule)
             );
-
-            const contextMessage = `${todaySchedule.companion}와(과) 함께하는 여행이네요. 오늘은 ${todaySchedule.days[0].places.length}곳을 방문할 예정입니다.`;
-            await startSpeaking(contextMessage);
-
-            await new Promise((resolve) => setTimeout(resolve, 2000));
-
-            // 첫 번째 장소에 대한 상세 정보 전달
-            const firstPlace = todaySchedule.days[0].places[0];
-            await generateTourGuide(
-              [{ AREA_CLTUR_TRRSRT_NM: firstPlace.title }],
-              {
-                title: firstPlace.title,
-                description: firstPlace.description,
-                time: firstPlace.time,
-                order: 1,
-                totalPlaces: todaySchedule.days[0].places.length,
-              }
-            );
-            setIsGuiding(true);
           }
         }
+
+        setIsInitializing(false); // 초기 로딩 상태 종료
+
+        // 웰컴 메시지 시작
+        await welcomeMessage();
       } catch (error) {
         console.error("Error in initializeTourGuide:", error);
-      } finally {
-        setIsLoadingStory(false);
         setIsInitializing(false);
       }
     };
@@ -930,8 +1139,19 @@ Additional context: ${currentPlace.description}`,
     };
   }, []);
 
-  // TourScreen 컴포넌트 내부 상태 선언부에 추가
-  const [welcomeMessage] = useState("안녕하세요! 여행을 시작해볼까요?");
+  // welcomeMessage 함수 수정
+  const welcomeMessage = async () => {
+    try {
+      setIsInitializing(true);
+      setShowMusicSection(false); // 웰컴 메시지 시작할 때 음악 섹션 숨기기
+      const message = "안녕하세요! 여행을 시작해볼까요?";
+      await startSpeaking(message);
+      setIsInitializing(false);
+    } catch (error) {
+      console.error("Welcome message error:", error);
+      setIsInitializing(false);
+    }
+  };
 
   // cleanup 함수 수정
   const cleanup = () => {
@@ -939,14 +1159,25 @@ Additional context: ${currentPlace.description}`,
     Speech.stop();
 
     // 현재 재생 중인 모든 음성 객체 정리
-    Audio.Sound.createAsync = async () => {
+    const originalCreateAsync = Audio.Sound.createAsync;
+    Audio.Sound.createAsync = async (
+      source: Audio.AVPlaybackSource,
+      initialStatus?: Audio.AVPlaybackStatusToSet,
+      onPlaybackStatusUpdate?:
+        | ((status: Audio.AVPlaybackStatus) => void)
+        | null,
+      downloadFirst?: boolean
+    ): Promise<Audio.SoundObject> => {
       const sound = new Audio.Sound();
       try {
         await sound.unloadAsync();
       } catch (error) {
         console.error("Sound cleanup error:", error);
       }
-      return { sound, status: {} };
+      return {
+        sound,
+        status: { isLoaded: true } as Audio.AVPlaybackStatus,
+      };
     };
 
     // 텍스트 애니메이션 타이머 정리
@@ -965,12 +1196,123 @@ Additional context: ${currentPlace.description}`,
     setTourGuide(""); // 텍스트 내용도 초기화
     setPausedGuideText(null);
     setIsLoadingStory(false);
+    setShowMusicSection(false); // 컴포넌트 정리 시 음악 섹션 숨기기
   };
 
   // 뒤로가기 핸들러
   const handleBackPress = () => {
     cleanup();
     navigation.goBack();
+  };
+
+  // 장소에 도착했을 때 BGM 재생
+  const handleLocationArrival = async (location: string) => {
+    try {
+      const response = await musicService.current.playLocationBGM(location);
+      if (response && response.videoId) {
+        setCurrentBGM(response.videoId);
+      }
+    } catch (error) {
+      console.error("BGM playback error:", error);
+    }
+  };
+
+  // 이동 중 사용자 취향 음악 재생
+  const handleTransitMusic = async (userGenre: string) => {
+    try {
+      if (!userData) return null;
+
+      const songInfo = await musicService.current.playUserPreferredMusic({
+        birthYear: userData.birthYear,
+        musicGenre: userGenre,
+      });
+
+      if (songInfo.videoId) {
+        setCurrentBGM(songInfo.videoId);
+        return {
+          title: songInfo.title,
+          artist: songInfo.artist,
+        };
+      }
+      return null;
+    } catch (error) {
+      console.error("Transit music error:", error);
+      return null;
+    }
+  };
+
+  // 컴포넌트 cleanup
+  useEffect(() => {
+    return () => {
+      musicService.current.stop();
+    };
+  }, []);
+
+  // 사용자 취향 정보 로드하는 함수 추가
+  const loadUserPreferences = async () => {
+    try {
+      const userData = await AsyncStorage.getItem("userData");
+      if (userData) {
+        const parsedData = JSON.parse(userData);
+        setUserPreferences(parsedData.preferences || []);
+        setUserMusicGenres(parsedData.music_genres || []);
+        setUserData({
+          birthYear: parsedData.birthYear || 2000, // 기본값 설정
+          musicGenres: parsedData.music_genres || [],
+        });
+      }
+    } catch (error) {
+      console.error("Error loading user preferences:", error);
+    }
+  };
+
+  // 음악 재생 버튼 컴포넌트 추가
+  const MusicButton = () => (
+    <TouchableOpacity
+      style={styles.musicButton}
+      onPress={() => {
+        if (userMusicGenres.length > 0) {
+          const randomGenre =
+            userMusicGenres[Math.floor(Math.random() * userMusicGenres.length)];
+          handleTransitMusic(randomGenre);
+        }
+      }}
+    >
+      <Music size={24} color="#FFFFFF" />
+      <Text style={styles.musicButtonText}>음악 재생</Text>
+    </TouchableOpacity>
+  );
+
+  // 음악 재생/일시정지 핸들러 추가
+  const handlePlayPause = async () => {
+    try {
+      if (isPlaying) {
+        await musicService.current.pause();
+        setIsPlaying(false);
+      } else {
+        if (userMusicGenres.length > 0) {
+          const randomGenre =
+            userMusicGenres[Math.floor(Math.random() * userMusicGenres.length)];
+          const songInfo = await handleTransitMusic(randomGenre);
+          setCurrentSong(songInfo);
+          setIsPlaying(true);
+        }
+      }
+    } catch (error) {
+      console.error("Music playback error:", error);
+    }
+  };
+
+  // handleVoiceCommand 함수 수정
+  const handleVoiceCommand = async (text: string) => {
+    try {
+      const response = await processQuery(text);
+      if (response && response.text) {
+        await startSpeaking(response);
+      }
+    } catch (error) {
+      console.error("Voice command error:", error);
+    }
   };
 
   if (!isAudioReady) {
@@ -1006,26 +1348,20 @@ Additional context: ${currentPlace.description}`,
       ) : isLoadingStory ? (
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color="#FFFFFF" />
-          <Text style={styles.loadingText}>이야기 준비 중...</Text>
+          <Text style={styles.loadingText}>잠시만 기다려주세요...</Text>
         </View>
       ) : (
-        <ScrollView
-          ref={scrollViewRef}
-          style={styles.guideContainer}
-          contentContainerStyle={styles.guideContent}
-          showsVerticalScrollIndicator={false}
-          onContentSizeChange={() =>
-            scrollViewRef.current?.scrollToEnd({ animated: true })
-          }
-        >
-          {isLoading ? (
-            <ActivityIndicator size="large" color="#fff" />
-          ) : tourGuide ? (
-            <View style={styles.textContainer}>
-              <Text style={styles.guideText}>{tourGuide}</Text>
-            </View>
-          ) : null}
-        </ScrollView>
+        <View style={styles.guideContainer}>
+          <ScrollView
+            style={styles.guideContent}
+            ref={scrollViewRef}
+            onContentSizeChange={() => {
+              scrollViewRef.current?.scrollToEnd({ animated: true });
+            }}
+          >
+            <Text style={styles.guideText}>{tourGuide}</Text>
+          </ScrollView>
+        </View>
       )}
 
       <View style={styles.voiceVisualizerContainer}>
@@ -1041,7 +1377,7 @@ Additional context: ${currentPlace.description}`,
               style={styles.squareButton}
               onPress={() => setShowVoiceModal(true)}
             >
-              <View style={styles.square} />
+              <VoiceIcon width={24} height={24} />
             </TouchableOpacity>
 
             <View style={styles.micButtonContainer}>
@@ -1067,12 +1403,12 @@ Additional context: ${currentPlace.description}`,
             </View>
 
             <View style={styles.rightButtonContainer}>
-              {isRecording ? (
+              {tourState.showNextButton ? (
                 <TouchableOpacity
-                  style={styles.backToStoryButton}
-                  onPress={() => {}}
+                  style={styles.nextButton}
+                  onPress={handleNextPlace}
                 >
-                  <BackToStoryIcon width={54} height={18} />
+                  <Text style={styles.nextButtonText}>다음</Text>
                 </TouchableOpacity>
               ) : (
                 <View style={styles.emptySpace} />
@@ -1081,6 +1417,78 @@ Additional context: ${currentPlace.description}`,
           </View>
         </View>
       </View>
+
+      {showVoiceModal && (
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>음성 선택</Text>
+            {voiceTypes.map((voice) => (
+              <TouchableOpacity
+                key={voice.id}
+                style={[
+                  styles.voiceOption,
+                  selectedVoice.id === voice.id && styles.selectedVoice,
+                  voice.disabled && styles.disabledVoice,
+                ]}
+                onPress={() => !voice.disabled && handleVoiceSelect(voice)}
+                disabled={voice.disabled}
+              >
+                <View>
+                  <Text
+                    style={[
+                      styles.voiceName,
+                      voice.disabled && styles.disabledText,
+                    ]}
+                  >
+                    {voice.name}
+                  </Text>
+                  <Text
+                    style={[
+                      styles.voiceDescription,
+                      voice.disabled && styles.disabledText,
+                    ]}
+                  >
+                    {voice.description}
+                  </Text>
+                </View>
+                {selectedVoice.id === voice.id && (
+                  <View style={styles.checkmark} />
+                )}
+              </TouchableOpacity>
+            ))}
+          </View>
+        </View>
+      )}
+
+      {showMusicButton && !isLoadingStory && <MusicButton />}
+
+      {/* 음악 재생 섹션 */}
+      {showMusicSection && !isLoadingStory && !isInitializing && (
+        <View style={styles.musicSection}>
+          <View style={styles.musicContent}>
+            <View style={styles.musicInfo}>
+              <View style={styles.songIconContainer}>
+                <SongIcon width={20} height={20} color="#FFFFFF" />
+              </View>
+              {currentSong && (
+                <Text style={styles.songTitle} numberOfLines={1}>
+                  {currentSong.artist} - {currentSong.title}
+                </Text>
+              )}
+            </View>
+            <TouchableOpacity
+              style={styles.musicControlButton}
+              onPress={handlePlayPause}
+            >
+              {isPlaying ? (
+                <Pause size={16} color="#FFFFFF" />
+              ) : (
+                <Play size={16} color="#FFFFFF" />
+              )}
+            </TouchableOpacity>
+          </View>
+        </View>
+      )}
     </SafeAreaView>
   );
 }
@@ -1113,7 +1521,10 @@ const styles = StyleSheet.create({
   selectedInterest: { backgroundColor: "#007AFF" },
   interestText: { color: "#007AFF", fontSize: 16 },
   selectedInterestText: { color: "#fff" },
-  guideContainer: { flex: 1, marginBottom: 120 },
+  guideContainer: {
+    flex: 1,
+    marginBottom: 180, // 하단 여백 증가 (마이크 버튼 + 음악 섹션 높이)
+  },
   guideContent: { padding: 20 },
   textContainer: { flex: 1, padding: 16 },
   guideText: {
@@ -1130,7 +1541,9 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     backgroundColor: "transparent",
-    paddingBottom: Platform.OS === "ios" ? 20 : 10,
+    paddingBottom: Platform.OS === "ios" ? 32 : 24,
+    zIndex: 2, // 음악 섹션보다 위에 표시되도록
+    marginTop: 16,
   },
   voiceVisualizerContainer: {
     position: "absolute",
@@ -1241,12 +1654,6 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
   },
-  square: {
-    width: 40,
-    height: 40,
-    backgroundColor: "rgba(255, 255, 255, 0.3)",
-    borderRadius: 8,
-  },
   playButton: {
     width: 54,
     height: 40,
@@ -1284,17 +1691,18 @@ const styles = StyleSheet.create({
     backgroundColor: "#FFFFFF",
     borderRadius: 16,
     padding: 20,
-    width: "80%",
+    width: "90%",
     maxWidth: 400,
     position: "absolute",
     bottom: 100,
-    left: 20,
+    alignSelf: "center",
   },
   modalTitle: {
     fontSize: 20,
     fontWeight: "600",
     marginBottom: 16,
     color: "#000000",
+    textAlign: "center",
   },
   voiceOption: {
     flexDirection: "row",
@@ -1305,20 +1713,113 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     marginBottom: 8,
   },
-  selectedVoice: { backgroundColor: "#F0F0F0" },
+  selectedVoice: {
+    backgroundColor: "#F0F0F0",
+  },
   voiceName: {
     fontSize: 18,
     fontWeight: "500",
     color: "#000000",
     marginBottom: 4,
   },
-  voiceDescription: { fontSize: 14, color: "#666666" },
+  voiceDescription: {
+    fontSize: 14,
+    color: "#666666",
+  },
   checkmark: {
     width: 20,
     height: 20,
     borderRadius: 10,
     backgroundColor: "#007AFF",
   },
-  disabledVoice: { opacity: 0.5, backgroundColor: "#F5F5F5" },
-  disabledText: { color: "#999999" },
+  disabledVoice: {
+    opacity: 0.5,
+    backgroundColor: "#F5F5F5",
+  },
+  disabledText: {
+    color: "#999999",
+  },
+  nextButton: {
+    width: 64,
+    height: 40,
+    backgroundColor: "rgba(255, 255, 255, 0.3)",
+    borderRadius: 20,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  nextButtonText: {
+    color: "#FFFFFF",
+    fontSize: 16,
+    fontWeight: "500",
+  },
+  musicButton: {
+    position: "absolute",
+    bottom: 100,
+    right: 20,
+    backgroundColor: "#007AFF",
+    padding: 16,
+    borderRadius: 50,
+    flexDirection: "row",
+    alignItems: "center",
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
+  },
+  musicButtonText: {
+    color: "#FFFFFF",
+    marginLeft: 8,
+    fontSize: 16,
+    fontWeight: "600",
+  },
+  musicSection: {
+    position: "absolute",
+    bottom: 84,
+    left: 20,
+    right: 20,
+    backgroundColor: "rgba(255, 255, 255, 0.1)",
+    borderRadius: 8,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    zIndex: 1,
+    marginBottom: 24,
+  },
+  musicContent: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    height: 48,
+  },
+  musicInfo: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    flex: 1,
+  },
+  songIconContainer: {
+    width: 20,
+    height: 20,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  songTitle: {
+    color: "#FFFFFF",
+    fontSize: 14,
+    lineHeight: 18,
+    fontWeight: "400",
+    flex: 1,
+  },
+  musicControlButton: {
+    width: 32,
+    height: 32,
+    borderRadius: 100,
+    backgroundColor: "#4E7EB8",
+    justifyContent: "center",
+    alignItems: "center",
+    marginLeft: 6,
+  },
 });
