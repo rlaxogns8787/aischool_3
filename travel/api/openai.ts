@@ -1,6 +1,4 @@
-import { getLatLngFromTmap } from "../utils/tmapUtils"; // ✅ TMap API를 활용한 좌표 변환 함수 추가
 import AsyncStorage from "@react-native-async-storage/async-storage";
-
 // Azure OpenAI 설정
 const AZURE_OPENAI_ENDPOINT = "https://ssapy-openai.openai.azure.com/";
 const AZURE_OPENAI_KEY =
@@ -242,27 +240,6 @@ export const generateTravelSchedule = async (tripInfo: TripInfo) => {
     const data = await response.json();
     const scheduleJson = JSON.parse(data.choices[0].message.content);
 
-    // TMap API를 사용해 장소별 위도/경도 추가
-    for (let day of scheduleJson.days) {
-      for (let place of day.places) {
-        const location = await getLatLngFromTmap(place.title);
-        if (location) {
-          place.coords = location; // TMap에서 가져온 좌표 추가
-          console.log(`✅ 장소 '${place.title}' 좌표 저장됨:`, location); // 확인용 로그 추가
-        } else {
-          place.coords = { lat: 0, lng: 0 }; // 좌표가 없을 경우 기본값 설정
-          console.warn(`⚠️ 장소 '${place.title}'의 좌표를 찾을 수 없음`);
-        }
-      }
-    }
-
-    // ✅ 모든 좌표 추가 완료 후 AsyncStorage에 저장
-    await AsyncStorage.setItem("scheduleData", JSON.stringify(scheduleJson));
-    // console.log(
-    //   "🔵 최종 여행 일정 (좌표 포함):",
-    //   JSON.stringify(scheduleJson, null, 2)
-    // );
-
     // 원본 JSON 문자열 저장
     scheduleJson.generatedScheduleRaw = data.choices[0].message.content;
 
@@ -303,6 +280,23 @@ export const generateTravelSchedule = async (tripInfo: TripInfo) => {
 
       return text;
     };
+    // AsyncStorage에 저장
+    try {
+      await AsyncStorage.setItem(
+        "formattedSchedule",
+        JSON.stringify(scheduleJson)
+      );
+      console.log("일정이 성공적으로 저장되었습니다.");
+    } catch (error) {
+      console.error("일정 저장 중 오류 발생:", error);
+    }
+
+    //   // 저장된 데이터를 로그로 출력
+    //   const storedData = await AsyncStorage.getItem("formattedSchedule");
+    //   console.log("저장된 일정 데이터:", storedData);
+    // } catch (error) {
+    //   console.error("일정 저장 중 오류 발생:", error);
+    // }
 
     // JSON 원본은 저장하고, 텍스트 형식으로 변환하여 반환
     return formatScheduleToText(scheduleJson);

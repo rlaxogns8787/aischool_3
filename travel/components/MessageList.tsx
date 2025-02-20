@@ -15,6 +15,8 @@ import Carousel from "react-native-snap-carousel";
 import OptionCard from "./OptionCard";
 import OptionModal from "./OptionModal"; // OptionModal import 추가
 import StyleToggleButton from "./StyleToggleButton";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { addSchedule } from "../api/loginapi";
 
 const { width: screenWidth } = Dimensions.get("window");
 
@@ -31,6 +33,18 @@ type MessageListProps = {
   onStyleToggle: (value: string) => void;
   onStyleSelectComplete: () => void;
   toggleModal: () => void;
+  handleRecreateSchedule: () => void;
+  handleExit: () => void;
+  showScheduleButtons: boolean;
+  selectedOption: "recreate" | "confirm" | null;
+  setSelectedOptions: React.Dispatch<
+    React.SetStateAction<{ [key: string]: "recreate" | "confirm" | null }>
+  >;
+  handleRestart: () => void;
+  disabledButtons: { [key: string]: boolean };
+  setDisabledButtons: React.Dispatch<
+    React.SetStateAction<{ [key: string]: boolean }>
+  >;
 };
 
 const OptionButton = ({
@@ -69,10 +83,26 @@ export default function MessageList({
   onStyleToggle,
   onStyleSelectComplete,
   toggleModal,
+  handleRecreateSchedule, // ✅ 반드시 이 이름으로 받기
+  handleExit,
+  handleRestart,
+  showScheduleButtons,
+  selectedOption,
 }: MessageListProps) {
   const scrollViewRef = useRef<ScrollView>(null);
   const [isModalVisible, setModalVisible] = useState(false);
   const [selectedCard, setSelectedCard] = useState<CardItem | null>(null);
+  const [schedule, setSchedule] = useState<any>(null);
+
+  useEffect(() => {
+    const fetchSchedule = async () => {
+      const storedSchedule = await AsyncStorage.getItem("formattedSchedule");
+      if (storedSchedule) {
+        setSchedule(JSON.parse(storedSchedule));
+      }
+    };
+    fetchSchedule();
+  }, []);
 
   const handleCardPress = (card: CardItem) => {
     setSelectedCard(card);
@@ -83,6 +113,17 @@ export default function MessageList({
     setModalVisible(false);
     setSelectedCard(null);
   };
+
+  const handleUpdateSchedule = (updatedSchedule: any) => {
+    setSchedule(updatedSchedule);
+  };
+
+  const [selectedOptions, setSelectedOptions] = useState<{
+    [key: string]: "recreate" | "confirm" | "restart" | null;
+  }>({});
+  const [disabledButtons, setDisabledButtons] = useState<{
+    [key: string]: boolean;
+  }>({});
 
   // 새 메시지가 추가될 때 자동 스크롤
   useEffect(() => {
@@ -159,117 +200,164 @@ export default function MessageList({
               )}
               {/* OptionCard 렌더링 */}
               {message.isBot &&
-                message.text.includes("여행 일정이 생성되었습니다") && (
-                  <OptionCard
-                    image="https://cdn.informaticsview.com/news/photo/202408/480_1718_1317.jpg" // 실제 이미지 URL로 변경
-                    people="2명"
-                    title="여행 일정"
-                    date="3박 4일"
-                    info="여행 일정이 생성되었습니다. 자세한 내용은 나중에 DB에서 가져올 예정입니다."
-                    onPress={() =>
-                      handleCardPress({
-                        image: {
-                          uri: "https://cdn.informaticsview.com/news/photo/202408/480_1718_1317.jpg",
-                        },
-                        keyword: "여행",
-                        title: "여행 일정",
-                        address: "3박 4일",
-                      })
-                    }
-                  />
+                (message.text.includes("여행 일정이 생성되었습니다") ||
+                  message.text.includes("새로운 일정이 생성되었습니다")) && (
+                  <OptionCard onPress={() => handleCardPress(schedule)} />
                 )}
+
+              {/* ✅ 일정 생성 후 일정 재생성/확정 버튼 표시 */}
+              {message.text.includes("일정이 생성되었습니다") && (
+                <View style={styles.optionsContainer}>
+                  <TouchableOpacity
+                    style={[
+                      styles.optionButton,
+                      selectedOptions[message.id] === "recreate" &&
+                        styles.optionButtonSelected,
+                    ]}
+                    onPress={() => {
+                      if (!disabledButtons[message.id]) {
+                        // 🔹 개별 메시지의 버튼이 비활성화 상태가 아니면 실행
+                        handleRecreateSchedule();
+                        setSelectedOptions((prev) => ({
+                          ...prev,
+                          [message.id]: "recreate",
+                        }));
+                        setDisabledButtons((prev) => ({
+                          ...prev,
+                          [message.id]: true,
+                        })); // 🔹 해당 메시지 버튼 비활성화
+                      }
+                    }}
+                    disabled={disabledButtons[message.id]} // 🔹 개별 메시지의 버튼을 비활성화
+                  >
+                    <Text
+                      style={[
+                        styles.optionText,
+                        selectedOptions[message.id] === "recreate" &&
+                          styles.optionTextSelected,
+                      ]}
+                    >
+                      일정을 다시 짜주세요
+                    </Text>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    style={[
+                      styles.optionButton,
+                      selectedOptions[message.id] === "confirm" &&
+                        styles.optionButtonSelected,
+                    ]}
+                    onPress={async () => {
+                      if (!disabledButtons[message.id]) {
+                        handleExit();
+                        setSelectedOptions((prev) => ({
+                          ...prev,
+                          [message.id]: "confirm",
+                        }));
+                        setDisabledButtons((prev) => ({
+                          ...prev,
+                          [message.id]: true,
+                        }));
+
+                        // 🔹 일정 확정 시 AsyncStorage에 저장
+                        try {
+                          const userData = await AsyncStorage.getItem("userData");
+                          if (userData) {
+                            await AsyncStorage.setItem("confirmedUserData", userData);
+                            console.log("UserData -> confirmedUserData 에 저장됨:", userData);
+                          }
+
+                          const formattedSchedule = await AsyncStorage.getItem("formattedSchedule");
+                          if (formattedSchedule) {
+                            const scheduleData = JSON.parse(formattedSchedule);
+                            
+                            // 🔹 timestamp 형식 변환
+                            scheduleData.timestamp = new Date().toISOString(); // 현재 시간을 ISO 8601 형식으로 변환
+
+                            await AsyncStorage.setItem("confirmedSchedule", JSON.stringify(scheduleData));
+                            console.log("FormattedSchedule -> confirmedSchedule 에 저장됨:", scheduleData);
+                            
+                            // 🔹 DB에 일정 추가
+                            await addSchedule(scheduleData); // DB에 일정 추가
+                            console.log("일정이 DB에 성공적으로 저장되었습니다.");
+                          }
+
+                          console.log("일정과 사용자 데이터가 성공적으로 저장되었습니다.");
+                        } catch (error) {
+                          console.error("데이터 저장 중 오류 발생:", error);
+                        }
+                      }
+                    }}
+                    disabled={disabledButtons[message.id]} // 🔹 개별 메시지의 버튼을 비활성화
+                  >
+                    <Text
+                      style={[
+                        styles.optionText,
+                        selectedOptions[message.id] === "confirm" &&
+                          styles.optionTextSelected,
+                      ]}
+                    >
+                      일정이 마음에 들어요
+                    </Text>
+                  </TouchableOpacity>
+
+                  {/* ✅ 추가: 처음부터 다시 할래요 버튼 */}
+                  <TouchableOpacity
+                    style={[
+                      styles.optionButton,
+                      selectedOptions[message.id] === "restart" &&
+                        styles.optionButtonSelected, // ✅ 선택된 상태일 때 스타일 추가
+                    ]}
+                    onPress={() => {
+                      if (!disabledButtons[message.id]) {
+                        handleRestart(); // 기존 handleRestart 호출
+                        setSelectedOptions((prev) => ({
+                          ...prev,
+                          [message.id]: "restart",
+                        })); // ✅ 선택된 옵션으로 'restart' 저장
+                        setDisabledButtons((prev) => ({
+                          ...prev,
+                          [message.id]: true,
+                        })); // ✅ 버튼 비활성화
+                      }
+                    }}
+                    disabled={disabledButtons[message.id]} // ✅ 비활성화 적용
+                  >
+                    <Text
+                      style={[
+                        styles.optionText,
+                        selectedOptions[message.id] === "restart" &&
+                          styles.optionTextSelected, // ✅ 텍스트 스타일 변경
+                      ]}
+                    >
+                      처음부터 다시 할래요
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              )}
             </View>
           ) : null
         )}
-        {messages.some((msg) => msg.isLoading) &&
+
+        {/* {messages.some((msg) => msg.isLoading) &&
           !messages.some((msg) =>
             msg.text.includes("여행 일정이 생성되었습니다")
-          ) && <LoadingBubble />}
+          ) && <LoadingBubble />} */}
+        {messages.some((msg) => msg.isLoading) && <LoadingBubble />}
       </ScrollView>
       {selectedCard && (
         <OptionModal
           isVisible={isModalVisible}
           onClose={handleCloseModal}
-          images={[
-            {
-              uri: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSt3DCbI2D3dd9d5foUaeITIVjicguWURtF4w&s",
-            },
-            {
-              uri: "https://thumb.pann.com/tc_480/http://fimg5.pann.com/new/download.jsp?FileID=55485262",
-            },
-            {
-              uri: "https://i.pinimg.com/736x/f1/ee/c9/f1eec90d828b0d417e86143daf493261.jpg",
-            },
-          ]} // 여러 이미지 전달
-          themeName={selectedCard.title}
-          description={selectedCard.address}
-          keywords={[selectedCard.keyword]} // 예시로 키워드 전달
-          dayPlans={[
-            {
-              day: "1일차",
-              date: "2.12/월",
-              places: [
-                {
-                  image: {
-                    uri: "https://www.heritage.go.kr/gung/gogung1/images/ic-c1.jpg",
-                  },
-                  name: "경복궁",
-                  address: "서울 중구",
-                  duration: "29분 소요",
-                },
-                {
-                  image: {
-                    uri: "https://heritage.unesco.or.kr/wp-content/uploads/2019/04/hd6_393_i1.jpg",
-                  },
-                  name: "창덕궁",
-                  address: "서울 종로구",
-                  duration: "45분 소요",
-                },
-                {
-                  image: {
-                    uri: "https://upload.wikimedia.org/wikipedia/commons/3/35/%EB%8D%95%EC%88%98%EA%B6%81.jpg",
-                  },
-                  name: "덕수궁",
-                  address: "서울 중구",
-                  duration: "30분 소요",
-                },
-              ],
-            },
-            {
-              day: "2일차",
-              date: "2.13/화",
-              places: [
-                {
-                  image: {
-                    uri: "https://cdn.pixabay.com/photo/2022/09/16/17/08/namsan-tower-7459178_640.jpg",
-                  },
-                  name: "남산타워",
-                  address: "서울 용산구",
-                  duration: "45분 소요",
-                },
-                {
-                  image: {
-                    uri: "https://cdn.pixabay.com/photo/2014/04/17/05/16/myeongdong-326136_640.jpg",
-                  },
-                  name: "명동",
-                  address: "서울 중구",
-                  duration: "1시간 소요",
-                },
-                {
-                  image: {
-                    uri: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTrQr8t3KCKCw8qbz1kKg44Ls_ZAT1hpAtKPQ&s",
-                  },
-                  name: "동대문",
-                  address: "서울 중구",
-                  duration: "1시간 30분 소요",
-                },
-              ],
-            },
-            // 다른 일차들 추가
-          ]}
+          images={schedule.images}
+          themeName={schedule.title}
+          description={schedule.description}
+          keywords={schedule.keywords}
+          dayPlans={schedule.days}
           onShare={() => {}}
           onPlacePress={() => {}}
           onShareWithColleagues={() => {}}
+          onUpdate={handleUpdateSchedule} // 추가된 부분
         />
       )}
     </View>
@@ -328,7 +416,7 @@ const styles = StyleSheet.create({
   optionText: {
     fontSize: 16,
     color: "#007AFF",
-    textAlign: "left",
+    textAlign: "center",
   },
   optionTextSelected: {
     color: "#FFFFFF",
@@ -377,5 +465,13 @@ const styles = StyleSheet.create({
   loadingText: {
     fontSize: 14,
     color: "#666",
+  },
+  recreateButton: {
+    backgroundColor: "#F2F2F7", // ✅ 기존 옵션 스타일의 회색 배경
+    borderColor: "#D1D1D6", // ✅ 기존 옵션 스타일과 동일한 테두리
+  },
+  exitButton: {
+    backgroundColor: "#007AFF", // ✅ 기존 옵션 스타일의 파란색 배경
+    borderColor: "#007AFF",
   },
 });

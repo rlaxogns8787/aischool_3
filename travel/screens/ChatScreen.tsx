@@ -12,7 +12,11 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { useNavigation, NavigationProp } from "@react-navigation/native";
 import MessageList from "../components/MessageList";
 import MessageInput from "../components/MessageInput";
-import { chatWithAI, generateTravelSchedule } from "../api/openai";
+import {
+  chatWithAI,
+  generateTravelSchedule,
+  generateImage,
+} from "../api/openai";
 import Icon from "react-native-vector-icons/Ionicons";
 import DateTimePicker, {
   DateTimePickerEvent,
@@ -78,6 +82,16 @@ export default function ChatScreen() {
   const [selectedStartDate, setSelectedStartDate] = useState<Date | null>(null);
   const [selectedEndDate, setSelectedEndDate] = useState<Date | null>(null);
   const [isSelectingEndDate, setIsSelectingEndDate] = useState(false);
+  const [showScheduleButtons, setShowScheduleButtons] = useState(false);
+  const [selectedOption, setSelectedOption] = useState<
+    "recreate" | "confirm" | null
+  >(null);
+  const [selectedOptions, setSelectedOptions] = useState<{
+    [key: string]: "recreate" | "confirm" | null;
+  }>({});
+  const [disabledButtons, setDisabledButtons] = useState<{
+    [key: string]: boolean;
+  }>({});
 
   // 여행 일정 데이터 AsyncStorage에서 가져와 TMapScreen으로 이동
   const handleShowMap = async () => {
@@ -98,6 +112,9 @@ export default function ChatScreen() {
   useEffect(() => {
     setMessages([INITIAL_MESSAGE]);
   }, []);
+
+  // 메시지 개수 확인
+  useEffect(() => {}, [messages]);
 
   // 메시지 업데이트 헬퍼 함수
   const updateMessages = (newMessages: Message[], removePattern?: string) => {
@@ -248,12 +265,13 @@ export default function ChatScreen() {
         day: "numeric",
       });
 
-      // 여행 기간 계산 수정
-      const days = Math.ceil(
-        (endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)
-      ); // +1 제거
-      const nights = days; // 당일치기면 0박, 1박이상이면 days값 그대로 사용
-      const duration = `${nights}박${days + 1}일`; // 일수는 +1 (당일 포함)
+      // 날짜 차이 계산 수정 (당일치기 고려)
+      const timeDiff = endDate.getTime() - startDate.getTime();
+      const days = Math.floor(timeDiff / (1000 * 60 * 60 * 24));
+
+      // 당일치기(시작일 = 종료일)인 경우 0박1일, 아닌 경우 n박(n+1)일
+      const nights = days;
+      const duration = days === 0 ? "0박1일" : `${nights}박${days + 1}일`;
 
       const confirmMessage: Message = {
         id: Date.now().toString(),
@@ -275,13 +293,6 @@ export default function ChatScreen() {
         "여행 날짜를 선택해주세요"
       );
       setDatePickerVisible(false);
-
-      // 디버그 로그
-      console.log("Date selection completed:", {
-        startDate: formattedStartDate,
-        endDate: formattedEndDate,
-        duration,
-      });
     } catch (error) {
       console.error("Date handling error:", error);
       Alert.alert("오류", "날짜 처리 중 오류가 발생했습니다.");
@@ -294,6 +305,22 @@ export default function ChatScreen() {
 
     try {
       setIsLoading(true);
+
+      // ✅ 🔄 일정 재생성 요청 감지 및 AI 일정 생성
+      if (text === "새로운 일정을 요청합니다.") {
+        const aiResponse = await chatWithAI("새로운 일정을 요청합니다.");
+
+        const aiMessage: Message = {
+          id: Date.now().toString(),
+          text: `🗓 새로운 일정이 생성되었습니다!\n\n${aiResponse}`,
+          isBot: true,
+          timestamp: new Date().toISOString(),
+        };
+
+        setMessages((prev) => [...prev, aiMessage]);
+        setIsLoading(false);
+        return; // ✅ 여기서 함수 종료
+      }
 
       // 예산 응답 처리
       if (messages.some((msg) => msg.text.includes("여행 예산은 어느 정도"))) {
@@ -498,6 +525,53 @@ export default function ChatScreen() {
         };
         updateMessages([aiMessage]);
       }
+
+      // 일정 생성 시 이미지도 함께 생성
+      if (text.includes("일정 생성") || text.includes("새로운 일정")) {
+        try {
+          // 1. 먼저 일정 생성
+          const aiResponse = await generateTravelSchedule(tripInfo);
+
+          // 2. 여행지 기반으로 이미지 생성
+          const destination = tripInfo.destination || "한국 여행";
+          const imagePrompt = `Beautiful travel destination photo of ${destination}, scenic view, high quality, 4k`;
+          const generatedImage = await generateImage(imagePrompt);
+
+          // 3. 생성된 일정과 이미지를 함께 저장
+          const scheduleWithImage = {
+            ...JSON.parse(aiResponse),
+            image: generatedImage.url, // 생성된 이미지 URL
+          };
+
+          // 4. AsyncStorage에 저장
+          await AsyncStorage.setItem(
+            "formattedSchedule",
+            JSON.stringify(scheduleWithImage)
+          );
+
+          // 5. AI 응답 메시지 추가
+          const aiMessage: Message = {
+            id: Date.now().toString(),
+            text: `🗓 새로운 일정이 생성되었습니다!\n\n${aiResponse}`,
+            isBot: true,
+            timestamp: new Date().toISOString(),
+          };
+
+          setMessages((prev) => [...prev, aiMessage]);
+        } catch (error) {
+          console.error("Schedule generation error:", error);
+          const errorMessage: Message = {
+            id: Date.now().toString(),
+            text: `죄송합니다. ${
+              error.message ||
+              "일정 생성 중 오류가 발생했습니다. 다시 시도해주세요."
+            }`,
+            isBot: true,
+            timestamp: new Date().toISOString(),
+          };
+          updateMessages([errorMessage]);
+        }
+      }
     } catch (error) {
       console.error("Chat error:", error);
       const errorMessage: Message = {
@@ -506,9 +580,183 @@ export default function ChatScreen() {
         isBot: true,
         timestamp: new Date().toISOString(),
       };
-      updateMessages([errorMessage]);
+      setMessages((prev) => [...prev, errorMessage]);
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  // ⏹ 일정 종료 함수
+  const handleExit = () => {
+    // ✅ 일정 확정 메시지를 채팅에 추가
+    setMessages((prev) => [
+      ...prev,
+      {
+        id: Date.now().toString(),
+        text: "✅ 여행일정이 확정되었습니다!",
+        isBot: true,
+        timestamp: new Date().toISOString(),
+      },
+    ]);
+    setSelectedOption("confirm"); // ✅ 선택한 버튼 스타일 변경
+    setShowScheduleButtons(false); // 버튼 숨기기
+  };
+
+  //처음부터 다시 시작 버튼 함수
+  const handleRestart = () => {
+    setMessages((prev) => [
+      ...prev,
+      {
+        id: Date.now().toString(),
+        text: "네, 처음부터 시작하겠습니다.",
+        isBot: true,
+        timestamp: new Date().toISOString(),
+      },
+    ]);
+
+    // 날짜 관련 상태 초기화
+    setStartDate(new Date());
+    setEndDate(new Date());
+    setSelectedStartDate(null);
+    setSelectedEndDate(null);
+    setIsSelectingEndDate(false);
+    setDatePickerVisible(false);
+    setDatePickerMode("start");
+
+    // 1.5초 후 초기 메시지로 리셋
+    setTimeout(() => {
+      setMessages([INITIAL_MESSAGE]);
+      setSelectedOptions({});
+      setDisabledButtons({});
+    }, 1500);
+
+    setShowScheduleButtons(false);
+  };
+
+  // 일정 생성 감지
+  useEffect(() => {
+    if (messages.length > 0) {
+      const lastMessage = messages[messages.length - 1]; // 마지막 메시지 가져오기
+
+      // 🔹 일정 생성 완료 메시지 감지
+      if (
+        lastMessage.text.includes("예산 정리") ||
+        lastMessage.text.includes("일정이 생성")
+      ) {
+        setShowScheduleButtons(true);
+        setMessages((prev) => {
+          if (prev.some((msg) => msg.isLoading)) {
+            return prev.filter((msg) => !msg.isLoading);
+          }
+          return prev;
+        });
+      }
+
+      // 🔹 새로운 일정 요청 감지 (추가된 코드)
+      if (lastMessage.text.includes("새로운 일정을 요청합니다.")) {
+        handleSendMessage("새로운 일정을 요청합니다.");
+      }
+    }
+  }, [messages]); // messages 변경될 때마다 실행
+
+  // ✅ 일정이 생성된 후에도 버튼을 계속 표시
+  useEffect(() => {
+    if (messages.some((msg) => msg.text.includes("일정이 생성되었습니다"))) {
+      setShowScheduleButtons(true); // ✅ 일정 생성 후 버튼 다시 활성화
+    }
+  }, [messages]);
+
+  // 🔄 일정 재생성 함수
+  const handleRecreateSchedule = async () => {
+    // ✅ 기존 일정 버튼 숨기기
+    setShowScheduleButtons(false);
+    setSelectedOption(null);
+
+    // ✅ 로딩 메시지 추가
+    const loadingMessage: Message = {
+      id: `loading-${Date.now()}`,
+      isBot: true,
+      text: "🔄 AI가 여행 일정을 재생성하고 있습니다...",
+      timestamp: new Date().toISOString(),
+      isLoading: true,
+    };
+    setMessages((prev) => [...prev, loadingMessage]);
+
+    // ✅ 1초 대기 후 일정 생성 요청 (UI 반영 시간 확보)
+    await new Promise((resolve) => setTimeout(resolve, 1000));
+
+    // ✅ 기존 사용자 선택 정보 찾기
+    const tripInfo = {
+      styles: messages
+        .find((msg) => msg.text.includes("여행 스타일:"))
+        ?.text.split("여행 스타일: ")[1]
+        .split("\n")[0]
+        .split(", "),
+      destination: messages
+        .find((msg) => msg.text.includes("여행 지역:"))
+        ?.text.split("여행 지역: ")[1]
+        .split("\n")[0],
+      startDate: selectedStartDate,
+      endDate: selectedEndDate,
+      duration: `${startDate.toLocaleDateString("ko-KR", {
+        year: "numeric",
+        month: "long",
+        day: "numeric",
+      })}부터 ${endDate.toLocaleDateString("ko-KR", {
+        year: "numeric",
+        month: "long",
+        day: "numeric",
+      })}까지`,
+      companion: messages
+        .find((msg) => msg.text.includes("여행 인원:"))
+        ?.text.split("여행 인원: ")[1]
+        .split("\n")[0],
+      budget: messages
+        .find((msg) => msg.text.includes("예산:"))
+        ?.text.split("예산: ")[1]
+        .split("\n")[0],
+      transportation: messages
+        .find((msg) => msg.text.includes("교통수단:"))
+        ?.text.split("교통수단: ")[1]
+        .split("\n")[0]
+        .split(", "),
+    };
+
+    try {
+      // ✅ AI 일정 요청
+      const aiResponse = await generateTravelSchedule(tripInfo);
+
+      // ✅ AI 응답 메시지 추가 (로딩 메시지 대체)
+      setMessages((prev) =>
+        prev
+          .filter((msg) => !msg.isLoading) // 기존 로딩 메시지 제거
+          .concat([
+            {
+              id: Date.now().toString(),
+              text: `🗓 새로운 일정이 생성되었습니다!\n\n${aiResponse}`,
+              isBot: true,
+              timestamp: new Date().toISOString(),
+            },
+          ])
+      );
+      // ✅ 일정이 새로 생성되었으므로 버튼 다시 표시 (0.5초 뒤 실행)
+      setTimeout(() => {
+        setShowScheduleButtons(true);
+      }, 500);
+    } catch (error) {
+      console.error("❌ 일정 재생성 실패:", error);
+      setMessages((prev) =>
+        prev
+          .filter((msg) => !msg.isLoading) // 기존 로딩 메시지 제거
+          .concat([
+            {
+              id: Date.now().toString(),
+              text: "❌ 일정 재생성 중 오류가 발생했습니다. 다시 시도해주세요.",
+              isBot: true,
+              timestamp: new Date().toISOString(),
+            },
+          ])
+      );
     }
   };
 
@@ -849,6 +1097,57 @@ export default function ChatScreen() {
     ]);
   };
 
+  // 오늘 자정으로 설정된 Date 객체 생성
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  // DatePicker 부분
+  <DateTimePicker
+    testID="dateTimePicker"
+    value={datePickerMode === "start" ? startDate : endDate}
+    mode="date"
+    display="inline"
+    onChange={(event: DateTimePickerEvent, date?: Date) => {
+      if (event.type === "set" && date) {
+        if (datePickerMode === "start") {
+          // 시작일 선택
+          setStartDate(date);
+          setSelectedStartDate(date);
+          setDatePickerMode("end");
+          setEndDate(date); // 시작일과 동일한 날짜로 초기화
+        } else {
+          // 종료일 선택
+          if (date >= selectedStartDate!) {
+            setEndDate(date);
+            setSelectedEndDate(date);
+            handleConfirm();
+          } else {
+            Alert.alert("알림", "종료일은 시작일과 같거나 이후여야 합니다.");
+          }
+        }
+      }
+    }}
+    minimumDate={today} // 시작일, 종료일 모두 오늘부터 선택 가능
+    locale="ko-KR"
+    style={[styles.datePicker, { height: 350 }]}
+  />;
+
+  // 날짜 선택 초기화 시 시작일 모드로 설정
+  const resetDatePicker = () => {
+    setDatePickerMode("start");
+    setStartDate(new Date());
+    setEndDate(new Date());
+    setSelectedStartDate(null);
+    setSelectedEndDate(null);
+  };
+
+  // DatePicker가 처음 열릴 때 시작일 모드로 설정
+  useEffect(() => {
+    if (messages.some((msg) => msg.text.includes("여행 날짜를 선택해주세요"))) {
+      resetDatePicker();
+    }
+  }, [messages]);
+
   return (
     <SafeAreaView style={styles.container}>
       {/* Navigation Bar */}
@@ -877,6 +1176,14 @@ export default function ChatScreen() {
             onStyleToggle={handleStyleToggle}
             onStyleSelectComplete={handleStyleSelectComplete}
             keyboardShouldPersistTaps="handled"
+            handleRecreateSchedule={handleRecreateSchedule}
+            handleExit={handleExit}
+            handleRestart={handleRestart}
+            showScheduleButtons={showScheduleButtons}
+            selectedOption={selectedOption}
+            setSelectedOptions={setSelectedOptions} // ✅ 추가
+            disabledButtons={disabledButtons} // ✅ 추가
+            setDisabledButtons={setDisabledButtons} // ✅ 추가
           />
         </View>
 
@@ -891,8 +1198,17 @@ export default function ChatScreen() {
         ) && (
           <View style={styles.datePickerContainer}>
             <View style={styles.datePickerHeader}>
-              <TouchableOpacity onPress={hideDatePicker}>
-                <Text style={styles.datePickerButton}>취소</Text>
+              <TouchableOpacity
+                onPress={() => {
+                  // 재선택 시 시작일 선택 모드로 변경하고 날짜 초기화
+                  setDatePickerMode("start");
+                  setStartDate(new Date());
+                  setEndDate(new Date());
+                  setSelectedStartDate(null);
+                  setSelectedEndDate(null);
+                }}
+              >
+                <Text style={styles.datePickerButton}>재선택</Text>
               </TouchableOpacity>
               <Text style={styles.datePickerTitle}>
                 {datePickerMode === "start" ? "시작일" : "종료일"} 선택
@@ -901,9 +1217,7 @@ export default function ChatScreen() {
                 onPress={() => {
                   if (datePickerMode === "start") {
                     setDatePickerMode("end");
-                    setEndDate(
-                      new Date(startDate.getTime() + 24 * 60 * 60 * 1000)
-                    ); // 다음날로 설정
+                    setEndDate(startDate); // 다음날이 아닌 시작일과 동일하게 설정
                   } else {
                     handleConfirm();
                   }
@@ -918,21 +1232,18 @@ export default function ChatScreen() {
               testID="dateTimePicker"
               value={datePickerMode === "start" ? startDate : endDate}
               mode="date"
-              is24Hour={true}
               display="inline"
               onChange={(event: DateTimePickerEvent, date?: Date) => {
-                console.log("Date selected:", date);
-                console.log("startDate:", startDate);
-                console.log("endDate:", endDate);
                 if (event.type === "set" && date) {
                   if (datePickerMode === "start") {
+                    // 시작일 선택
                     setStartDate(date);
                     setSelectedStartDate(date);
                     setDatePickerMode("end");
                     setEndDate(date); // 시작일과 동일한 날짜로 초기화
-                    setSelectedEndDate(date);
                   } else {
-                    if (date >= startDate) {
+                    // 종료일 선택
+                    if (date >= selectedStartDate!) {
                       setEndDate(date);
                       setSelectedEndDate(date);
                       handleConfirm();
@@ -945,7 +1256,7 @@ export default function ChatScreen() {
                   }
                 }
               }}
-              minimumDate={datePickerMode === "start" ? new Date() : startDate}
+              minimumDate={today} // 시작일, 종료일 모두 오늘부터 선택 가능
               locale="ko-KR"
               style={[styles.datePicker, { height: 350 }]}
             />

@@ -1,15 +1,18 @@
-import React from "react";
+import React, { useEffect } from "react";
 import {
   View,
   Text,
   StyleSheet,
   TouchableOpacity,
   ScrollView,
+  Alert,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { ArrowLeft } from "lucide-react-native";
 import { Schedule } from "../types/schedule";
-import { useRoute, RouteProp } from "@react-navigation/native";
+import { useRoute, RouteProp, useNavigation } from "@react-navigation/native";
+import TrashIcon from "../assets/trash.svg";
+import { deleteSchedule as deleteScheduleAPI, getSchedules } from "../api/loginapi";
 
 type RouteParams = {
   ScheduleDetail: {
@@ -19,7 +22,42 @@ type RouteParams = {
 
 export default function ScheduleDetail() {
   const route = useRoute<RouteProp<RouteParams, "ScheduleDetail">>();
+  const navigation = useNavigation();
   const { schedule } = route.params;
+
+  const deleteSchedule = async (id: string) => {
+    Alert.alert("일정 삭제", "이 일정을 삭제하시겠습니까?", [
+      {
+        text: "취소",
+        style: "cancel",
+      },
+      {
+        text: "삭제",
+        style: "destructive",
+        onPress: async () => {
+          try {
+            await deleteScheduleAPI(id);
+            navigation.goBack();
+          } catch (error) {
+            console.error("Failed to delete schedule:", error);
+          }
+        },
+      },
+    ]);
+  };
+
+  useEffect(() => {
+    const fetchSchedules = async () => {
+      try {
+        const schedules = await getSchedules();
+        // Handle the fetched schedules as needed
+      } catch (error) {
+        console.error("Failed to fetch schedules:", error);
+      }
+    };
+
+    fetchSchedules();
+  }, []);
 
   return (
     <SafeAreaView style={styles.container}>
@@ -28,7 +66,11 @@ export default function ScheduleDetail() {
           <ArrowLeft size={24} color="#000" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>여행 일정</Text>
-        <View style={{ width: 24 }} />
+        <TouchableOpacity
+          onPress={() => deleteSchedule(schedule.id || schedule.tripId)}
+        >
+          <TrashIcon width={24} height={24} color="#FF4D4D" />
+        </TouchableOpacity>
       </View>
 
       <ScrollView style={styles.content}>
@@ -48,7 +90,7 @@ export default function ScheduleDetail() {
                 <View style={styles.activityContent}>
                   <Text style={styles.place}>{activity.place}</Text>
                   <Text style={styles.description}>{activity.description}</Text>
-                  {activity.cost && (
+                  {activity.cost > 0 && (
                     <Text style={styles.cost}>
                       ₩{activity.cost.toLocaleString()}
                     </Text>
