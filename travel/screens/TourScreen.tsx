@@ -1081,6 +1081,48 @@ Additional context: ${currentPlace.description}`,
           </View>
         </View>
       </View>
+
+      {showVoiceModal && (
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>음성 선택</Text>
+            {voiceTypes.map((voice) => (
+              <TouchableOpacity
+                key={voice.id}
+                style={[
+                  styles.voiceOption,
+                  selectedVoice.id === voice.id && styles.selectedVoice,
+                  voice.disabled && styles.disabledVoice,
+                ]}
+                onPress={() => !voice.disabled && handleVoiceSelect(voice)}
+                disabled={voice.disabled}
+              >
+                <View>
+                  <Text
+                    style={[
+                      styles.voiceName,
+                      voice.disabled && styles.disabledText,
+                    ]}
+                  >
+                    {voice.name}
+                  </Text>
+                  <Text
+                    style={[
+                      styles.voiceDescription,
+                      voice.disabled && styles.disabledText,
+                    ]}
+                  >
+                    {voice.description}
+                  </Text>
+                </View>
+                {selectedVoice.id === voice.id && (
+                  <View style={styles.checkmark} />
+                )}
+              </TouchableOpacity>
+            ))}
+          </View>
+        </View>
+      )}
     </SafeAreaView>
   );
 }
@@ -1284,17 +1326,18 @@ const styles = StyleSheet.create({
     backgroundColor: "#FFFFFF",
     borderRadius: 16,
     padding: 20,
-    width: "80%",
+    width: "90%",
     maxWidth: 400,
     position: "absolute",
     bottom: 100,
-    left: 20,
+    alignSelf: "center",
   },
   modalTitle: {
     fontSize: 20,
     fontWeight: "600",
     marginBottom: 16,
     color: "#000000",
+    textAlign: "center",
   },
   voiceOption: {
     flexDirection: "row",
@@ -1305,20 +1348,30 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     marginBottom: 8,
   },
-  selectedVoice: { backgroundColor: "#F0F0F0" },
+  selectedVoice: {
+    backgroundColor: "#F0F0F0",
+  },
   voiceName: {
     fontSize: 18,
     fontWeight: "500",
     color: "#000000",
     marginBottom: 4,
   },
-  voiceDescription: { fontSize: 14, color: "#666666" },
+  voiceDescription: {
+    fontSize: 14,
+    color: "#666666",
+  },
   checkmark: {
     width: 20,
     height: 20,
     borderRadius: 10,
     backgroundColor: "#007AFF",
   },
-  disabledVoice: { opacity: 0.5, backgroundColor: "#F5F5F5" },
-  disabledText: { color: "#999999" },
+  disabledVoice: {
+    opacity: 0.5,
+    backgroundColor: "#F5F5F5",
+  },
+  disabledText: {
+    color: "#999999",
+  },
 });
