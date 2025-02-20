@@ -23,6 +23,8 @@ import {
   type WeatherData,
 } from "../services/weatherService";
 import { useNavigation, NavigationProp } from "@react-navigation/native";
+import { getSchedules } from "../api/loginapi";
+
 
 // 임시 데이터
 const scheduleData = {
@@ -109,19 +111,10 @@ export default function HomeScreen() {
     useCallback(() => {
       async function loadScheduleData() {
         try {
-          const storedSchedule = await AsyncStorage.getItem(
-            "confirmedSchedule"
-          );
-          if (storedSchedule) {
-            const parsedSchedule = JSON.parse(storedSchedule);
-            // travelStyle이 없는 경우 keywords를 사용하거나 기본값 설정
-            if (!parsedSchedule.travelStyle && parsedSchedule.keywords) {
-              parsedSchedule.travelStyle = parsedSchedule.keywords;
-            }
-            setSchedule(parsedSchedule);
-          }
+          const scheduleData = await getSchedules();
+          setSchedule(scheduleData);
         } catch (error) {
-          console.error("Failed to load schedule from AsyncStorage:", error);
+          console.error("Failed to load schedule from database:", error);
         }
       }
 
@@ -196,39 +189,45 @@ export default function HomeScreen() {
           </View>
         </View>
 
-        {/* Travel Card - 일정이 있을 때만 표시 */}
-        {schedule && schedule.tripId && (
-          <View style={styles.travelCardContainer}>
-            <View style={styles.travelCard}>
-              <View style={styles.cardHeader}>
-                <Text style={styles.timeLabel}>
-                  {isToday(new Date(schedule.startDate))
-                    ? "오늘 예정"
-                    : formatDate(new Date(schedule.startDate))}
-                </Text>
-                <View style={styles.travelStyleContainer}>
-                  {schedule.travelStyle &&
-                    schedule.travelStyle.map((style: string, index: number) => (
-                      <View key={index} style={styles.styleTag}>
-                        <Text style={styles.tagText}>{style}</Text>
-                      </View>
-                    ))}
-                </View>
-              </View>
-              <View style={styles.cardContent}>
-                <Text style={styles.cardTitle}>{schedule.title}</Text>
-                <TouchableOpacity
-                  style={styles.arrowButton}
-                  onPress={() => {
-                    navigation.navigate("Tour");
-                  }}
-                >
-                  <FlyArrowIcon width={20} height={20} color="#FFFFFF" />
-                </TouchableOpacity>
+        {/* Travel Card - 하단에 고정 */}
+        <View style={styles.travelCardContainer}>
+          <View style={styles.travelCard}>
+            <View style={styles.cardHeader}>
+              <Text style={styles.timeLabel}>
+                {schedule && isToday(new Date(schedule.startDate))
+                  ? "오늘 예정"
+                  : schedule
+                  ? formatDate(new Date(schedule.startDate))
+                  : ""}
+              </Text>
+              <View style={styles.travelStyleContainer}>
+                {schedule &&
+                  schedule.keywords &&
+                  schedule.keywords.map((style, index) => (
+                    <View key={index} style={styles.styleTag}>
+                      <Text style={styles.tagText}>{style}</Text>
+                    </View>
+                  ))}
               </View>
             </View>
+            <View style={styles.cardContent}>
+              <Text style={styles.cardTitle}>
+                {schedule ? schedule.title : ""}
+              </Text>
+              <Text style={styles.cardSummary}>
+                {schedule ? schedule.summary : ""}
+              </Text>
+              <TouchableOpacity
+                style={styles.arrowButton}
+                onPress={() => {
+                  navigation.navigate("Tour");
+                }}
+              >
+                <FlyArrowIcon width={20} height={20} color="#FFFFFF" />
+              </TouchableOpacity>
+            </View>
           </View>
-        )}
+        </View>
       </SafeAreaView>
     </ImageBackground>
   );
@@ -378,6 +377,15 @@ const styles = StyleSheet.create({
     fontSize: 14,
     lineHeight: 17,
     fontWeight: "700",
+    letterSpacing: -0.01,
+    color: "#FFFFFF",
+    marginRight: 72,
+  },
+  cardSummary: {
+    flex: 1,
+    fontSize: 12,
+    lineHeight: 14,
+    fontWeight: "500",
     letterSpacing: -0.01,
     color: "#FFFFFF",
     marginRight: 72,
