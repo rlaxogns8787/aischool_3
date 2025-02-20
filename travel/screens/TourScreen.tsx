@@ -9,7 +9,7 @@ import {
   Platform,
   Alert,
 } from "react-native";
-import axios from 'axios';
+import axios from "axios";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { ChevronLeft, Mic, ArrowLeft, Map } from "lucide-react-native";
 import MapIcon from "../assets/map.svg";
@@ -49,10 +49,9 @@ const AZURE_OPENAI_KEY =
 const DEPLOYMENT_NAME = "gpt-4o";
 
 //Azure AI Search 키와 인덱스
-const SEARCH_ENDPOINT = 'https://ssapy-ai-search.search.windows.net';
-const SEARCH_KEY = 'NGZcgM1vjwqKoDNPnFXcApBFttxWmGRLmnukKldPcTAzSeBjHCk6';
-const ATTRACTION_INDEX = 'attraction_3';
-
+const SEARCH_ENDPOINT = "https://ssapy-ai-search.search.windows.net";
+const SEARCH_KEY = "NGZcgM1vjwqKoDNPnFXcApBFttxWmGRLmnukKldPcTAzSeBjHCk6";
+const ATTRACTION_INDEX = "attraction_3";
 
 // type Interest = "건축" | "역사" | "문화" | "요리" | "자연";
 
@@ -225,32 +224,48 @@ export default function TourScreen() {
   const startAzureSTT = async () => {
     console.log("startAzureSTT 시작");
     try {
-      const speechConfig = sdk.SpeechConfig.fromSubscription(
-        SPEECH_KEY,
-        SPEECH_REGION
-      );
-      speechConfig.speechRecognitionLanguage = "ko-KR";
-      const audioConfig = sdk.AudioConfig.fromDefaultMicrophoneInput();
-      const recognizer = new sdk.SpeechRecognizer(speechConfig, audioConfig);
-      console.log("STT 인식 시작...");
-      return new Promise<string>((resolve, reject) => {
+      const { granted } = await Audio.requestPermissionsAsync();
+      if (!granted) {
+        throw new Error("마이크 권한이 필요합니다.");
+      }
+
+      const recording = new Audio.Recording();
+      await recording.prepareToRecordAsync();
+      await recording.startAsync();
+
+      console.log("녹음 시작...");
+
+      // 일정 시간 후 녹음 중지
+      setTimeout(async () => {
+        await recording.stopAndUnloadAsync();
+        const uri = recording.getURI();
+        console.log("녹음 완료, 파일 URI:", uri);
+
+        // 녹음된 파일을 Azure Speech SDK로 전달
+        const audioConfig = sdk.AudioConfig.fromWavFileInput(uri);
+        const speechConfig = sdk.SpeechConfig.fromSubscription(
+          SPEECH_KEY,
+          SPEECH_REGION
+        );
+        speechConfig.speechRecognitionLanguage = "ko-KR";
+        const recognizer = new sdk.SpeechRecognizer(speechConfig, audioConfig);
+
         recognizer.recognizeOnceAsync(
           (result) => {
             if (result.text) {
               console.log("STT 결과:", result.text);
-              resolve(result.text);
+              handleVoiceCommand(result.text);
             } else {
-              reject(new Error("음성 인식에 실패했습니다."));
+              console.error("음성 인식에 실패했습니다.");
             }
             recognizer.close();
           },
           (error) => {
             console.error("STT error:", error);
             recognizer.close();
-            reject(error);
           }
         );
-      });
+      }, 5000); // 5초 동안 녹음
     } catch (error) {
       console.error("STT initialization failed:", error);
       throw error;
@@ -378,18 +393,17 @@ export default function TourScreen() {
         },
         {
           headers: {
-            'Content-Type': 'application/json',
-            'api-key': SEARCH_KEY,
+            "Content-Type": "application/json",
+            "api-key": SEARCH_KEY,
           },
         }
       );
 
       generateTourGuide(response.data.value);
     } catch (error) {
-      console.error('Nearby spots search failed:', error);
+      console.error("Nearby spots search failed:", error);
     }
   };
-
 
   // 위치 추적 useEffect
   useEffect(() => {
@@ -415,37 +429,33 @@ export default function TourScreen() {
   }, []);
 
   // 일정 데이터 불러오기 및 스토리텔링 시작
-  useEffect(() => {
-    const fetchSchedule = async () => {
-      try {
-        const storedSchedule = await AsyncStorage.getItem("confirmedSchedule");
-        if (storedSchedule) {
-          const schedule = JSON.parse(storedSchedule);
-          if (schedule && schedule.days) {
-            const guideText = schedule.days
-              .map((day) =>
-                day.places
-                  .map((place) => `${place.title}: ${place.description}`)
-                  .join("\n")
-              )
-              .join("\n\n");
-            setTourGuide("");
-            animateText(guideText);
-            await startSpeaking(guideText);
-          } else {
-            throw new Error("Invalid schedule format");
-          }
+  const fetchSchedule = async () => {
+    try {
+      const storedSchedule = await AsyncStorage.getItem("confirmedSchedule");
+      if (storedSchedule) {
+        const schedule = JSON.parse(storedSchedule);
+        if (schedule && schedule.days) {
+          const guideText = schedule.days
+            .map((day) =>
+              day.places
+                .map((place) => `${place.title}: ${place.description}`)
+                .join("\n")
+            )
+            .join("\n\n");
+          setTourGuide("");
+          animateText(guideText);
+          await startSpeaking(guideText);
         } else {
-          throw new Error("No schedule found");
+          throw new Error("Invalid schedule format");
         }
-      } catch (error) {
-        console.error("Error fetching schedule:", error);
-        setTourGuide("일정을 불러오는 데 실패했습니다.");
+      } else {
+        throw new Error("No schedule found");
       }
-    };
-
-    fetchSchedule();
-  }, []);
+    } catch (error) {
+      console.error("Error fetching schedule:", error);
+      setTourGuide("일정을 불러오는 데 실패했습니다.");
+    }
+  };
 
   // 마이크 버튼 핸들러
   const handleMicPress = async () => {
@@ -491,10 +501,9 @@ export default function TourScreen() {
     navigation.navigate("Map");
   };
 
-
   // generateTourGuide 함수 수정: Syntax Error 해결 및 Azure AI Search 인덱스 추가
   const generateTourGuide = async (spots) => {
-    const spotNames = spots.map(s => s.AREA_CLTUR_TRRSRT_NM).join(', ');
+    const spotNames = spots.map((s) => s.AREA_CLTUR_TRRSRT_NM).join(", ");
     const body = {
       messages: [
         {
@@ -505,12 +514,12 @@ export default function TourScreen() {
           1) 최대 200자 내외의 짧은 해설을 지향.
           2) 장소의 역사/배경 + 재미있는 TMI(1~2줄) 포함.
           3) 너무 긴 문장보다, 짧은 문장 중심.
-          4) 필요 시 감탄사나 비유적 표현을 적절히 사용.`
+          4) 필요 시 감탄사나 비유적 표현을 적절히 사용.`,
         },
         {
           role: "user",
-          content: `${spotNames}에 대한 관광 가이드를 진행해줘`
-        }
+          content: `${spotNames}에 대한 관광 가이드를 진행해줘`,
+        },
       ],
       past_messages: 10,
       temperature: 0.7,
@@ -526,15 +535,16 @@ export default function TourScreen() {
             semantic_configuration: "attraction3-semantic",
             query_type: "semantic",
             in_scope: true,
-            role_information: "사용자에게 전문적이고 흥미있는 관광 가이드를 진행해주는 가이드 도우미입니다.",
+            role_information:
+              "사용자에게 전문적이고 흥미있는 관광 가이드를 진행해주는 가이드 도우미입니다.",
             filter: null,
             strictness: 1,
             top_n_documents: 5,
             key: "NGZcgM1vjwqKoDNPnFXcApBFttxWmGRLmnukKldPcTAzSeBjHCk6",
-            indexName: "attraction_3"
-          }
-        }
-      ]
+            indexName: "attraction_3",
+          },
+        },
+      ],
     };
 
     try {
@@ -542,15 +552,19 @@ export default function TourScreen() {
         `${AZURE_OPENAI_ENDPOINT}/openai/deployments/${DEPLOYMENT_NAME}/chat/completions?api-version=2024-02-15-preview`,
         {
           method: "POST",
-          headers: { "Content-Type": "application/json", "api-key": AZURE_OPENAI_KEY },
-          body: JSON.stringify(body)
+          headers: {
+            "Content-Type": "application/json",
+            "api-key": AZURE_OPENAI_KEY,
+          },
+          body: JSON.stringify(body),
         }
       );
 
       if (!response.ok) throw new Error("Failed to generate tour guide");
 
       const data = await response.json();
-      const content = data.choices[0]?.message?.content || "가이드를 불러오지 못했습니다.";
+      const content =
+        data.choices[0]?.message?.content || "가이드를 불러오지 못했습니다.";
       setTourGuide(content);
       animateText(content);
     } catch (error) {
@@ -560,8 +574,6 @@ export default function TourScreen() {
       setIsLoading(false);
     }
   };
-
-
 
   // speakText 함수 (TTS 실행)
   const speakText = (text: string) => {

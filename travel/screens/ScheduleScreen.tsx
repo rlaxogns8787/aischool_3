@@ -16,14 +16,16 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useFocusEffect } from "@react-navigation/native";
 import MenuIcon from "../assets/menu.svg";
 import CalendarIcon from "../assets/calendar.svg";
-import SunIcon from "../assets/sun.svg";
-import CloudIcon from "../assets/cloud.svg";
-import LocationIcon from "../assets/location.svg";
+// import SunIcon from "../assets/sun.svg";
+// import CloudIcon from "../assets/cloud.svg";
+// import LocationIcon from "../assets/location.svg";
+import TrashIcon from "../assets/trash.svg";
 import { Schedule } from "../types/schedule";
 import {
   getCurrentWeather,
   getHourlyForecast,
 } from "../services/weatherService";
+import { getSchedules, deleteSchedule } from "../api/loginapi";
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 const HEADER_HEIGHT = 44;
@@ -34,63 +36,62 @@ type ScheduleScreenProps = {
 
 export default function ScheduleScreen({ navigation }: ScheduleScreenProps) {
   const [schedules, setSchedules] = useState<Schedule[]>([]);
-  const [weather, setWeather] = useState<any>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [weatherForecast, setWeatherForecast] = useState<any[]>([]);
+  // const [weather, setWeather] = useState<any>(null);
+  // const [isLoading, setIsLoading] = useState(true);
+  // const [error, setError] = useState<string | null>(null);
+  // const [weatherForecast, setWeatherForecast] = useState<any[]>([]);
 
   const fetchSchedules = useCallback(async () => {
     try {
-      const storedSchedules = await AsyncStorage.getItem("confirmedSchedule");
-      if (storedSchedules) {
-        const parsedSchedules = JSON.parse(storedSchedules);
-        console.log("Loaded schedules from AsyncStorage:", parsedSchedules); // 디버그용 로그
+      // 데이터베이스에서 일정을 가져옵니다.
+      const schedules = await getSchedules(); // AsyncStorage 대신 getSchedules 호출
 
-        // parsedSchedules가 배열이 아닌 경우 배열로 변환
-        const schedulesArray = Array.isArray(parsedSchedules)
-          ? parsedSchedules
-          : [parsedSchedules];
+      // schedules가 배열이 아닌 경우 배열로 변환
+      const schedulesArray = Array.isArray(schedules)
+        ? schedules // 이미 배열인 경우 그대로 사용
+        : [schedules]; // 배열이 아닌 경우 배열로 감싸서 사용
 
-        // Schedule 타입에 맞게 변환
-        const formattedSchedules: Schedule[] = schedulesArray.map(
-          (schedule: any) => ({
-            id: schedule.tripId,
-            destination: schedule.title, // 목적지 정보가 없으므로 임의로 설정
-            title: schedule.title,
-            startDate: schedule.startDate,
-            endDate: schedule.endDate,
-            travelStyle: schedule.keywords,
-            activities: schedule.days
-              ? schedule.days.flatMap((day: any) =>
-                  day.places.map((place: any) => place.title)
-                )
-              : [],
-            budget: schedule.extraInfo ? schedule.extraInfo.totalCost : 0,
-            isAIRecommended: false, // AI 추천 여부 정보가 없으므로 임의로 설정
-            itinerary: schedule.days
-              ? schedule.days.map((day: any) => ({
-                  date: day.date,
-                  activities: day.places.map((place: any) => ({
-                    time: place.time,
-                    place: place.title,
-                    description: place.description,
-                    cost: place.cost,
-                  })),
-                }))
-              : [],
-            totalBudget: schedule.extraInfo
-              ? schedule.extraInfo.totalBudget
-              : 0, // totalBudget 추가
-            guideService: schedule.extraInfo
-              ? schedule.extraInfo.guideService
-              : false, // guideService 추가
-          })
-        );
+      // Schedule 타입에 맞게 변환
+      const formattedSchedules: Schedule[] = schedulesArray.map(
+        (schedule: any) => ({
+          id: schedule.tripId, // 일정의 고유 ID
+          destination: schedule.title, // 목적지 정보 (제목으로 설정)
+          title: schedule.title, // 일정 제목
+          startDate: schedule.startDate, // 시작 날짜
+          endDate: schedule.endDate, // 종료 날짜
+          travelStyle: schedule.keywords, // 여행 스타일 (키워드)
+          activities: schedule.days
+            ? schedule.days.flatMap((day: any) =>
+                day.places.map((place: any) => place.title) // 각 날의 활동 제목을 평면화하여 배열로 만듭니다.
+              )
+            : [], // 일정이 없는 경우 빈 배열 반환
+          budget: schedule.extraInfo ? schedule.extraInfo.totalCost : 0, // 예산 정보 (총 비용)
+          isAIRecommended: false, // AI 추천 여부 (기본값 false)
+          itinerary: schedule.days
+            ? schedule.days.map((day: any) => ({
+                date: day.date, // 날짜
+                activities: day.places.map((place: any) => ({
+                  time: place.time, // 활동 시간
+                  place: place.title, // 장소 제목
+                  description: place.description, // 장소 설명
+                  cost: place.cost, // 비용
+                })),
+              }))
+            : [], // 일정이 없는 경우 빈 배열 반환
+          totalBudget: schedule.extraInfo
+            ? schedule.extraInfo.totalBudget
+            : 0, // 총 예산 정보 (기본값 0)
+          guideService: schedule.extraInfo
+            ? schedule.extraInfo.guideService
+            : false, // 가이드 서비스 여부 (기본값 false)
+        })
+      );
 
-        setSchedules(formattedSchedules);
-      }
+      // 변환된 일정을 상태에 저장
+      setSchedules(formattedSchedules);
     } catch (error) {
-      console.error("Failed to load schedules from AsyncStorage:", error);
+      // 에러 발생 시 콘솔에 에러 메시지 출력
+      console.error("Failed to load schedules from database:", error);
     }
   }, []);
 
@@ -100,85 +101,80 @@ export default function ScheduleScreen({ navigation }: ScheduleScreenProps) {
     }, [fetchSchedules])
   );
 
-  useEffect(() => {
-    const fetchWeather = async () => {
-      try {
-        setIsLoading(true);
-        setError(null);
-        const weatherData = await getCurrentWeather("후암동");
-        setWeather(weatherData);
-      } catch (err) {
-        console.error("Weather fetch error:", err);
-        setError("날씨 정보를 불러오는데 실패했습니다");
-        // 임시 날씨 데이터 설정
-        setWeather({
-          temperature: 21,
-          condition: "맑음",
-          high: 24,
-          low: 13,
-          hourly: [
-            { time: "9AM", temp: 22, condition: "sunny" },
-            { time: "10AM", temp: 23, condition: "sunny" },
-            { time: "11AM", temp: 18, condition: "sunny" },
-            { time: "12PM", temp: 19, condition: "cloudy" },
-            { time: "1PM", temp: 21, condition: "cloudy" },
-            { time: "2PM", temp: 22, condition: "cloudy" },
-          ],
-        });
-      } finally {
-        setIsLoading(false);
-      }
-    };
+  // useEffect(() => {
+  //   const fetchWeather = async () => {
+  //     try {
+  //       setIsLoading(true);
+  //       setError(null);
+  //       const weatherData = await getCurrentWeather("후암동");
+  //       setWeather(weatherData);
+  //     } catch (err) {
+  //       console.error("Weather fetch error:", err);
+  //       setError("날씨 정보를 불러오는데 실패했습니다");
+  //       // 임시 날씨 데이터 설정
+  //       setWeather({
+  //         temperature: 21,
+  //         condition: "맑음",
+  //         high: 24,
+  //         low: 13,
+  //         hourly: [
+  //           { time: "9AM", temp: 22, condition: "sunny" },
+  //           { time: "10AM", temp: 23, condition: "sunny" },
+  //           { time: "11AM", temp: 18, condition: "sunny" },
+  //           { time: "12PM", temp: 19, condition: "cloudy" },
+  //           { time: "1PM", temp: 21, condition: "cloudy" },
+  //           { time: "2PM", temp: 22, condition: "cloudy" },
+  //         ],
+  //       });
+  //     } finally {
+  //       setIsLoading(false);
+  //     }
+  //   };
 
-    fetchWeather();
-  }, []);
+  //   fetchWeather();
+  // }, []);
 
-  useEffect(() => {
-    const loadWeatherForecast = async () => {
-      if (schedules.length > 0) {
-        const nextSchedule = schedules[0]; // 가장 가까운 일정
-        try {
-          // 여행지의 위도/경도 정보가 필요합니다
-          const forecast = await getHourlyForecast(
-            nextSchedule.latitude,
-            nextSchedule.longitude
-          );
-          setWeatherForecast(forecast);
-        } catch (error) {
-          console.error("Forecast error:", error);
-        }
-      }
-    };
+  // useEffect(() => {
+  //   const loadWeatherForecast = async () => {
+  //     if (schedules.length > 0) {
+  //       const nextSchedule = schedules[0]; // 가장 가까운 일정
+  //       try {
+  //         // 여행지의 위도/경도 정보가 필요합니다
+  //         const forecast = await getHourlyForecast(
+  //           nextSchedule.latitude,
+  //           nextSchedule.longitude
+  //         );
+  //         setWeatherForecast(forecast);
+  //       } catch (error) {
+  //         console.error("Forecast error:", error);
+  //       }
+  //     }
+  //   };
 
-    loadWeatherForecast();
-  }, [schedules]);
+  //   loadWeatherForecast();
+  // }, [schedules]);
 
-  const deleteSchedule = async (id: string) => {
+  const deleteScheduleui = async (id: string) => {
     try {
+      console.log(`Attempting to delete schedule with ID: ${id}`); // 삭제 시도 로그
+
+      // 데이터베이스에서 일정 삭제
+      await deleteSchedule(id); // loginapi.tsx의 deleteSchedule 함수 호출
+      console.log(`Successfully deleted schedule with ID: ${id}`); // 삭제 성공 로그
+
+      // 삭제 후 상태에서 해당 일정 제거
       const updatedSchedules = schedules.filter(
         (schedule) => schedule.id !== id
       );
       setSchedules(updatedSchedules);
-      await AsyncStorage.setItem(
-        "confirmedSchedule",
-        JSON.stringify(updatedSchedules)
-      );
-      fetchSchedules(); // 일정 삭제 후 일정 목록 다시 불러오기
+      console.log("Updated schedules after deletion:", updatedSchedules); // 업데이트된 일정 로그
+
+      // 삭제 후 일정 목록 다시 불러오기
+      fetchSchedules(); 
     } catch (error) {
-      console.error("Failed to delete schedule:", error);
+      console.error("Failed to delete schedule:", error); // 에러 로그
     }
   };
-
-  const renderEmptyState = () => (
-    <View style={styles.emptyStateContainer}>
-      <Image
-        source={require("../assets/empty.png")}
-        style={styles.emptyImage}
-      />
-      <Text style={styles.emptyTitle}>아직 여행 예정되어 있지 않네요</Text>
-      <Text style={styles.emptySubtitle}>새로운 여행을 계획해보세요</Text>
-    </View>
-  );
 
   return (
     <View style={styles.container}>
@@ -198,42 +194,47 @@ export default function ScheduleScreen({ navigation }: ScheduleScreenProps) {
           </TouchableOpacity>
         </View>
 
-        {/* Weather Info */}
-        <View style={styles.weatherContainer}>
-          <View style={styles.weatherHeader}>
-            <View>
-              <View style={styles.locationContainer}>
-                <LocationIcon width={16} height={16} color="#FFFFFF" />
-                <Text style={styles.location}>{weather?.location}</Text>
+        {schedules.length > 0 ? (
+          <>
+            {/* Weather Info */}
+            {/*
+            <View style={styles.weatherContainer}>
+              <View style={styles.weatherHeader}>
+                <View>
+                  <View style={styles.locationContainer}>
+                    <LocationIcon width={16} height={16} color="#FFFFFF" />
+                    <Text style={styles.location}>{weather?.location}</Text>
+                  </View>
+                  <Text style={styles.temperature}>
+                    {weather?.temperature}°
+                  </Text>
+                </View>
+                <View style={styles.weatherInfo}>
+                  <Text style={styles.highLow}>
+                    H:{weather?.high}° L:{weather?.low}°
+                  </Text>
+                </View>
               </View>
-              <Text style={styles.temperature}>{weather?.temperature}°</Text>
-            </View>
-            <View style={styles.weatherInfo}>
-              <Text style={styles.highLow}>
-                H:{weather?.high}° L:{weather?.low}°
-              </Text>
-            </View>
-          </View>
 
-          {/* Hourly Weather */}
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            style={styles.hourlyWeather}
-          >
-            {weather?.hourly.map((item, index) => (
-              <View key={index} style={styles.hourlyItem}>
-                <Text style={styles.hourlyTime}>{item.time}</Text>
-                {item.condition === "sunny" ? (
-                  <SunIcon width={24} height={24} color="#FFD409" />
-                ) : (
-                  <CloudIcon width={24} height={24} color="#FFFFFF" />
-                )}
-                <Text style={styles.hourlyTemp}>{item.temp}°</Text>
-              </View>
-            ))}
-          </ScrollView>
-        </View>
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                style={styles.hourlyWeather}
+              >
+                {weather?.hourly.map((item, index) => (
+                  <View key={index} style={styles.hourlyItem}>
+                    <Text style={styles.hourlyTime}>{item.time}</Text>
+                    {item.condition === "sunny" ? (
+                      <SunIcon width={24} height={24} color="#FFD409" />
+                    ) : (
+                      <CloudIcon width={24} height={24} color="#FFFFFF" />
+                    )}
+                    <Text style={styles.hourlyTemp}>{item.temp}°</Text>
+                  </View>
+                ))}
+              </ScrollView>
+            </View>
+            */}
 
         {/* Schedule Content */}
         <ScrollView
@@ -274,7 +275,7 @@ export default function ScheduleScreen({ navigation }: ScheduleScreenProps) {
                     </TouchableOpacity>
                     <TouchableOpacity
                       style={styles.deleteButton}
-                      onPress={() => deleteSchedule(schedule.id)}
+                      onPress={() => deleteScheduleui(schedule.id)}
                     >
                       <Text style={styles.deleteButtonText}>삭제</Text>
                     </TouchableOpacity>
@@ -282,17 +283,28 @@ export default function ScheduleScreen({ navigation }: ScheduleScreenProps) {
                 </TouchableOpacity>
               ))
             : renderEmptyState()}
-        </ScrollView>
-
-        {/* 하단 고정 버튼 */}
-        {/* <View style={styles.bottomButtonContainer}>
-          <TouchableOpacity
-            style={styles.detailButton}
-            onPress={() => navigation.navigate("Chat")}
-          >
-            <Text style={styles.buttonText}>일정 등록</Text>
-          </TouchableOpacity>
-        </View> */}
+            </ScrollView>
+          </>
+        ) : (
+          <View style={styles.emptyContainer}>
+            <View style={styles.emptyContent}>
+              <View style={styles.emptyStateContainer}>
+                <Text style={styles.emptyTitle}>여행 기록이 아직 없네요</Text>
+                <Text style={styles.emptySubtitle}>
+                  어디론가 떠나보는게 어떨까요?
+                </Text>
+              </View>
+            </View>
+            <View style={styles.buttonContainer}>
+              <TouchableOpacity
+                style={styles.registerButton}
+                onPress={() => navigation.navigate("Chat")}
+              >
+                <Text style={styles.buttonText}>일정 등록</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        )}
       </SafeAreaView>
     </View>
   );
@@ -320,65 +332,65 @@ const styles = StyleSheet.create({
     width: 24,
     height: 24,
   },
-  weatherContainer: {
-    flexDirection: "column",
-    padding: 20,
-    paddingBottom: 16,
-    backgroundColor: "rgba(0, 0, 0, 0.1)",
-    backdropFilter: "blur(45px)",
-  },
-  weatherHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "flex-start",
-    marginBottom: 8,
-  },
-  locationContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-  },
-  location: {
-    fontSize: 14,
-    fontWeight: "500",
-    color: "#FFFFFF",
-  },
-  temperature: {
-    fontSize: 40,
-    fontWeight: "300",
-    color: "#FFFFFF",
-    lineHeight: 56,
-  },
-  weatherInfo: {
-    alignItems: "flex-end",
-  },
-  highLow: {
-    fontSize: 15,
-    color: "#FFFFFF",
-    opacity: 0.8,
-  },
-  hourlyWeather: {
-    marginTop: 8,
-  },
-  hourlyItem: {
-    alignItems: "center",
-    width: 60,
-    marginRight: 12,
-  },
-  hourlyTime: {
-    color: "#FFFFFF",
-    fontSize: 12,
-    fontWeight: "500",
-    marginBottom: 4,
-    width: "100%",
-    textAlign: "center",
-  },
-  hourlyTemp: {
-    color: "#FFFFFF",
-    fontSize: 14,
-    fontWeight: "500",
-    marginTop: 4,
-  },
+  // weatherContainer: {
+  //   flexDirection: "column",
+  //   padding: 20,
+  //   paddingBottom: 16,
+  //   backgroundColor: "rgba(0, 0, 0, 0.1)",
+  //   backdropFilter: "blur(45px)",
+  // },
+  // weatherHeader: {
+  //   flexDirection: "row",
+  //   justifyContent: "space-between",
+  //   alignItems: "flex-start",
+  //   marginBottom: 8,
+  // },
+  // locationContainer: {
+  //   flexDirection: "row",
+  //   alignItems: "center",
+  //   gap: 4,
+  // },
+  // location: {
+  //   fontSize: 14,
+  //   fontWeight: "500",
+  //   color: "#FFFFFF",
+  // },
+  // temperature: {
+  //   fontSize: 40,
+  //   fontWeight: "300",
+  //   color: "#FFFFFF",
+  //   lineHeight: 56,
+  // },
+  // weatherInfo: {
+  //   alignItems: "flex-end",
+  // },
+  // highLow: {
+  //   fontSize: 15,
+  //   color: "#FFFFFF",
+  //   opacity: 0.8,
+  // },
+  // hourlyWeather: {
+  //   marginTop: 8,
+  // },
+  // hourlyItem: {
+  //   alignItems: "center",
+  //   width: 60,
+  //   marginRight: 12,
+  // },
+  // hourlyTime: {
+  //   color: "#FFFFFF",
+  //   fontSize: 12,
+  //   fontWeight: "500",
+  //   marginBottom: 4,
+  //   width: "100%",
+  //   textAlign: "center",
+  // },
+  // hourlyTemp: {
+  //   color: "#FFFFFF",
+  //   fontSize: 14,
+  //   fontWeight: "500",
+  //   marginTop: 4,
+  // },
   content: {
     flex: 1,
   },
@@ -387,35 +399,40 @@ const styles = StyleSheet.create({
     paddingBottom: 48 + 24 + 83, // 버튼 높이(48) + 상단 마진(24) + 하단 탭 높이(83)
     paddingTop: 16, // 날씨 컨테이너와 첫 번째 카드 사이 간격
   },
-  emptyStateContainer: {
+  emptyContainer: {
     flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
+    justifyContent: "space-between",
   },
-  emptyImage: {
-    width: 120,
-    height: 120,
-    marginBottom: 24,
-    backgroundColor: "#EAF2FF",
-    borderRadius: 24,
+  emptyContent: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  emptyStateContainer: {
+    alignItems: "center",
   },
   emptyTitle: {
+    fontFamily: "Inter",
     fontSize: 18,
     fontWeight: "800",
-    color: "#1F2024",
-    marginBottom: 8,
+    lineHeight: 22,
     letterSpacing: 0.005 * 18,
+    textAlign: "center",
+    color: "#FFFFFF",
+    marginBottom: 8,
   },
   emptySubtitle: {
+    fontFamily: "Inter",
     fontSize: 14,
-    color: "#71727A",
-    marginBottom: 32,
+    lineHeight: 20,
+    textAlign: "center",
+    color: "rgba(255, 255, 255, 0.8)",
+  },
+  buttonContainer: {
+    paddingHorizontal: 40,
+    paddingBottom: 72,
   },
   registerButton: {
-    position: "absolute",
-    bottom: 83 + 24, // 하단 탭 높이(83) + 24px 마진
-    left: 24,
-    right: 24,
     height: 48,
     backgroundColor: "rgba(255, 255, 255, 0.2)",
     borderRadius: 300,
@@ -513,10 +530,6 @@ const styles = StyleSheet.create({
   scheduleContent: {
     padding: 16,
     paddingHorizontal: 24,
-    gap: 16,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
   },
   scheduleTextContainer: {
     flex: 1,
@@ -528,6 +541,7 @@ const styles = StyleSheet.create({
     lineHeight: 17,
     letterSpacing: -0.01 * 14,
     color: "#FFFFFF",
+    marginBottom: 4, // 제목과 날짜 사이 간격
   },
   date: {
     fontFamily: "SF Pro Text",
@@ -555,6 +569,8 @@ const styles = StyleSheet.create({
     padding: 16,
     backgroundColor: "rgba(255, 255, 255, 0.2)",
     borderRadius: 300,
+    marginHorizontal: 24,
+    marginBottom: 16, // 버튼 하단 여백
   },
   bottomButtonContainer: {
     paddingHorizontal: 40,

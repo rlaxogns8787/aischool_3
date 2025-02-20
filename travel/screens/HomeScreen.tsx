@@ -23,6 +23,8 @@ import {
   type WeatherData,
 } from "../services/weatherService";
 import { useNavigation, NavigationProp } from "@react-navigation/native";
+import { getSchedules } from "../api/loginapi";
+
 
 // 임시 데이터
 const scheduleData = {
@@ -109,14 +111,10 @@ export default function HomeScreen() {
     useCallback(() => {
       async function loadScheduleData() {
         try {
-          const storedSchedule = await AsyncStorage.getItem(
-            "confirmedSchedule"
-          );
-          if (storedSchedule) {
-            setSchedule(JSON.parse(storedSchedule));
-          }
+          const scheduleData = await getSchedules();
+          setSchedule(scheduleData);
         } catch (error) {
-          console.error("Failed to load schedule from AsyncStorage:", error);
+          console.error("Failed to load schedule from database:", error);
         }
       }
 
@@ -215,6 +213,9 @@ export default function HomeScreen() {
             <View style={styles.cardContent}>
               <Text style={styles.cardTitle}>
                 {schedule ? schedule.title : ""}
+              </Text>
+              <Text style={styles.cardSummary}>
+                {schedule ? schedule.summary : ""}
               </Text>
               <TouchableOpacity
                 style={styles.arrowButton}
@@ -376,6 +377,15 @@ const styles = StyleSheet.create({
     fontSize: 14,
     lineHeight: 17,
     fontWeight: "700",
+    letterSpacing: -0.01,
+    color: "#FFFFFF",
+    marginRight: 72,
+  },
+  cardSummary: {
+    flex: 1,
+    fontSize: 12,
+    lineHeight: 14,
+    fontWeight: "500",
     letterSpacing: -0.01,
     color: "#FFFFFF",
     marginRight: 72,

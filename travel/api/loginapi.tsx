@@ -137,7 +137,7 @@ export const addSchedule = async (scheduleData) => {
 /**
  * 여행 일정 삭제 API
  */
-export const deleteSchedule = async (scheduleId) => {
+export const deleteSchedule = async (tripId) => {
   try {
     const userData = await AsyncStorage.getItem("userData");
     if (!userData) {
@@ -146,8 +146,8 @@ export const deleteSchedule = async (scheduleId) => {
 
     const userInfo = JSON.parse(userData);
 
-    const response = await axios.delete(`${BASE_URL}/schedule/${scheduleId}`, {
-      params: { username: userInfo.username },
+    const response = await axios.delete(`${BASE_URL}/schedule/${tripId}`, {
+      params: { username: userInfo.username }, // 백엔드에서 username을 요청 쿼리로 받음
     });
 
     return response.data;
@@ -158,6 +158,7 @@ export const deleteSchedule = async (scheduleId) => {
     );
   }
 };
+
 
 /**
  * 여행 일정 조회 API
@@ -175,11 +176,33 @@ export const getSchedules = async () => {
       params: { username: userInfo.username },
     });
 
-    return response.data;
+    const transformedData = transformScheduleData(response.data); // 변환 함수 호출
+    return transformedData; // 변환된 데이터를 반환
   } catch (error) {
     console.error("Get schedules error:", error);
     throw new Error(
       error.response?.data?.message || "일정 조회에 실패했습니다."
     );
   }
+};
+
+export const transformScheduleData = (dbData: any) => {
+  // dbData는 데이터베이스에서 불러온 데이터입니다.
+  const schedule = dbData[0]; // 배열에서 첫 번째 요소를 가져옵니다.
+
+  return {
+    tripId: schedule.tripId,
+    timestamp: schedule.timestamp,
+    title: schedule.title,
+    companion: schedule.companion,
+    startDate: schedule.startDate,
+    endDate: schedule.endDate,
+    duration: schedule.duration,
+    budget: schedule.budget,
+    transportation: schedule.transportation,
+    keywords: schedule.keywords,
+    summary: schedule.summary,
+    days: schedule.days, // days는 그대로 사용
+    extraInfo: schedule.extraInfo, // extraInfo도 그대로 사용
+  };
 };
