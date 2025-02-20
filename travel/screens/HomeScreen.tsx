@@ -185,6 +185,8 @@ export default function HomeScreen() {
                   <Text style={styles.location}>서울 잠실동</Text>
                 </View>
                 <Text style={styles.temperature}>24°</Text>
+                <Text style={styles.weatherCondition}>맑음</Text>
+                <Text style={styles.tempRange}>최고 27° / 최저 19°</Text>
               </>
             ) : weather ? (
               <>
@@ -193,6 +195,8 @@ export default function HomeScreen() {
                   <Text style={styles.location}>{weather.location}</Text>
                 </View>
                 <Text style={styles.temperature}>{weather.temperature}°</Text>
+                <Text style={styles.weatherCondition}>{weather.condition}</Text>
+                <Text style={styles.tempRange}>최고 {weather.high}° / 최저 {weather.low}°</Text>
               </>
             ) : null}
           </View>
@@ -429,4 +433,17 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     padding: 16,
   },
+  weatherCondition: {
+    fontSize: 18,
+    fontWeight: "500",
+    color: "#fff",
+    marginTop: 5,
+  },
+  tempRange: {
+    fontSize: 14,
+    fontWeight: "400",
+    color: "#fff",
+    opacity: 0.8,
+    marginTop: 2,
+  },  
 });
