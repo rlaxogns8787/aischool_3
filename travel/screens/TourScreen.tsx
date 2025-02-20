@@ -202,6 +202,13 @@ interface ScheduleResponse {
   schedules: ServerSchedule[];
 }
 
+// 상태 추가
+interface TourState {
+  currentDayIndex: number;
+  currentPlaceIndex: number;
+  showNextButton: boolean;
+}
+
 export default function TourScreen() {
   const navigation = useNavigation();
   const [displayedText, setDisplayedText] = useState("");
@@ -234,6 +241,11 @@ export default function TourScreen() {
   const { user } = useAuth();
   const [isInitializing, setIsInitializing] = useState(true);
   const [isLoadingStory, setIsLoadingStory] = useState(false);
+  const [tourState, setTourState] = useState<TourState>({
+    currentDayIndex: 0,
+    currentPlaceIndex: 0,
+    showNextButton: false,
+  });
 
   // 사용자 관심사를 DB에서 가져오기(기본값은 '전체'설정)
   const userPreference = user?.preferences?.[0] || "전체";
@@ -842,7 +854,21 @@ Additional context: ${currentPlace.description}`,
         .replace(/([.!?])\s*/g, "$1\n\n")
         .replace(/\n{3,}/g, "\n\n");
 
-      // 텍스트 설정 및 음성 재생 시작
+      // 마지막 장소가 아닌 경우에만 다음 장소 안내 추가
+      const scheduleData: Schedule = JSON.parse(
+        (await AsyncStorage.getItem("confirmedSchedule")) || "{}"
+      );
+      const currentDay = scheduleData.days[tourState.currentDayIndex];
+      const isLastPlace =
+        tourState.currentPlaceIndex === currentDay.places.length - 1;
+      const isLastDay =
+        tourState.currentDayIndex === scheduleData.days.length - 1;
+
+      if (!isLastPlace || !isLastDay) {
+        content += "\n\n다음 장소로 이동해볼까요?";
+        setTourState((prev) => ({ ...prev, showNextButton: true }));
+      }
+
       setTourGuide("");
       await startSpeaking(content);
 
@@ -850,6 +876,45 @@ Additional context: ${currentPlace.description}`,
     } catch (error) {
       console.error("Error generating tour guide:", error);
       return "죄송합니다. 설명을 불러오는데 실패했습니다.";
+    }
+  };
+
+  // 다음 장소로 이동하는 함수 추가
+  const handleNextPlace = async () => {
+    try {
+      const storedSchedule: Schedule = JSON.parse(
+        (await AsyncStorage.getItem("confirmedSchedule")) || "{}"
+      );
+      let { currentDayIndex, currentPlaceIndex } = tourState;
+
+      const currentDay = storedSchedule.days[currentDayIndex];
+
+      if (currentPlaceIndex < currentDay.places.length - 1) {
+        // 같은 날의 다음 장소로 이동
+        currentPlaceIndex++;
+      } else if (currentDayIndex < storedSchedule.days.length - 1) {
+        // 다음 날의 첫 장소로 이동
+        currentDayIndex++;
+        currentPlaceIndex = 0;
+      }
+
+      setTourState({
+        currentDayIndex,
+        currentPlaceIndex,
+        showNextButton: false,
+      });
+
+      const nextPlace =
+        storedSchedule.days[currentDayIndex].places[currentPlaceIndex];
+      await generateTourGuide([{ AREA_CLTUR_TRRSRT_NM: nextPlace.title }], {
+        title: nextPlace.title,
+        description: nextPlace.description,
+        time: nextPlace.time,
+        order: currentPlaceIndex + 1,
+        totalPlaces: currentDay.places.length,
+      });
+    } catch (error) {
+      console.error("Error moving to next place:", error);
     }
   };
 
@@ -1088,12 +1153,12 @@ Additional context: ${currentPlace.description}`,
             </View>
 
             <View style={styles.rightButtonContainer}>
-              {isRecording ? (
+              {tourState.showNextButton ? (
                 <TouchableOpacity
-                  style={styles.backToStoryButton}
-                  onPress={() => {}}
+                  style={styles.nextButton}
+                  onPress={handleNextPlace}
                 >
-                  <BackToStoryIcon width={54} height={18} />
+                  <Text style={styles.nextButtonText}>다음</Text>
                 </TouchableOpacity>
               ) : (
                 <View style={styles.emptySpace} />
@@ -1394,5 +1459,18 @@ const styles = StyleSheet.create({
   },
   disabledText: {
     color: "#999999",
+  },
+  nextButton: {
+    width: 64,
+    height: 40,
+    backgroundColor: "rgba(255, 255, 255, 0.3)",
+    borderRadius: 20,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  nextButtonText: {
+    color: "#FFFFFF",
+    fontSize: 16,
+    fontWeight: "500",
   },
 });
