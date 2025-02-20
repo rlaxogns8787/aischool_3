@@ -35,6 +35,7 @@ import { encode as btoa } from "base-64";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useAuth } from "../contexts/AuthContext";
 import { getSchedules } from "../api/loginapi";
+import { MusicService } from "../services/musicService";
 
 type TourScreenProps = {
   navigation: any;
@@ -246,6 +247,8 @@ export default function TourScreen() {
     currentPlaceIndex: 0,
     showNextButton: false,
   });
+  const [currentBGM, setCurrentBGM] = useState<string | null>(null);
+  const musicService = useRef(new MusicService());
 
   // 사용자 관심사를 DB에서 가져오기(기본값은 '전체'설정)
   const userPreference = user?.preferences?.[0] || "전체";
@@ -791,7 +794,7 @@ export default function TourScreen() {
     }
   ) => {
     try {
-      setIsLoadingStory(true); // 로딩 상태 시작
+      setIsLoadingStory(true);
 
       const spotNames = spots.map((s) => s.AREA_CLTUR_TRRSRT_NM).join(", ");
       const selectedCharacter = characterTraits[selectedVoice.id];
@@ -799,7 +802,8 @@ export default function TourScreen() {
       // 실제 일정 데이터 가져오기
       const storedSchedule = await AsyncStorage.getItem("confirmedSchedule");
       if (!storedSchedule) {
-        throw new Error("일정을 찾을 수 없습니다.");
+        console.log("일정을 찾을 수 없습니다.");
+        return;
       }
 
       const schedule: Schedule = JSON.parse(storedSchedule);
@@ -807,7 +811,8 @@ export default function TourScreen() {
       const todaySchedule = schedule.days.find((day) => day.date === today);
 
       if (!todaySchedule) {
-        throw new Error("오늘의 일정을 찾을 수 없습니다.");
+        console.log("오늘의 일정을 찾을 수 없습니다.");
+        return;
       }
 
       // 현재 장소 정보 찾기
@@ -816,7 +821,8 @@ export default function TourScreen() {
       );
 
       if (!currentPlace) {
-        throw new Error("현재 장소 정보를 찾을 수 없습니다.");
+        console.log("현재 장소 정보를 찾을 수 없습니다.");
+        return;
       }
 
       const body = {
@@ -928,9 +934,10 @@ Additional context: ${currentPlace.description}`,
 
       return content;
     } catch (error) {
-      console.error("Error generating tour guide:", error);
-      setIsLoadingStory(false); // 에러 발생 시에도 로딩 상태 종료
-      return "죄송합니다. 설명을 불러오는데 실패했습니다.";
+      console.log("Tour guide generation:", error);
+      setIsLoadingStory(false);
+      // 에러가 발생해도 조용히 처리
+      return;
     }
   };
 
@@ -1092,6 +1099,39 @@ Additional context: ${currentPlace.description}`,
     cleanup();
     navigation.goBack();
   };
+
+  // 장소에 도착했을 때 BGM 재생
+  const handleLocationArrival = async (location: string) => {
+    try {
+      const videoId = await musicService.current.playLocationBGM(location);
+      if (videoId) {
+        setCurrentBGM(videoId);
+      }
+    } catch (error) {
+      console.error("BGM playback error:", error);
+    }
+  };
+
+  // 이동 중 사용자 취향 음악 재생
+  const handleTransitMusic = async (userGenre: string) => {
+    try {
+      const videoId = await musicService.current.playUserPreferredMusic(
+        userGenre
+      );
+      if (videoId) {
+        setCurrentBGM(videoId);
+      }
+    } catch (error) {
+      console.error("Transit music error:", error);
+    }
+  };
+
+  // 컴포넌트 cleanup
+  useEffect(() => {
+    return () => {
+      musicService.current.stop();
+    };
+  }, []);
 
   if (!isAudioReady) {
     return (
