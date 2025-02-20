@@ -248,12 +248,14 @@ export default function ChatScreen() {
         day: "numeric",
       });
 
-      // 여행 기간 계산 수정
+      // 날짜 차이 계산 수정 (당일치기 고려)
       const days = Math.ceil(
         (endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)
-      ); // +1 제거
-      const nights = days; // 당일치기면 0박, 1박이상이면 days값 그대로 사용
-      const duration = `${nights}박${days + 1}일`; // 일수는 +1 (당일 포함)
+      );
+
+      // 당일치기인 경우 0박1일, 아닌 경우 n박(n+1)일
+      const nights = days;
+      const duration = days === 0 ? "당일" : `${nights}박${days + 1}일`;
 
       const confirmMessage: Message = {
         id: Date.now().toString(),

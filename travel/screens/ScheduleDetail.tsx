@@ -94,7 +94,7 @@ export default function ScheduleDetail() {
                 <View style={styles.activityContent}>
                   <Text style={styles.place}>{activity.place}</Text>
                   <Text style={styles.description}>{activity.description}</Text>
-                  {activity.cost && (
+                  {activity.cost > 0 && (
                     <Text style={styles.cost}>
                       ₩{activity.cost.toLocaleString()}
                     </Text>

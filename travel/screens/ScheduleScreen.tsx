@@ -439,7 +439,6 @@ const styles = StyleSheet.create({
   scheduleCard: {
     flex: 1,
     backgroundColor: "rgba(75, 126, 208, 0.3)",
-    backdropFilter: "blur(45px)",
     borderRadius: 12,
     overflow: "hidden",
     marginBottom: 16,
