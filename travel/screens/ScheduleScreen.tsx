@@ -25,7 +25,7 @@ import {
   getCurrentWeather,
   getHourlyForecast,
 } from "../services/weatherService";
-import { getSchedules, deleteSchedule } from "../api/loginapi";
+import { getSchedules } from "../api/loginapi";
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 const HEADER_HEIGHT = 44;
@@ -45,6 +45,7 @@ export default function ScheduleScreen({ navigation }: ScheduleScreenProps) {
     try {
       // 데이터베이스에서 일정을 가져옵니다.
       const schedules = await getSchedules(); // AsyncStorage 대신 getSchedules 호출
+      console.log("Fetched schedules:", schedules); // 추가된 로그
 
       // schedules가 배열이 아닌 경우 배열로 변환
       const schedulesArray = Array.isArray(schedules)
@@ -59,10 +60,10 @@ export default function ScheduleScreen({ navigation }: ScheduleScreenProps) {
           title: schedule.title, // 일정 제목
           startDate: schedule.startDate, // 시작 날짜
           endDate: schedule.endDate, // 종료 날짜
-          travelStyle: schedule.keywords, // 여행 스타일 (키워드)
+          travelStyle: schedule.keywords || [], // keywords가 없는 경우 빈 배열 반환
           activities: schedule.days
-            ? schedule.days.flatMap((day: any) =>
-                day.places.map((place: any) => place.title) // 각 날의 활동 제목을 평면화하여 배열로 만듭니다.
+            ? schedule.days.flatMap(
+                (day: any) => day.places.map((place: any) => place.title) // 각 날의 활동 제목을 평면화하여 배열로 만듭니다.
               )
             : [], // 일정이 없는 경우 빈 배열 반환
           budget: schedule.extraInfo ? schedule.extraInfo.totalCost : 0, // 예산 정보 (총 비용)
@@ -78,9 +79,7 @@ export default function ScheduleScreen({ navigation }: ScheduleScreenProps) {
                 })),
               }))
             : [], // 일정이 없는 경우 빈 배열 반환
-          totalBudget: schedule.extraInfo
-            ? schedule.extraInfo.totalBudget
-            : 0, // 총 예산 정보 (기본값 0)
+          totalBudget: schedule.extraInfo ? schedule.extraInfo.totalBudget : 0, // 총 예산 정보 (기본값 0)
           guideService: schedule.extraInfo
             ? schedule.extraInfo.guideService
             : false, // 가이드 서비스 여부 (기본값 false)
@@ -154,28 +153,6 @@ export default function ScheduleScreen({ navigation }: ScheduleScreenProps) {
   //   loadWeatherForecast();
   // }, [schedules]);
 
-  const deleteScheduleui = async (id: string) => {
-    try {
-      console.log(`Attempting to delete schedule with ID: ${id}`); // 삭제 시도 로그
-
-      // 데이터베이스에서 일정 삭제
-      await deleteSchedule(id); // loginapi.tsx의 deleteSchedule 함수 호출
-      console.log(`Successfully deleted schedule with ID: ${id}`); // 삭제 성공 로그
-
-      // 삭제 후 상태에서 해당 일정 제거
-      const updatedSchedules = schedules.filter(
-        (schedule) => schedule.id !== id
-      );
-      setSchedules(updatedSchedules);
-      console.log("Updated schedules after deletion:", updatedSchedules); // 업데이트된 일정 로그
-
-      // 삭제 후 일정 목록 다시 불러오기
-      fetchSchedules(); 
-    } catch (error) {
-      console.error("Failed to delete schedule:", error); // 에러 로그
-    }
-  };
-
   return (
     <View style={styles.container}>
       <LinearGradient
@@ -236,14 +213,13 @@ export default function ScheduleScreen({ navigation }: ScheduleScreenProps) {
             </View>
             */}
 
-        {/* Schedule Content */}
-        <ScrollView
-          style={styles.content}
-          contentContainerStyle={styles.contentContainer}
-          showsVerticalScrollIndicator={false}
-        >
-          {schedules.length > 0
-            ? schedules.map((schedule) => (
+            {/* Schedule Content */}
+            <ScrollView
+              style={styles.content}
+              contentContainerStyle={styles.contentContainer}
+              showsVerticalScrollIndicator={false}
+            >
+              {schedules.map((schedule) => (
                 <TouchableOpacity
                   key={schedule.id}
                   style={styles.scheduleCard}
@@ -252,11 +228,13 @@ export default function ScheduleScreen({ navigation }: ScheduleScreenProps) {
                   }
                 >
                   <View style={styles.scheduleHeader}>
-                    {schedule.travelStyle.map((style, index) => (
-                      <View key={index} style={styles.styleTag}>
-                        <Text style={styles.tagText}>{style}</Text>
-                      </View>
-                    ))}
+                    {(schedule.travelStyle || [])
+                      .slice(0, 3)
+                      .map((style, index) => (
+                        <View key={index} style={styles.styleTag}>
+                          <Text style={styles.tagText}>{style}</Text>
+                        </View>
+                      ))}
                   </View>
                   <View style={styles.scheduleContent}>
                     <View style={styles.scheduleTextContainer}>
@@ -265,24 +243,17 @@ export default function ScheduleScreen({ navigation }: ScheduleScreenProps) {
                         {schedule.startDate} - {schedule.endDate}
                       </Text>
                     </View>
-                    <TouchableOpacity
-                      style={styles.detailButton}
-                      onPress={() =>
-                        navigation.navigate("ScheduleDetail", { schedule })
-                      }
-                    >
-                      <Text style={styles.buttonText}>일정 자세히 보기</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                      style={styles.deleteButton}
-                      onPress={() => deleteScheduleui(schedule.id)}
-                    >
-                      <Text style={styles.deleteButtonText}>삭제</Text>
-                    </TouchableOpacity>
                   </View>
+                  <TouchableOpacity
+                    style={styles.detailButton}
+                    onPress={() =>
+                      navigation.navigate("ScheduleDetail", { schedule })
+                    }
+                  >
+                    <Text style={styles.buttonText}>일정 자세히 보기</Text>
+                  </TouchableOpacity>
                 </TouchableOpacity>
-              ))
-            : renderEmptyState()}
+              ))}
             </ScrollView>
           </>
         ) : (
@@ -453,7 +424,6 @@ const styles = StyleSheet.create({
   scheduleCard: {
     flex: 1,
     backgroundColor: "rgba(75, 126, 208, 0.3)",
-    backdropFilter: "blur(45px)",
     borderRadius: 12,
     overflow: "hidden",
     marginBottom: 16,

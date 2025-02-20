@@ -14,24 +14,28 @@ export type TravelInfo = {
   additionalRequests?: string;
 };
 
-export type Schedule = {
-  title: string;
+export interface Schedule {
+  id: string;
   destination: string;
-  activities: {
-    day: number;
-    items: {
+  title: string;
+  startDate: string;
+  endDate: string;
+  travelStyle: string[];
+  activities: string[];
+  budget: number;
+  isAIRecommended: boolean;
+  itinerary: {
+    date: string;
+    activities: {
       time: string;
-      activity: string;
-      location: string;
+      place: string;
       description: string;
       cost: number;
-      transportation: string;
     }[];
   }[];
   totalBudget: number;
-  travelStyle: string;
   guideService: boolean;
-};
+}
 
 export type ScheduleDay = {
   date: string;
