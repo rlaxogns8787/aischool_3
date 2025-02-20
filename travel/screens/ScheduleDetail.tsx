@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect } from "react";
 import {
   View,
   Text,
@@ -12,7 +12,7 @@ import { ArrowLeft } from "lucide-react-native";
 import { Schedule } from "../types/schedule";
 import { useRoute, RouteProp, useNavigation } from "@react-navigation/native";
 import TrashIcon from "../assets/trash.svg";
-import AsyncStorage from "@react-native-async-storage/async-storage";
+import { deleteSchedule as deleteScheduleAPI, getSchedules } from "../api/loginapi";
 
 type RouteParams = {
   ScheduleDetail: {
@@ -36,25 +36,8 @@ export default function ScheduleDetail() {
         style: "destructive",
         onPress: async () => {
           try {
-            const storedSchedules = await AsyncStorage.getItem(
-              "confirmedSchedule"
-            );
-            if (storedSchedules) {
-              const parsedSchedules = JSON.parse(storedSchedules);
-              const schedulesArray = Array.isArray(parsedSchedules)
-                ? parsedSchedules
-                : [parsedSchedules];
-
-              const updatedSchedules = schedulesArray.filter(
-                (item) => item.id !== id && item.tripId !== id
-              );
-
-              await AsyncStorage.setItem(
-                "confirmedSchedule",
-                JSON.stringify(updatedSchedules)
-              );
-              navigation.goBack();
-            }
+            await deleteScheduleAPI(id);
+            navigation.goBack();
           } catch (error) {
             console.error("Failed to delete schedule:", error);
           }
@@ -62,6 +45,19 @@ export default function ScheduleDetail() {
       },
     ]);
   };
+
+  useEffect(() => {
+    const fetchSchedules = async () => {
+      try {
+        const schedules = await getSchedules();
+        // Handle the fetched schedules as needed
+      } catch (error) {
+        console.error("Failed to fetch schedules:", error);
+      }
+    };
+
+    fetchSchedules();
+  }, []);
 
   return (
     <SafeAreaView style={styles.container}>

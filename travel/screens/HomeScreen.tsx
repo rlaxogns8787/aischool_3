@@ -111,14 +111,19 @@ export default function HomeScreen() {
       async function loadScheduleData() {
         try {
           const scheduleData = await getSchedules();
+          if (!scheduleData || scheduleData.length === 0) {
+            setSchedule(null); // scheduleData가 없을 경우 null로 설정
+            return;
+          }
           // 변환: keywords 데이터를 travelStyle로 변환
           const transformedScheduleData = {
-            ...scheduleData,
-            travelStyle: scheduleData.keywords || [], // keywords가 없으면 빈 배열로 설정
+            ...scheduleData[0], // 첫 번째 요소를 사용
+            travelStyle: scheduleData[0].keywords || [], // keywords가 없으면 빈 배열로 설정
           };
           setSchedule(transformedScheduleData);
         } catch (error) {
           console.error("Failed to load schedule from database:", error);
+          setSchedule(null); // 에러 발생 시 schedule을 null로 설정
         }
       }
 
@@ -194,7 +199,7 @@ export default function HomeScreen() {
         </View>
 
         {/* Travel Card - 일정이 있을 때만 표시 */}
-        {schedule && schedule.tripId && (
+        {schedule && schedule.tripId ? (
           <View style={styles.travelCardContainer}>
             <View style={styles.travelCard}>
               <View style={styles.cardHeader}>
@@ -225,6 +230,8 @@ export default function HomeScreen() {
               </View>
             </View>
           </View>
+        ) : (
+          <Text style={styles.errorText}></Text>
         )}
       </SafeAreaView>
     </ImageBackground>

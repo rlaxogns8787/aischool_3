@@ -175,7 +175,7 @@ export const getSchedules = async () => {
       params: { username: userInfo.username },
     });
 
-    return response.data[0]; // 첫 번째 요소를 반환하여 객체 형식으로 변경
+    return response.data;
   } catch (error) {
     console.error("Get schedules error:", error);
     throw new Error(

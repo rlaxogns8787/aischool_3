@@ -45,6 +45,7 @@ export default function ScheduleScreen({ navigation }: ScheduleScreenProps) {
     try {
       // 데이터베이스에서 일정을 가져옵니다.
       const schedules = await getSchedules(); // AsyncStorage 대신 getSchedules 호출
+      console.log("Fetched schedules:", schedules); // 추가된 로그
 
       // schedules가 배열이 아닌 경우 배열로 변환
       const schedulesArray = Array.isArray(schedules)
@@ -89,6 +90,7 @@ export default function ScheduleScreen({ navigation }: ScheduleScreenProps) {
 
       // 변환된 일정을 상태에 저장
       setSchedules(formattedSchedules);
+
     } catch (error) {
       // 에러 발생 시 콘솔에 에러 메시지 출력
       console.error("Failed to load schedules from database:", error);
