@@ -272,6 +272,17 @@ type SoundObject = {
   status: AVPlaybackStatus;
 };
 
+// YouTube API 키 추가
+const YOUTUBE_API_KEY = "AIzaSyBcAwJBnmuJVux4c3ZzcBfZrIKHbFF9jnk";
+
+// 타입 정의 추가
+interface YouTubeEvent {
+  state: string;
+  error?: string;
+  target?: number;
+  data?: any;
+}
+
 export default function TourScreen() {
   const navigation = useNavigation<any>();
   const [displayedText, setDisplayedText] = useState("");
@@ -318,9 +329,11 @@ export default function TourScreen() {
   const [currentSong, setCurrentSong] = useState<{
     title: string;
     artist: string;
+    videoId: string | null;
   } | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [userData, setUserData] = useState<UserData | null>(null);
+  const youtubePlayerRef = useRef(null);
 
   // 사용자 관심사를 DB에서 가져오기(기본값은 '전체'설정)
   const userPreference = user?.preferences?.[0] || "전체";
@@ -363,7 +376,6 @@ export default function TourScreen() {
       // ✅ 함수형 업데이트로 즉시 반영
       setSelectedVoice((prev) => (prev.id !== voice.id ? voice : prev));
       setShowVoiceModal(false);
-
     } catch (error) {
       console.error("Voice selection error:", error);
     } finally {
@@ -1041,18 +1053,28 @@ Additional context: ${currentPlace.description}`,
       if (userMusicGenres.length > 0 && userData) {
         const randomGenre =
           userMusicGenres[Math.floor(Math.random() * userMusicGenres.length)];
-        const songInfo = await handleTransitMusic(randomGenre);
-        if (songInfo) {
-          setCurrentSong(songInfo);
+        console.log("Selected genre:", randomGenre);
+        console.log("User birth year:", userData.birthYear);
+
+        const songInfo = await musicService.current.playUserPreferredMusic({
+          birthYear: userData.birthYear,
+          musicGenre: randomGenre,
+        });
+
+        if (songInfo.videoId) {
+          setCurrentSong({
+            title: songInfo.title,
+            artist: songInfo.artist,
+            videoId: songInfo.videoId,
+          });
           setIsPlaying(true);
         }
       }
 
       return content;
     } catch (error) {
-      console.log("Tour guide generation:", error);
+      console.error("Tour guide generation error:", error);
       setIsLoadingStory(false);
-      // 에러가 발생해도 조용히 처리
       return;
     }
   };
@@ -1282,7 +1304,7 @@ Additional context: ${currentPlace.description}`,
     };
   }, []);
 
-  // 사용자 취향 정보 로드하는 함수 추가
+  // 사용자 취향 정보 로드하는 함수 수정
   const loadUserPreferences = async () => {
     try {
       const userData = await AsyncStorage.getItem("userData");
@@ -1291,7 +1313,7 @@ Additional context: ${currentPlace.description}`,
         setUserPreferences(parsedData.preferences || []);
         setUserMusicGenres(parsedData.music_genres || []);
         setUserData({
-          birthYear: parsedData.birthYear || 2000, // 기본값 설정
+          birthYear: parsedData.birthyear || 2000, // birthyear로 수정
           musicGenres: parsedData.music_genres || [],
         });
       }
@@ -1299,6 +1321,11 @@ Additional context: ${currentPlace.description}`,
       console.error("Error loading user preferences:", error);
     }
   };
+
+  // useEffect에서 사용자 데이터 로드
+  useEffect(() => {
+    loadUserPreferences();
+  }, []);
 
   // 음악 재생 버튼 컴포넌트 추가
   const MusicButton = () => (
@@ -1317,23 +1344,66 @@ Additional context: ${currentPlace.description}`,
     </TouchableOpacity>
   );
 
-  // 음악 재생/일시정지 핸들러 추가
+  // 음악 재생/일시정지 핸들러 수정
   const handlePlayPause = async () => {
     try {
+      console.log("handlePlayPause called, current state:", {
+        isPlaying,
+        currentSong,
+        userData,
+      });
+
       if (isPlaying) {
+        console.log("Attempting to pause music");
         await musicService.current.pause();
         setIsPlaying(false);
       } else {
-        if (userMusicGenres.length > 0) {
-          const randomGenre =
-            userMusicGenres[Math.floor(Math.random() * userMusicGenres.length)];
-          const songInfo = await handleTransitMusic(randomGenre);
-          setCurrentSong(songInfo);
+        if (currentSong?.videoId) {
+          console.log("Attempting to play current song:", currentSong);
+          await musicService.current.play();
           setIsPlaying(true);
+        } else if (userData) {
+          console.log(
+            "No current song, searching for new song with user data:",
+            userData
+          );
+          const defaultSong = {
+            title: "Test Audio",
+            artist: "Sample",
+            videoId: "test",
+          };
+
+          setCurrentSong(defaultSong);
+          setIsPlaying(true);
+
+          const randomGenre =
+            userMusicGenres.length > 0
+              ? userMusicGenres[
+                  Math.floor(Math.random() * userMusicGenres.length)
+                ]
+              : "pop";
+
+          console.log("Selected genre for new song:", randomGenre);
+
+          const songInfo = await musicService.current.playUserPreferredMusic({
+            birthYear: userData.birthYear || 2000,
+            musicGenre: randomGenre,
+          });
+
+          console.log("Received song info:", songInfo);
+
+          if (songInfo.videoId) {
+            setCurrentSong({
+              title: songInfo.title,
+              artist: songInfo.artist,
+              videoId: songInfo.videoId,
+            });
+          }
         }
       }
     } catch (error) {
       console.error("Music playback error:", error);
+      Alert.alert("음악 재생 오류", "음악을 재생하는 중 문제가 발생했습니다.");
     }
   };
 
@@ -1504,14 +1574,21 @@ Additional context: ${currentPlace.description}`,
               <View style={styles.songIconContainer}>
                 <SongIcon width={20} height={20} color="#FFFFFF" />
               </View>
-              {currentSong && (
+              {currentSong ? (
                 <Text style={styles.songTitle} numberOfLines={1}>
                   {currentSong.artist} - {currentSong.title}
+                </Text>
+              ) : (
+                <Text style={styles.songTitle}>
+                  음악을 재생하려면 클릭하세요
                 </Text>
               )}
             </View>
             <TouchableOpacity
-              style={styles.musicControlButton}
+              style={[
+                styles.musicControlButton,
+                isPlaying && styles.musicControlButtonActive,
+              ]}
               onPress={handlePlayPause}
             >
               {isPlaying ? (
@@ -1815,10 +1892,10 @@ const styles = StyleSheet.create({
     bottom: 84,
     left: 20,
     right: 20,
-    backgroundColor: "rgba(255, 255, 255, 0.1)",
-    borderRadius: 8,
-    paddingVertical: 8,
-    paddingHorizontal: 12,
+    backgroundColor: "rgba(255, 255, 255, 0.15)",
+    borderRadius: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
     zIndex: 1,
     marginBottom: 24,
   },
@@ -1831,29 +1908,34 @@ const styles = StyleSheet.create({
   musicInfo: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
+    gap: 12,
     flex: 1,
   },
   songIconContainer: {
-    width: 20,
-    height: 20,
+    width: 32,
+    height: 32,
+    backgroundColor: "rgba(255, 255, 255, 0.1)",
+    borderRadius: 16,
     justifyContent: "center",
     alignItems: "center",
   },
   songTitle: {
     color: "#FFFFFF",
-    fontSize: 14,
-    lineHeight: 18,
-    fontWeight: "400",
+    fontSize: 16,
+    lineHeight: 20,
+    fontWeight: "500",
     flex: 1,
   },
   musicControlButton: {
-    width: 32,
-    height: 32,
-    borderRadius: 100,
-    backgroundColor: "#4E7EB8",
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: "rgba(78, 126, 184, 0.8)",
     justifyContent: "center",
     alignItems: "center",
-    marginLeft: 6,
+    marginLeft: 12,
+  },
+  musicControlButtonActive: {
+    backgroundColor: "#4E7EB8",
   },
 });
