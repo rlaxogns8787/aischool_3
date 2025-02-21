@@ -164,20 +164,49 @@ export default function HomeScreen() {
             return;
           }
 
-          // 현재 날짜
+          // 현재 날짜 (시간 제외)
           const today = new Date();
           today.setHours(0, 0, 0, 0);
 
+          // 유효한 일정 필터링
+          const validSchedules = scheduleData.filter((schedule: any) => {
+            const startDate = new Date(schedule.startDate);
+            startDate.setHours(0, 0, 0, 0);
+            const endDate = new Date(schedule.endDate);
+            endDate.setHours(0, 0, 0, 0);
+
+            // 여행 기간 계산 (일수)
+            const tripDuration = Math.ceil(
+              (endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)
+            );
+
+            // 당일치기(0박1일) 여행이고 시작일이 오늘 이전인 경우 제외
+            if (tripDuration === 0 && startDate < today) {
+              return false;
+            }
+
+            // 시작일이 오늘 이후이거나,
+            // 1박 이상이면서 종료일이 오늘 이후인 경우 포함
+            return startDate >= today || (tripDuration > 0 && endDate >= today);
+          });
+
+          if (validSchedules.length === 0) {
+            setSchedule(null);
+            return;
+          }
+
           // 일정들을 날짜 기준으로 정렬
-          const sortedSchedules = scheduleData.sort((a, b) => {
+          const sortedSchedules = validSchedules.sort((a: any, b: any) => {
             const dateA = new Date(a.startDate);
             const dateB = new Date(b.startDate);
 
-            // 오늘 날짜와의 차이 계산
-            const diffA = Math.abs(dateA.getTime() - today.getTime());
-            const diffB = Math.abs(dateB.getTime() - today.getTime());
+            // 시작 날짜가 같은 경우 tripId로 정렬 (먼저 등록된 순)
+            if (dateA.getTime() === dateB.getTime()) {
+              return a.tripId - b.tripId;
+            }
 
-            return diffA - diffB;
+            // 시작 날짜로 정렬
+            return dateA.getTime() - dateB.getTime();
           });
 
           // 가장 가까운 일정 선택
