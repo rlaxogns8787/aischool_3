@@ -16,7 +16,7 @@ import OptionCard from "./OptionCard";
 import OptionModal from "./OptionModal"; // OptionModal import 추가
 import StyleToggleButton from "./StyleToggleButton";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { addSchedule } from "../api/loginapi";
+import { addSchedule,addrecord } from "../api/loginapi";
 
 const { width: screenWidth } = Dimensions.get("window");
 
@@ -262,7 +262,8 @@ export default function MessageList({
                             );
 
                             // 🔹 DB에 일정 추가
-                            await addSchedule(scheduleData); // DB에 일정 추가
+                            await addSchedule(scheduleData);
+                            await addrecord(scheduleData); // DB에 일정 추가
                             console.log(
                               "일정이 DB에 성공적으로 저장되었습니다."
                             );

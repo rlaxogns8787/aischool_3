@@ -197,3 +197,97 @@ export const getSchedules = async () => {
     );
   }
 };
+
+
+/**
+ * 여행 기록 추가 API_2
+ */
+export const addrecord = async (scheduleData) => {
+  try {
+    const userData = await AsyncStorage.getItem("userData");
+    if (!userData) {
+      throw new Error("사용자 정보를 찾을 수 없습니다.");
+    }
+    const userInfo = JSON.parse(userData);
+    console.log("User Info:", userInfo); // 사용자 정보 확인
+    const formattedScheduleData = {
+      username: userInfo.username,
+      tripId: scheduleData.tripId,
+      timestamp: new Date().toISOString(),
+      title: scheduleData.title,
+      companion: scheduleData.companion,
+      startDate: scheduleData.startDate,
+      endDate: scheduleData.endDate,
+      duration: scheduleData.duration,
+      budget: scheduleData.budget,
+      transportation: scheduleData.transportation,
+      keywords: scheduleData.keywords,
+      summary: scheduleData.summary,
+      days: scheduleData.days,
+      extraInfo: scheduleData.extraInfo,
+      generatedScheduleRaw: JSON.stringify(scheduleData),
+    };
+    console.log("Formatted Schedule Data:", formattedScheduleData); // 포맷된 일정 데이터 확인
+    const response = await axios.post(
+      `${BASE_URL}/additional_schedule`,
+      formattedScheduleData
+    );
+    console.log("Add record Response:", response.data); // 서버 응답 확인
+    return response.data;
+  } catch (error) {
+    console.error("Add record error:", error);
+    throw new Error(
+      error.response?.data?.message || "일정 추가에 실패했습니다."
+    );
+  }
+};
+
+/**
+ * 여행 기록 삭제 API
+ */
+export const deleterecord = async (scheduleId) => {
+  try {
+    const userData = await AsyncStorage.getItem("userData");
+    if (!userData) {
+      throw new Error("사용자 정보를 찾을 수 없습니다.");
+    }
+
+    const userInfo = JSON.parse(userData);
+
+    const response = await axios.delete(`${BASE_URL}/additional_schedule/${scheduleId}`, {
+      params: { username: userInfo.username },
+    });
+
+    return response.data;
+  } catch (error) {
+    console.error("Delete schedule error:", error);
+    throw new Error(
+      error.response?.data?.message || "일정 삭제에 실패했습니다."
+    );
+  }
+};
+
+/**
+ * 여행 기록 조회 API
+ */
+export const getrecord = async () => {
+  try {
+    const userData = await AsyncStorage.getItem("userData");
+    if (!userData) {
+      throw new Error("사용자 정보를 찾을 수 없습니다.");
+    }
+
+    const userInfo = JSON.parse(userData);
+
+    const response = await axios.get(`${BASE_URL}/additional_schedule`, {
+      params: { username: userInfo.username },
+    });
+
+    return response.data;
+  } catch (error) {
+    console.error("Get schedules error:", error);
+    throw new Error(
+      error.response?.data?.message || "일정 조회에 실패했습니다."
+    );
+  }
+};

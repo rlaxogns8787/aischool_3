@@ -24,6 +24,7 @@ import { MessageCircle } from "lucide-react-native";
 import MyProfileScreen from "./screens/MyProfileScreen";
 import EditProfileScreen from "./screens/EditProfileScreen";
 import ScheduleDetail from "./screens/ScheduleDetail";
+import TravelLogDetail from "./screens/TravelLogDetail";
 import TermsDetailScreen from "./screens/TermsDetailScreen";
 import CustomerSupportScreen from "./screens/CustomerSupportScreen";
 
@@ -49,6 +50,7 @@ export type RootStackParamList = {
   Tour: undefined;
   MyProfile: undefined;
   ScheduleDetail: undefined;
+  TravelLogDetail: undefined;
   CustomerSupport: undefined;
 };
 
@@ -234,6 +236,11 @@ export default function App() {
             <Stack.Screen
               name="ScheduleDetail"
               component={ScheduleDetail} // 추가
+              options={{ headerShown: false }}
+            />
+            <Stack.Screen
+              name="TravelLogDetail"
+              component={TravelLogDetail} // 추가
               options={{ headerShown: false }}
             />
 
