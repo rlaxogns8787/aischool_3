@@ -275,52 +275,37 @@ export default function AuthScreen({ navigation, route }: AuthScreenProps) {
     return `${randomAdjective} ${randomAnimal}`;
   }
 
-  // 닉네임 중복 확인 핸들러
-  const handleCheckNickname = async () => {
-    try {
-      if (!nickname.trim()) {
-        Alert.alert("알림", "닉네임을 입력해주세요.");
-        return;
-      }
-
-      const response = await checkNicknameDuplicate(nickname);
-
-      if (response.available) {
-        setIsNicknameChecked(true);
-        setIsNicknameValid(true);
-        Alert.alert("확인", "사용 가능한 닉네임입니다.");
-      } else {
-        setIsNicknameChecked(true);
-        setIsNicknameValid(false);
-        Alert.alert("알림", "이미 사용 중인 닉네임입니다.");
-      }
-    } catch (error: any) {
-      console.error("닉네임 중복 확인 실패:", error);
-      Alert.alert("오류", error.message || "닉네임 중복 확인에 실패했습니다.");
-    }
-  };
-
-  // 닉네임 변경 시 중복 확인 상태 초기화
+  // 닉네임 변경 핸들러 수정
   const handleNicknameChange = (text: string) => {
     setNickname(text);
+    // 중복 확인 관련 상태 업데이트 주석 처리
+    /*
     setIsNicknameChecked(false);
     setIsNicknameValid(false);
+    */
   };
 
-  // 랜덤 닉네임 생성 시에도 중복 확인 필요
+  // 랜덤 닉네임 생성 핸들러 수정
   const handleRefreshNickname = () => {
     const newNickname = generateRandomNickname();
     setNickname(newNickname);
+    // 중복 확인 관련 상태 업데이트 주석 처리
+    /*
     setIsNicknameChecked(false);
     setIsNicknameValid(false);
+    */
   };
 
+  // 다음 단계로 이동하는 핸들러 수정
   const handleNextStep = () => {
     if (step === "info") {
+      // 중복 확인 검증 주석 처리
+      /*
       if (!isNicknameChecked || !isNicknameValid) {
         Alert.alert("알림", "닉네임 중복 확인이 필요합니다.");
         return;
       }
+      */
 
       // 기존 유효성 검사
       if (
@@ -781,14 +766,7 @@ export default function AuthScreen({ navigation, route }: AuthScreenProps) {
                       <View style={styles.nicknameContainer}>
                         <View style={styles.nicknameInputWrapper}>
                           <TextInput
-                            style={[
-                              styles.nicknameInput,
-                              isNicknameChecked && {
-                                borderColor: isNicknameValid
-                                  ? "#34C759"
-                                  : "#FF3B30",
-                              },
-                            ]}
+                            style={styles.nicknameInput}
                             value={nickname}
                             onChangeText={handleNicknameChange}
                             placeholder="닉네임을 입력해주세요"
@@ -806,19 +784,11 @@ export default function AuthScreen({ navigation, route }: AuthScreenProps) {
                           </TouchableOpacity>
                         </View>
                         <TouchableOpacity
-                          style={[
-                            styles.checkButton,
-                            isNicknameChecked &&
-                              isNicknameValid &&
-                              styles.checkButtonValid,
-                          ]}
-                          onPress={handleCheckNickname}
+                          style={[styles.checkButton]}
+                          disabled={true} // 버튼 비활성화
+                          onPress={() => {}} // 빈 핸들러
                         >
-                          <Text style={styles.checkButtonText}>
-                            {isNicknameChecked && isNicknameValid
-                              ? "확인 완료"
-                              : "중복 확인"}
-                          </Text>
+                          <Text style={styles.checkButtonText}>중복 확인</Text>
                         </TouchableOpacity>
                       </View>
                     </View>
@@ -1078,12 +1048,7 @@ export default function AuthScreen({ navigation, route }: AuthScreenProps) {
               <View style={styles.nicknameContainer}>
                 <View style={styles.nicknameInputWrapper}>
                   <TextInput
-                    style={[
-                      styles.nicknameInput,
-                      isNicknameChecked && {
-                        borderColor: isNicknameValid ? "#34C759" : "#FF3B30",
-                      },
-                    ]}
+                    style={styles.nicknameInput}
                     value={nickname}
                     onChangeText={handleNicknameChange}
                     placeholder="닉네임을 입력해주세요"
@@ -1097,19 +1062,11 @@ export default function AuthScreen({ navigation, route }: AuthScreenProps) {
                   </TouchableOpacity>
                 </View>
                 <TouchableOpacity
-                  style={[
-                    styles.checkButton,
-                    isNicknameChecked &&
-                      isNicknameValid &&
-                      styles.checkButtonValid,
-                  ]}
-                  onPress={handleCheckNickname}
+                  style={[styles.checkButton]}
+                  disabled={true} // 버튼 비활성화
+                  onPress={() => {}} // 빈 핸들러
                 >
-                  <Text style={styles.checkButtonText}>
-                    {isNicknameChecked && isNicknameValid
-                      ? "확인 완료"
-                      : "중복 확인"}
-                  </Text>
+                  <Text style={styles.checkButtonText}>중복 확인</Text>
                 </TouchableOpacity>
               </View>
             </View>
@@ -1563,14 +1520,11 @@ const styles = StyleSheet.create({
     padding: 8,
   },
   checkButton: {
-    backgroundColor: "#1F2024",
+    backgroundColor: "#C5C6CC", // 비활성화된 버튼 색상
     borderRadius: 8,
     paddingVertical: 14,
     paddingHorizontal: 12,
     justifyContent: "center",
-  },
-  checkButtonValid: {
-    backgroundColor: "#34C759",
   },
   checkButtonText: {
     color: "#FFFFFF",
