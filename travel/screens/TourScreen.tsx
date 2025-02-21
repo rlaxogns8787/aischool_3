@@ -217,8 +217,7 @@ const characterTraits: VoiceCharacterType = {
         .replace(/시오/g, "어")
         .replace(/보세요/g, "봐")
         .replace(/이에요|예요/g, "이야")
-        .replace(/\./g, "!")
-        .replace(/(?<=[.!?])\s+/g, "~ ");
+        .replace(/\./g, "!");
     },
   },
 };
