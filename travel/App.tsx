@@ -99,12 +99,8 @@ function MainTabs() {
         name="홈"
         component={HomeScreen}
         options={{
-          tabBarIcon: ({ focused }: { focused: boolean }) => (
-            <HomeIcon
-              width={24}
-              height={24}
-              color={focused ? "#ffffff" : "rgba(255, 255, 255, 0.6)"}
-            />
+          tabBarIcon: ({ color }) => (
+            <HomeIcon width={24} height={24} color={color} />
           ),
         }}
       />
@@ -112,12 +108,8 @@ function MainTabs() {
         name="가이드"
         component={TourScreen}
         options={{
-          tabBarIcon: ({ focused }: { focused: boolean }) => (
-            <MessageCircle
-              width={24}
-              height={24}
-              color={focused ? "#ffffff" : "rgba(255, 255, 255, 0.6)"}
-            />
+          tabBarIcon: ({ color }) => (
+            <MessageCircle width={24} height={24} color={color} />
           ),
         }}
       />
@@ -125,12 +117,8 @@ function MainTabs() {
         name="내일정"
         component={ScheduleScreen}
         options={{
-          tabBarIcon: ({ focused }: { focused: boolean }) => (
-            <CalendarIcon
-              width={24}
-              height={24}
-              color={focused ? "#ffffff" : "rgba(255, 255, 255, 0.6)"}
-            />
+          tabBarIcon: ({ color }) => (
+            <CalendarIcon width={24} height={24} color={color} />
           ),
         }}
       />
@@ -138,12 +126,8 @@ function MainTabs() {
         name="여행기록"
         component={TravelLogScreen}
         options={{
-          tabBarIcon: ({ focused }: { focused: boolean }) => (
-            <GalleryIcon
-              width={24}
-              height={24}
-              color={focused ? "#ffffff" : "rgba(255, 255, 255, 0.6)"}
-            />
+          tabBarIcon: ({ color }) => (
+            <GalleryIcon width={24} height={24} color={color} />
           ),
         }}
       />
@@ -207,7 +191,10 @@ export default function App() {
             />
 
             {/* 고객센터 화면 추가 */}
-            <Stack.Screen name="CustomerSupport" component={CustomerSupportScreen} />
+            <Stack.Screen
+              name="CustomerSupport"
+              component={CustomerSupportScreen}
+            />
 
             <Stack.Screen name="Onboarding" component={OnboardingScreen} />
             <Stack.Screen name="Main" component={MainDrawer} />
@@ -254,7 +241,6 @@ export default function App() {
                 gestureDirection: "horizontal",
               }}
             />
-
           </Stack.Navigator>
         </NavigationContainer>
       </AuthProvider>
