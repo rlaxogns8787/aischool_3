@@ -60,7 +60,7 @@ type RootStackParamList = {
   Tour: undefined;
 };
 
-type HomeScreenNavigationProp = NavigationProp<RootStackParamList>;
+type HomeScreenNavigationProp = DrawerNavigationProp<RootStackParamList>;
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
 

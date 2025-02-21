@@ -57,8 +57,6 @@ export const updateUserInfo = async (field, value, password?) => {
       throw new Error("username이 없습니다.");
     }
 
-    console.log("Sending update request:", { username, field, value });
-
     // 서버에 보낼 데이터 구성
     let updateData = {
       username, // username 추가
@@ -99,7 +97,7 @@ export const updateUserInfo = async (field, value, password?) => {
     }
 
     return response.data;
-  } catch (error) {
+  } catch (error: any) {
     console.error("Update error details:", error);
     throw new Error(
       error.response?.data?.message || "정보 업데이트에 실패했습니다."

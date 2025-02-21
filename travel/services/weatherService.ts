@@ -1,7 +1,11 @@
-const AZURE_MAPS_KEY =
-  "7iEv0kILZZ3Fzwx3hi3KblwFmx4QcPX8YsVBEXdaQTu8BtMbAPzGJQQJ99BBACYeBjFUZlQXAAAgAZMPd2ld";
-const AZURE_MAPS_CLIENT_ID = "b6a940db-c318-477c-baea-f8f8180062b0";
-const AZURE_MAPS_ENDPOINT = "https://atlas.microsoft.com/weather/current/json";
+import axios from "axios";
+
+const OPENWEATHERMAP_KEY = "d8b6ec4b0d962bb74c5f798fd68d197b";
+// const KAKAO_API_KEY = "a98b3d67979288daf0c29c88075998ab";  // 주석 처리
+const REVERSE_GEOCODING_URL = "https://api.openweathermap.org/geo/1.0/reverse";
+const FORECAST_URL = "https://api.openweathermap.org/data/2.5/forecast";
+const BASE_URL = "https://api.openweathermap.org/data/2.5/weather";
+// const KAKAO_GEO_URL = "https://dapi.kakao.com/v2/local/geo/coord2regioncode.json";  // 주석 처리
 
 export interface WeatherData {
   temperature: number;
@@ -16,56 +20,132 @@ export interface WeatherData {
   location: string;
 }
 
+interface ForecastEntry {
+  main: {
+    temp: number;
+  };
+  weather: Array<{ main: string; description: string }>; // 🌟 weather 속성 추가
+  dt_txt: string;
+}
+
+// Kakao API 함수 주석 처리
+/*
+async function getDistrictName(latitude: number, longitude: number): Promise<string> {
+  try {
+    const response = await axios.get(KAKAO_GEO_URL, {
+      params: { x: longitude, y: latitude },
+      headers: { Authorization: `KakaoAK ${KAKAO_API_KEY}` },
+    });
+
+    const regionData = response.data.documents[0];
+    const locationName = `${regionData.region_1depth_name} ${regionData.region_2depth_name}`;
+    return locationName;
+  } catch (error) {
+    console.error("Kakao API Error:", error);
+    return "위치 정보 없음";
+  }
+}
+*/
+
+// OpenWeather API의 reverse geocoding 사용
+async function getLocationName(
+  latitude: number,
+  longitude: number
+): Promise<string> {
+  try {
+    // 1. 언어 코드를 ko로 수정
+    const response = await axios.get(
+      `${REVERSE_GEOCODING_URL}?lat=${latitude}&lon=${longitude}&limit=1&appid=${OPENWEATHERMAP_KEY}&lang=ko`
+    );
+
+    const [location] = response.data;
+    if (!location) {
+      return "위치 정보 없음";
+    }
+
+    // 2. 응답 데이터 구조에 맞게 수정
+    let locationString = "";
+
+    // 한국의 경우
+    if (location.country === "KR") {
+      // state는 시/도, name은 구/군 정보
+      locationString = location.state
+        ? `${location.state} ${location.name}`
+        : location.name;
+    } else {
+      // 해외의 경우
+      locationString = location.name;
+      if (location.state) {
+        locationString += `, ${location.state}`;
+      }
+      locationString += `, ${location.country}`;
+    }
+
+    return locationString;
+  } catch (error) {
+    if (axios.isAxiosError(error)) {
+      console.error(
+        "Reverse Geocoding Error:",
+        error.response?.data || error.message
+      );
+    }
+    return "위치 정보 없음";
+  }
+}
+
 export async function getCurrentWeather(
   latitude: number,
   longitude: number
 ): Promise<WeatherData> {
   try {
-    const url = `${AZURE_MAPS_ENDPOINT}?api-version=1.0&query=${latitude},${longitude}`;
+    const weatherUrl = `${BASE_URL}?lat=${latitude}&lon=${longitude}&appid=${OPENWEATHERMAP_KEY}&units=metric&lang=kr`;
+    const response = await axios.get(weatherUrl);
+    const weatherData = response.data;
 
-    const response = await fetch(url, {
-      method: "GET",
-      headers: {
-        Accept: "application/json",
-        "Ocp-Apim-Subscription-Key": AZURE_MAPS_KEY,
-      },
+    // Kakao API 대신 OpenWeather의 reverse geocoding 사용
+    const locationName = await getLocationName(latitude, longitude);
+
+    const forecastUrl = `${FORECAST_URL}?lat=${latitude}&lon=${longitude}&appid=${OPENWEATHERMAP_KEY}&units=metric&lang=kr`;
+    const forecastResponse = await axios.get(forecastUrl);
+    const forecastData = forecastResponse.data;
+
+    const today = new Date().toISOString().split("T")[0];
+
+    let highTemp = -Infinity;
+    let lowTemp = Infinity;
+
+    const forecastList: ForecastEntry[] = forecastData.list;
+    forecastList.forEach((entry) => {
+      if (entry.dt_txt.startsWith(today)) {
+        const temp = entry.main.temp;
+        highTemp = Math.max(highTemp, temp);
+        lowTemp = Math.min(lowTemp, temp);
+      }
     });
 
-    if (!response.ok) {
-      throw new Error(`Weather API failed with status: ${response.status}`);
-    }
-
-    const data = await response.json();
-    console.log("Weather API response:", data);
-
-    if (!data.results?.[0]) {
-      throw new Error("No weather data available");
-    }
-
-    const result = data.results[0];
-    const temp = Math.round(result.temperature?.value || 0);
+    // 반올림된 현재 기온
+    const roundedTemp = Math.round(weatherData.main.temp);
+    // 반올림된 최저/최고 기온
+    const roundedHigh = Math.round(weatherData.main.temp_max);
+    const roundedLow = Math.round(weatherData.main.temp_min);
+    // 반올림된 예보 기반 최저/최고 기온
+    const forecastHigh = Math.round(highTemp);
+    const forecastLow = Math.round(lowTemp);
 
     return {
-      temperature: temp,
-      condition: result.phrase || "맑음",
-      high: Math.round(
-        result.temperatureSummary?.past24Hours?.maximum?.value || temp + 3
-      ),
-      low: Math.round(
-        result.temperatureSummary?.past24Hours?.minimum?.value || temp - 3
-      ),
-      location: "현재 위치",
-      hourly: [
-        { time: "9AM", temp: temp - 2, condition: "sunny" },
-        { time: "10AM", temp: temp - 1, condition: "sunny" },
-        { time: "11AM", temp: temp, condition: "sunny" },
-        { time: "12PM", temp: temp + 1, condition: "sunny" },
-        { time: "1PM", temp: temp + 2, condition: "sunny" },
-        { time: "2PM", temp: temp + 1, condition: "sunny" },
-      ],
+      temperature: roundedTemp,
+      condition: weatherData.weather[0].description || "맑음",
+      high: roundedHigh === roundedTemp ? forecastHigh : roundedHigh,
+      low: roundedLow === roundedTemp ? forecastLow : roundedLow,
+      location: locationName,
+      hourly: forecastList.slice(0, 6).map((entry, index) => ({
+        time: `${9 + index}AM`,
+        temp: Math.round(entry.main.temp),
+        condition: entry.weather[0].main,
+      })),
     };
   } catch (error) {
-    console.error("Error details:", error);
+    console.error("Weather API Error:", error);
     // 에러 발생 시 기본 날씨 데이터 반환
     return {
       temperature: 24,

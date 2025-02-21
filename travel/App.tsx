@@ -24,6 +24,8 @@ import { MessageCircle } from "lucide-react-native";
 import MyProfileScreen from "./screens/MyProfileScreen";
 import EditProfileScreen from "./screens/EditProfileScreen";
 import ScheduleDetail from "./screens/ScheduleDetail";
+import TermsDetailScreen from "./screens/TermsDetailScreen";
+import CustomerSupportScreen from "./screens/CustomerSupportScreen";
 
 export type RootStackParamList = {
   Auth: undefined;
@@ -47,6 +49,7 @@ export type RootStackParamList = {
   Tour: undefined;
   MyProfile: undefined;
   ScheduleDetail: undefined;
+  CustomerSupport: undefined;
 };
 
 enableScreens();
@@ -201,6 +204,9 @@ export default function App() {
               })}
             />
 
+            {/* 고객센터 화면 추가 */}
+            <Stack.Screen name="CustomerSupport" component={CustomerSupportScreen} />
+
             <Stack.Screen name="Onboarding" component={OnboardingScreen} />
             <Stack.Screen name="Main" component={MainDrawer} />
             <Stack.Screen
@@ -230,6 +236,18 @@ export default function App() {
               component={ScheduleDetail} // 추가
               options={{ headerShown: false }}
             />
+
+            {/* TermsDetailScreen 추가 */}
+            <Stack.Screen
+              name="TermsDetail"
+              component={TermsDetailScreen}
+              options={{
+                headerShown: true, // 헤더 표시
+                animation: "slide_from_right",
+                gestureDirection: "horizontal",
+              }}
+            />
+
           </Stack.Navigator>
         </NavigationContainer>
       </AuthProvider>
