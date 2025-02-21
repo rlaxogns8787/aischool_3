@@ -23,7 +23,7 @@ export default function CustomerSupportScreen({
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
           <ChevronLeft size={24} color="#000" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>고객센터</Text>
+        <Text style={styles.headerTitle}>문의하기</Text>
       </View>
 
       {/* 고객센터 정보 */}
