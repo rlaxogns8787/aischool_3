@@ -30,18 +30,24 @@ export default function TermsDetailScreen({ navigation, route }: TermsDetailScre
 
   useLayoutEffect(() => {
     navigation.setOptions({
-      headerShown: true,
-      headerTitle: title,
-      headerLeft: () => (
-        <TouchableOpacity onPress={() => navigation.goBack()}>
-          <ChevronLeft size={24} color="#007AFF" />
-        </TouchableOpacity>
-      ),
+      headerShown: false,
     });
   }, [navigation, title]);
 
   return (
     <SafeAreaView style={styles.container}>
+      <View style={{
+        flexDirection: "row",
+        alignItems: "center",
+        padding: 16,
+        borderBottomWidth: 1,
+        borderBottomColor: "#ddd"
+      }}>
+        <TouchableOpacity onPress={() => navigation.goBack()} style={{ marginRight: 10 }}>
+          <ChevronLeft size={24} color="#007AFF" />
+        </TouchableOpacity>
+        <Text style={{ fontSize: 18, fontWeight: "400" }}>{title}</Text>
+      </View>
       <ScrollView style={styles.scrollView}>
         {/* 제목 (가운데 정렬) */}
         <Text style={styles.title}>{title}</Text>
@@ -102,7 +108,8 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
     color: "#000",
     textAlign: "center",
-    marginBottom: 16,
+    marginBottom: 10,
+    marginTop: 25,
   },
   sectionGroupTitle: {
     fontSize: 19,
@@ -144,5 +151,12 @@ const styles = StyleSheet.create({
     lineHeight: 26,
     color: "#444",
     marginBottom: 8,
+  },
+  headerTitle: {
+    fontSize: 18,
+    fontWeight: "bold",
+    color: "#000",
+    textAlign: "left", // 기존 center → left 변경
+    flex: 1, // 제목이 왼쪽으로 정렬되도록 추가
   },
 });

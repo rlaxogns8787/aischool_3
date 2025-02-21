@@ -2,6 +2,9 @@ import React, { useState } from 'react'
 import { View, Text, StyleSheet, Image, TouchableOpacity, Dimensions, ScrollView, NativeScrollEvent, NativeSyntheticEvent } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 
+const GuideImage = require('../assets/aitravelguide.jpg');
+const ScheduleImage = require('../assets/aischedule.webp');
+
 const { width } = Dimensions.get('window')
 
 type OnboardingScreenProps = {
@@ -11,15 +14,15 @@ type OnboardingScreenProps = {
 const slides = [
   {
     id: 1,
-    image: 'https://via.placeholder.com/300x300/007AFF/FFFFFF?text=AI+Travel+Guide',
-    title: '나만의 도슨트 설명',
-    subtitle: '나를 위한 개인 맞춤형 여행 가이드 설명 어쩌구 저쩌구 옆에서 계속 나를 위해 설명 쭉그르르'
+    image: GuideImage,
+    title: '나만을 위한 도슨트 설명!',
+    subtitle: 'SSAPY는 당신만을 위한 개인 맞춤 여행 가이드입니다!\n 여행 일정 동안 당신의 취향에 맞춘 설명을 제공하며, \n마치 개인 가이드처럼 주요 관광지를 안내해 드립니다.'
   },
   {
     id: 2,
-    image: 'https://via.placeholder.com/300x300/34C759/FFFFFF?text=Smart+Schedule',
-    title: '일정이 짜기 귀찮다면',
-    subtitle: '일정까지도 알아서 척척 몇만 오시면 됩니다 인공지능이 어쩌구 저쩌구'
+    image: ScheduleImage,
+    title: '일정이 짜기 귀찮다면?',
+    subtitle: 'AI가 당신의 스타일을 반영해 최적의 일정을 추천합니다.\n 기본 정보만 선택하면 나머지는 알아서 척척! \n 편하게 여행을 즐길 수 있습니다.'
   }
 ]
 
@@ -49,7 +52,7 @@ export default function OnboardingScreen({ navigation }: OnboardingScreenProps) 
         {slides.map((slide) => (
           <View key={slide.id} style={[styles.slide, { width }]}>
             <Image
-              source={{ uri: slide.image }}
+              source={slide.image}
               style={styles.image}
             />
             <View style={styles.textContainer}>
@@ -97,6 +100,7 @@ const styles = StyleSheet.create({
     height: width * 0.8,
     resizeMode: 'contain',
     borderRadius: 20,
+    marginBottom: 30,
   },
   textContainer: {
     alignItems: 'center',

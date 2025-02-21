@@ -21,7 +21,7 @@ export default function CustomerSupportScreen({
       {/* 헤더 */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-          <ChevronLeft size={24} color="#000" />
+          <ChevronLeft size={24} color="#007AFF" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>문의하기</Text>
       </View>
@@ -70,10 +70,11 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     fontSize: 18,
-    fontWeight: "bold",
+    fontWeight: "400",
   },
   content: {
     padding: 20,
+    marginTop: 25,
   },
   sectionTitle: {
     fontSize: 16,
