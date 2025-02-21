@@ -895,7 +895,7 @@ export default function TourScreen() {
 
   const handleMapPress = () => {
     console.log("handleMapPress 호출");
-    navigation.navigate("Map" as never);
+    navigation.navigate("Map");
   };
 
   // generateTourGuide 함수 수정

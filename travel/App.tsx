@@ -27,6 +27,8 @@ import ScheduleDetail from "./screens/ScheduleDetail";
 import TravelLogDetail from "./screens/TravelLogDetail";
 import TermsDetailScreen from "./screens/TermsDetailScreen";
 import CustomerSupportScreen from "./screens/CustomerSupportScreen";
+import TMapScreen from "./screens/TMapScreen";
+import MapScreen from "./screens/MapScreen";
 
 export type RootStackParamList = {
   Auth: undefined;
@@ -48,10 +50,12 @@ export type RootStackParamList = {
   Main: undefined;
   Chat: undefined;
   Tour: undefined;
+  Map: undefined;
   MyProfile: undefined;
   ScheduleDetail: undefined;
   TravelLogDetail: undefined;
   CustomerSupport: undefined;
+  TMap: undefined;
 };
 
 enableScreens();
@@ -101,6 +105,15 @@ function MainTabs() {
         options={{
           tabBarIcon: ({ color }) => (
             <HomeIcon width={24} height={24} color={color} />
+          ),
+        }}
+      />
+      <Tab.Screen
+        name="지도"
+        component={TMapScreen}
+        options={{
+          tabBarIcon: ({ color }) => (
+            <MessageCircle width={24} height={24} color={color} />
           ),
         }}
       />
@@ -240,6 +253,20 @@ export default function App() {
                 animation: "slide_from_right",
                 gestureDirection: "horizontal",
               }}
+            />
+
+            <Stack.Screen
+              name="TMap"
+              component={TMapScreen}
+              options={{
+                headerShown: false,
+              }}
+            />
+
+            <Stack.Screen
+              name="Map"
+              component={MapScreen}
+              options={{ headerShown: false }}
             />
           </Stack.Navigator>
         </NavigationContainer>
