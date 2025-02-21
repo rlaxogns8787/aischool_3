@@ -361,22 +361,21 @@ export default function TourScreen() {
     try {
       setIsLoading(true);
       if (textTimeoutRef.current) clearTimeout(textTimeoutRef.current);
-      setSelectedVoice(voice);
+      // ✅ 함수형 업데이트로 즉시 반영
+      setSelectedVoice((prev) => (prev.id !== voice.id ? voice : prev));
       setShowVoiceModal(false);
 
-      // 현재 표시된 텍스트가 있다면 새로운 음성으로 다시 읽기
-      if (tourGuide) {
-        await startSpeaking(tourGuide);
-      } else {
-        // 환영 메시지 다시 읽기
-        await welcomeMessage();
-      }
     } catch (error) {
       console.error("Voice selection error:", error);
     } finally {
       setIsLoading(false);
     }
   };
+  useEffect(() => {
+    if (selectedVoice && tourGuide) {
+      startSpeaking(tourGuide);
+    }
+  }, [selectedVoice]);
 
   // animateText 함수 수정
   const animateText = (text: string, speakingDuration: number = 0) => {
