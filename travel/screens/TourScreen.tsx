@@ -373,20 +373,27 @@ export default function TourScreen() {
     try {
       setIsLoading(true);
       if (textTimeoutRef.current) clearTimeout(textTimeoutRef.current);
-      // ✅ 함수형 업데이트로 즉시 반영
+
+      // 현재 텍스트 저장
+      const currentText = tourGuide;
+
+      // 음성 변경
       setSelectedVoice((prev) => (prev.id !== voice.id ? voice : prev));
       setShowVoiceModal(false);
+
+      // 현재 텍스트가 있다면 새로운 음성 캐릭터에 맞게 포맷팅하고 말하기
+      if (currentText) {
+        const formattedText =
+          characterTraits[voice.id].formatMessage(currentText);
+        setTourGuide(""); // 텍스트 초기화
+        await startSpeaking(formattedText);
+      }
     } catch (error) {
       console.error("Voice selection error:", error);
     } finally {
       setIsLoading(false);
     }
   };
-  useEffect(() => {
-    if (selectedVoice && tourGuide) {
-      startSpeaking(tourGuide);
-    }
-  }, [selectedVoice]);
 
   // animateText 함수 수정
   const animateText = (text: string, speakingDuration: number = 0) => {
@@ -1010,7 +1017,7 @@ Additional context: ${currentPlace.description}`,
         data.choices[0]?.message?.content || "설명을 생성하지 못했습니다.";
 
       // 선택된 음성 캐릭터에 맞게 메시지 포맷팅
-      content = characterTraits[selectedVoice.id].formatMessage(content);
+      content = selectedCharacter.formatMessage(content);
 
       // 텍스트 정리
       content = content
@@ -1041,7 +1048,11 @@ Additional context: ${currentPlace.description}`,
         tourState.currentDayIndex === scheduleData.days.length - 1;
 
       if (!isLastPlace || !isLastDay) {
-        content += "\n\n노래를 들으면서 다음 장소로 이동해보세요!";
+        content +=
+          "\n\n" +
+          selectedCharacter.formatMessage(
+            "노래를 들으면서 다음 장소로 이동해보세요!"
+          );
         setTourState((prev) => ({ ...prev, showNextButton: true }));
       }
 

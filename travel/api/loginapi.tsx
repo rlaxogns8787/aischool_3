@@ -4,14 +4,25 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 // Flask 백엔드 서버 기본 URL
 const BASE_URL = "https://5a031-gce0e3fhexdbh4c6.eastus-01.azurewebsites.net";
 
+interface RegisterUserData {
+  username: string;
+  password: string;
+  nickname: string;
+  birthyear: number;
+  gender: string;
+  marketing_consent: number;
+  preferences?: string[]; // Optional
+  music_genres?: string[]; // Optional
+}
+
 /**
  * 회원가입 API 요청
  */
-export const registerUser = async (userData) => {
+export const registerUser = async (userData: RegisterUserData) => {
   try {
     const response = await axios.post(`${BASE_URL}/register`, userData);
     return response.data;
-  } catch (error) {
+  } catch (error: any) {
     throw error.response ? error.response.data : { message: "Network error" };
   }
 };
@@ -198,7 +209,6 @@ export const getSchedules = async () => {
   }
 };
 
-
 /**
  * 여행 기록 추가 API_2
  */
@@ -254,9 +264,12 @@ export const deleterecord = async (scheduleId) => {
 
     const userInfo = JSON.parse(userData);
 
-    const response = await axios.delete(`${BASE_URL}/additional_schedule/${scheduleId}`, {
-      params: { username: userInfo.username },
-    });
+    const response = await axios.delete(
+      `${BASE_URL}/additional_schedule/${scheduleId}`,
+      {
+        params: { username: userInfo.username },
+      }
+    );
 
     return response.data;
   } catch (error) {
@@ -291,3 +304,29 @@ export const getrecord = async () => {
     );
   }
 };
+
+/**
+ * 닉네임 중복 확인 API(임시 주석처리)
+ */
+// export const checkNicknameDuplicate = async (nickname: string) => {
+//   try {
+//     // 실제 서버의 닉네임 중복 확인 엔드포인트로 수정
+//     const response = await axios.post(`${BASE_URL}/check-duplicate`, {
+//       type: "nickname",
+//       value: nickname,
+//     });
+//     return response.data;
+//   } catch (error: any) {
+//     // 서버 응답 에러 처리 개선
+//     if (error.response) {
+//       // 서버가 응답한 경우
+//       throw error.response.data;
+//     } else if (error.request) {
+//       // 요청은 보냈지만 응답을 받지 못한 경우
+//       throw { message: "서버에서 응답이 없습니다. 잠시 후 다시 시도해주세요." };
+//     } else {
+//       // 요청 자체를 보내지 못한 경우
+//       throw { message: "네트워크 연결을 확인해주세요." };
+//     }
+//   }
+// };

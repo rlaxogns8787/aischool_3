@@ -23,7 +23,11 @@ import FacebookIcon from "../assets/facebook.svg";
 import AppleIcon from "../assets/apple.svg";
 import { useAuth } from "../contexts/AuthContext";
 import { Picker } from "@react-native-picker/picker";
-import { registerUser, loginUser } from "../api/loginapi";
+import {
+  registerUser,
+  loginUser,
+  checkNicknameDuplicate,
+} from "../api/loginapi";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
 type AuthScreenProps = {
@@ -179,6 +183,24 @@ const ANIMALS = [
 
 type AuthStep = "info" | "preference";
 
+// 음악 장르 옵션 추가
+const musicGenreOptions = [
+  "팝송",
+  "OLD POP",
+  "K-POP",
+  "Billboard Top 100",
+  "클래식",
+  "록",
+  "힙합",
+  "R&B",
+  "어쿠스틱",
+  "EDM",
+  "포크",
+  "재즈",
+  "트로트",
+  "가곡",
+];
+
 export default function AuthScreen({ navigation, route }: AuthScreenProps) {
   const { signIn, signUp } = useAuth();
   const [isSignUp, setIsSignUp] = useState(route.params?.isSignUp || false);
@@ -191,11 +213,14 @@ export default function AuthScreen({ navigation, route }: AuthScreenProps) {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [showGenderPicker, setShowGenderPicker] = useState(false);
-  const [selectedGender, setSelectedGender] = useState("");
+  const [selectedGender, setSelectedGender] = useState("male");
   const [showBirthYearPicker, setShowBirthYearPicker] = useState(false);
-  const [selectedBirthYear, setSelectedBirthYear] = useState("");
+  const [selectedBirthYear, setSelectedBirthYear] = useState(String(maxYear));
   const [step, setStep] = useState<AuthStep>("info");
   const [selectedPreferences, setSelectedPreferences] = useState<string[]>([]);
+  const [selectedMusicGenres, setSelectedMusicGenres] = useState<string[]>([]);
+  const [isNicknameChecked, setIsNicknameChecked] = useState(false);
+  const [isNicknameValid, setIsNicknameValid] = useState(false);
 
   // 사용자 정보 상태
   const [formData, setFormData] = useState({
@@ -250,14 +275,54 @@ export default function AuthScreen({ navigation, route }: AuthScreenProps) {
     return `${randomAdjective} ${randomAnimal}`;
   }
 
-  // 닉네임 새로고침 핸들러
+  // 닉네임 중복 확인 핸들러
+  const handleCheckNickname = async () => {
+    try {
+      if (!nickname.trim()) {
+        Alert.alert("알림", "닉네임을 입력해주세요.");
+        return;
+      }
+
+      const response = await checkNicknameDuplicate(nickname);
+
+      if (response.available) {
+        setIsNicknameChecked(true);
+        setIsNicknameValid(true);
+        Alert.alert("확인", "사용 가능한 닉네임입니다.");
+      } else {
+        setIsNicknameChecked(true);
+        setIsNicknameValid(false);
+        Alert.alert("알림", "이미 사용 중인 닉네임입니다.");
+      }
+    } catch (error: any) {
+      console.error("닉네임 중복 확인 실패:", error);
+      Alert.alert("오류", error.message || "닉네임 중복 확인에 실패했습니다.");
+    }
+  };
+
+  // 닉네임 변경 시 중복 확인 상태 초기화
+  const handleNicknameChange = (text: string) => {
+    setNickname(text);
+    setIsNicknameChecked(false);
+    setIsNicknameValid(false);
+  };
+
+  // 랜덤 닉네임 생성 시에도 중복 확인 필요
   const handleRefreshNickname = () => {
-    setNickname(generateRandomNickname());
+    const newNickname = generateRandomNickname();
+    setNickname(newNickname);
+    setIsNicknameChecked(false);
+    setIsNicknameValid(false);
   };
 
   const handleNextStep = () => {
     if (step === "info") {
-      // 기본 정보 유효성 검사
+      if (!isNicknameChecked || !isNicknameValid) {
+        Alert.alert("알림", "닉네임 중복 확인이 필요합니다.");
+        return;
+      }
+
+      // 기존 유효성 검사
       if (
         !email ||
         !password ||
@@ -274,7 +339,6 @@ export default function AuthScreen({ navigation, route }: AuthScreenProps) {
         return;
       }
 
-      // 다음 단계(취향 선택)로 이동
       setStep("preference");
     } else {
       // 회원가입 완료 처리
@@ -464,26 +528,23 @@ export default function AuthScreen({ navigation, route }: AuthScreenProps) {
 
   const handleSkipPreferences = async () => {
     try {
-      console.log("회원가입 요청 시작 (취향 선택 건너뛰기)");
-
-      // API 스펙에 맞게 데이터 구조화
+      // API 요청 데이터 구조화
       const signUpData = {
-        username: email, // email -> username
+        username: email,
         password: password,
         nickname: nickname,
-        birthyear: parseInt(birthYear), // birthYear -> birthyear (문자열을 숫자로 변환)
-        gender: gender.charAt(0).toUpperCase() + gender.slice(1), // 첫 글자 대문자로
-        marketing_consent: route.params?.agreements?.marketing ? 1 : 0, // boolean -> number
+        birthyear: parseInt(birthYear),
+        gender: gender.charAt(0).toUpperCase() + gender.slice(1),
+        marketing_consent: route.params?.agreements?.marketing ? 1 : 0,
+        // 빈 배열로 전송
+        preferences: [],
+        music_genres: [],
       };
 
-      console.log("회원가입 API 요청 데이터:", signUpData);
-
-      // 회원가입 API 호출
       const response = await registerUser(signUpData);
-      console.log("회원가입 응답:", response);
 
       if (response.message === "User created successfully") {
-        // 자동 로그인
+        // 자동 로그인 처리
         const loginData = {
           username: email,
           password: password,
@@ -505,6 +566,7 @@ export default function AuthScreen({ navigation, route }: AuthScreenProps) {
               | "female",
             marketing: loginResponse.user_info.marketing_consent,
             preferences: [],
+            music_genres: [],
           });
 
           navigation.replace("Onboarding");
@@ -518,11 +580,6 @@ export default function AuthScreen({ navigation, route }: AuthScreenProps) {
 
   const handleCompleteWithPreferences = async () => {
     try {
-      if (selectedPreferences.length === 0) {
-        Alert.alert("알림", "하나 이상의 취향을 선택해주세요.");
-        return;
-      }
-
       // API 요청 데이터 구조화
       const signUpData = {
         username: email,
@@ -531,10 +588,10 @@ export default function AuthScreen({ navigation, route }: AuthScreenProps) {
         birthyear: parseInt(birthYear),
         gender: gender.charAt(0).toUpperCase() + gender.slice(1),
         marketing_consent: route.params?.agreements?.marketing ? 1 : 0,
-        preferences: selectedPreferences, // 취향 정보 포함
+        preferences: selectedPreferences,
+        music_genres: selectedMusicGenres,
       };
 
-      // 회원가입 API 호출
       const response = await registerUser(signUpData);
 
       if (response.message === "User created successfully") {
@@ -560,14 +617,15 @@ export default function AuthScreen({ navigation, route }: AuthScreenProps) {
               | "female",
             marketing: loginResponse.user_info.marketing_consent,
             preferences: selectedPreferences,
+            music_genres: selectedMusicGenres,
           });
 
           navigation.replace("Onboarding");
         }
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error("회원가입 요청 실패:", error);
-      Alert.alert("오류", "회원가입에 실패했습니다.");
+      Alert.alert("오류", error.message || "회원가입에 실패했습니다.");
     }
   };
 
@@ -633,6 +691,26 @@ export default function AuthScreen({ navigation, route }: AuthScreenProps) {
       </View>
     </View>
   );
+
+  // Picker 모달이 열릴 때 현재 값을 설정
+  const handleOpenBirthYearPicker = () => {
+    setSelectedBirthYear(birthYear || String(maxYear));
+    setShowBirthYearPicker(true);
+  };
+
+  const handleOpenGenderPicker = () => {
+    setSelectedGender(gender || "male");
+    setShowGenderPicker(true);
+  };
+
+  // 완료 버튼 핸들러 수정
+  const handleBirthYearComplete = () => {
+    handleBirthYearSelect(selectedBirthYear || String(maxYear));
+  };
+
+  const handleGenderComplete = () => {
+    handleGenderSelect(selectedGender || "male");
+  };
 
   if (!isSignUp) {
     return (
@@ -700,22 +778,47 @@ export default function AuthScreen({ navigation, route }: AuthScreenProps) {
 
                     <View style={styles.inputContainer}>
                       <Text style={styles.label}>닉네임</Text>
-                      <View style={styles.nicknameInputContainer}>
-                        <TextInput
-                          style={styles.input}
-                          placeholder="방황하는 너구리"
-                          value={nickname}
-                          onChangeText={setNickname}
-                        />
-                        <TouchableOpacity
-                          style={styles.refreshIconButton}
-                          onPress={handleRefreshNickname}
-                        >
-                          <RefreshIcon
-                            width={24}
-                            height={24}
-                            stroke="#8E8E93"
+                      <View style={styles.nicknameContainer}>
+                        <View style={styles.nicknameInputWrapper}>
+                          <TextInput
+                            style={[
+                              styles.nicknameInput,
+                              isNicknameChecked && {
+                                borderColor: isNicknameValid
+                                  ? "#34C759"
+                                  : "#FF3B30",
+                              },
+                            ]}
+                            value={nickname}
+                            onChangeText={handleNicknameChange}
+                            placeholder="닉네임을 입력해주세요"
+                            editable={true}
                           />
+                          <TouchableOpacity
+                            style={styles.refreshButton}
+                            onPress={handleRefreshNickname}
+                          >
+                            <RefreshIcon
+                              width={24}
+                              height={24}
+                              stroke="#8E8E93"
+                            />
+                          </TouchableOpacity>
+                        </View>
+                        <TouchableOpacity
+                          style={[
+                            styles.checkButton,
+                            isNicknameChecked &&
+                              isNicknameValid &&
+                              styles.checkButtonValid,
+                          ]}
+                          onPress={handleCheckNickname}
+                        >
+                          <Text style={styles.checkButtonText}>
+                            {isNicknameChecked && isNicknameValid
+                              ? "확인 완료"
+                              : "중복 확인"}
+                          </Text>
                         </TouchableOpacity>
                       </View>
                     </View>
@@ -724,7 +827,7 @@ export default function AuthScreen({ navigation, route }: AuthScreenProps) {
                       <Text style={styles.label}>출생연도</Text>
                       <TouchableOpacity
                         style={styles.pickerButton}
-                        onPress={() => setShowBirthYearPicker(true)}
+                        onPress={handleOpenBirthYearPicker}
                       >
                         <Text
                           style={[
@@ -741,7 +844,7 @@ export default function AuthScreen({ navigation, route }: AuthScreenProps) {
                       <Text style={styles.label}>성별</Text>
                       <TouchableOpacity
                         style={styles.pickerButton}
-                        onPress={() => setShowGenderPicker(true)}
+                        onPress={handleOpenGenderPicker}
                       >
                         <Text
                           style={[
@@ -778,7 +881,7 @@ export default function AuthScreen({ navigation, route }: AuthScreenProps) {
                   <Text style={styles.label}>출생연도</Text>
                   <TouchableOpacity
                     style={styles.pickerButton}
-                    onPress={() => setShowBirthYearPicker(true)}
+                    onPress={handleOpenBirthYearPicker}
                   >
                     <Text
                       style={[
@@ -795,7 +898,7 @@ export default function AuthScreen({ navigation, route }: AuthScreenProps) {
                   <Text style={styles.label}>성별</Text>
                   <TouchableOpacity
                     style={styles.pickerButton}
-                    onPress={() => setShowGenderPicker(true)}
+                    onPress={handleOpenGenderPicker}
                   >
                     <Text
                       style={[
@@ -972,20 +1075,41 @@ export default function AuthScreen({ navigation, route }: AuthScreenProps) {
 
             <View style={styles.inputContainer}>
               <Text style={styles.label}>닉네임 *</Text>
-              <View style={styles.nicknameInputContainer}>
-                <TextInput
-                  style={styles.input}
-                  placeholder="방황하는 너구리"
-                  value={nickname}
-                  onChangeText={setNickname}
-                  editable={true}
-                  returnKeyType="next"
-                />
+              <View style={styles.nicknameContainer}>
+                <View style={styles.nicknameInputWrapper}>
+                  <TextInput
+                    style={[
+                      styles.nicknameInput,
+                      isNicknameChecked && {
+                        borderColor: isNicknameValid ? "#34C759" : "#FF3B30",
+                      },
+                    ]}
+                    value={nickname}
+                    onChangeText={handleNicknameChange}
+                    placeholder="닉네임을 입력해주세요"
+                    editable={true}
+                  />
+                  <TouchableOpacity
+                    style={styles.refreshButton}
+                    onPress={handleRefreshNickname}
+                  >
+                    <RefreshIcon width={24} height={24} stroke="#8E8E93" />
+                  </TouchableOpacity>
+                </View>
                 <TouchableOpacity
-                  style={styles.refreshIconButton}
-                  onPress={handleRefreshNickname}
+                  style={[
+                    styles.checkButton,
+                    isNicknameChecked &&
+                      isNicknameValid &&
+                      styles.checkButtonValid,
+                  ]}
+                  onPress={handleCheckNickname}
                 >
-                  <RefreshIcon width={24} height={24} stroke="#8E8E93" />
+                  <Text style={styles.checkButtonText}>
+                    {isNicknameChecked && isNicknameValid
+                      ? "확인 완료"
+                      : "중복 확인"}
+                  </Text>
                 </TouchableOpacity>
               </View>
             </View>
@@ -994,7 +1118,7 @@ export default function AuthScreen({ navigation, route }: AuthScreenProps) {
               <Text style={styles.label}>출생연도 *</Text>
               <TouchableOpacity
                 style={styles.pickerButton}
-                onPress={() => setShowBirthYearPicker(true)}
+                onPress={handleOpenBirthYearPicker}
               >
                 <Text
                   style={[
@@ -1011,7 +1135,7 @@ export default function AuthScreen({ navigation, route }: AuthScreenProps) {
               <Text style={styles.label}>성별 *</Text>
               <TouchableOpacity
                 style={styles.pickerButton}
-                onPress={() => setShowGenderPicker(true)}
+                onPress={handleOpenGenderPicker}
               >
                 <Text
                   style={[
@@ -1028,46 +1152,7 @@ export default function AuthScreen({ navigation, route }: AuthScreenProps) {
               </TouchableOpacity>
             </View>
 
-            <Modal
-              visible={showGenderPicker}
-              transparent={true}
-              animationType="slide"
-            >
-              <View style={styles.modalContainer}>
-                <View style={styles.pickerHeader}>
-                  <TouchableOpacity
-                    onPress={() => setShowGenderPicker(false)}
-                    style={styles.pickerHeaderButton}
-                  >
-                    <Text style={styles.pickerHeaderButtonText}>취소</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    onPress={() => {
-                      if (selectedGender) handleGenderSelect(selectedGender);
-                    }}
-                    style={styles.pickerHeaderButton}
-                  >
-                    <Text
-                      style={[
-                        styles.pickerHeaderButtonText,
-                        { color: "#007AFF" },
-                      ]}
-                    >
-                      완료
-                    </Text>
-                  </TouchableOpacity>
-                </View>
-                <Picker
-                  selectedValue={selectedGender || gender}
-                  onValueChange={setSelectedGender}
-                  style={styles.picker}
-                >
-                  <Picker.Item label="남자" value="male" />
-                  <Picker.Item label="여자" value="female" />
-                </Picker>
-              </View>
-            </Modal>
-
+            {/* 출생연도 Picker 모달 */}
             <Modal
               visible={showBirthYearPicker}
               transparent={true}
@@ -1082,10 +1167,7 @@ export default function AuthScreen({ navigation, route }: AuthScreenProps) {
                     <Text style={styles.pickerHeaderButtonText}>취소</Text>
                   </TouchableOpacity>
                   <TouchableOpacity
-                    onPress={() => {
-                      if (selectedBirthYear)
-                        handleBirthYearSelect(selectedBirthYear);
-                    }}
+                    onPress={handleBirthYearComplete}
                     style={styles.pickerHeaderButton}
                   >
                     <Text
@@ -1099,13 +1181,52 @@ export default function AuthScreen({ navigation, route }: AuthScreenProps) {
                   </TouchableOpacity>
                 </View>
                 <Picker
-                  selectedValue={selectedBirthYear || birthYear}
+                  selectedValue={selectedBirthYear}
                   onValueChange={setSelectedBirthYear}
                   style={styles.picker}
                 >
                   {years.map((year) => (
                     <Picker.Item key={year} label={`${year}년`} value={year} />
                   ))}
+                </Picker>
+              </View>
+            </Modal>
+
+            {/* 성별 Picker 모달 */}
+            <Modal
+              visible={showGenderPicker}
+              transparent={true}
+              animationType="slide"
+            >
+              <View style={styles.modalContainer}>
+                <View style={styles.pickerHeader}>
+                  <TouchableOpacity
+                    onPress={() => setShowGenderPicker(false)}
+                    style={styles.pickerHeaderButton}
+                  >
+                    <Text style={styles.pickerHeaderButtonText}>취소</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    onPress={handleGenderComplete}
+                    style={styles.pickerHeaderButton}
+                  >
+                    <Text
+                      style={[
+                        styles.pickerHeaderButtonText,
+                        { color: "#007AFF" },
+                      ]}
+                    >
+                      완료
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+                <Picker
+                  selectedValue={selectedGender}
+                  onValueChange={setSelectedGender}
+                  style={styles.picker}
+                >
+                  <Picker.Item label="남자" value="male" />
+                  <Picker.Item label="여자" value="female" />
                 </Picker>
               </View>
             </Modal>
@@ -1123,7 +1244,7 @@ export default function AuthScreen({ navigation, route }: AuthScreenProps) {
               관심있는 주제 키워드를 모두 선택해주세요
             </Text>
             <Text style={styles.subtitle}>
-              관심사를 기반으로 여행 가이드를 진행합니다.
+              관심사를 기반으로 도슨트 가이드 진행
             </Text>
             <View style={styles.preferencesContainer}>
               {preferenceOptions.map((preference) => (
@@ -1144,6 +1265,40 @@ export default function AuthScreen({ navigation, route }: AuthScreenProps) {
                     ]}
                   >
                     {preference}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+
+            <Text style={[styles.title, { marginTop: 32 }]}>
+              선호하는 음악 장르를 모두 선택해주세요
+            </Text>
+            <Text style={styles.subtitle}>장르 기반으로 노래 추천 진행</Text>
+            <View style={styles.preferencesContainer}>
+              {musicGenreOptions.map((genre) => (
+                <TouchableOpacity
+                  key={genre}
+                  style={[
+                    styles.preferenceButton,
+                    selectedMusicGenres.includes(genre) &&
+                      styles.preferenceButtonSelected,
+                  ]}
+                  onPress={() => {
+                    setSelectedMusicGenres((prev) =>
+                      prev.includes(genre)
+                        ? prev.filter((g) => g !== genre)
+                        : [...prev, genre]
+                    );
+                  }}
+                >
+                  <Text
+                    style={[
+                      styles.preferenceButtonText,
+                      selectedMusicGenres.includes(genre) &&
+                        styles.preferenceButtonTextSelected,
+                    ]}
+                  >
+                    {genre}
                   </Text>
                 </TouchableOpacity>
               ))}
@@ -1196,6 +1351,7 @@ const styles = StyleSheet.create({
     color: "#000",
     textAlign: "center",
     lineHeight: 26,
+    marginBottom: 8,
   },
   inputContainer: {
     marginBottom: 20,
@@ -1379,11 +1535,25 @@ const styles = StyleSheet.create({
   picker: {
     backgroundColor: "#fff",
   },
-  nicknameInputContainer: {
-    position: "relative",
-    width: "100%",
+  nicknameContainer: {
+    flexDirection: "row",
+    gap: 8,
+    alignItems: "center",
   },
-  refreshIconButton: {
+  nicknameInputWrapper: {
+    flex: 1,
+    position: "relative",
+  },
+  nicknameInput: {
+    borderWidth: 1,
+    borderColor: "#E5E5EA",
+    borderRadius: 8,
+    padding: 12,
+    paddingRight: 40,
+    fontSize: 16,
+    backgroundColor: "#fff",
+  },
+  refreshButton: {
     position: "absolute",
     right: 8,
     top: 0,
@@ -1391,7 +1561,21 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     padding: 8,
-    zIndex: 1,
+  },
+  checkButton: {
+    backgroundColor: "#1F2024",
+    borderRadius: 8,
+    paddingVertical: 14,
+    paddingHorizontal: 12,
+    justifyContent: "center",
+  },
+  checkButtonValid: {
+    backgroundColor: "#34C759",
+  },
+  checkButtonText: {
+    color: "#FFFFFF",
+    fontSize: 14,
+    fontWeight: "600",
   },
   socialIcon: {
     width: 24,
@@ -1401,7 +1585,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: "#666",
     textAlign: "center",
-    marginBottom: 20,
+    marginBottom: 12,
   },
   preferencesContainer: {
     flexDirection: "row",
