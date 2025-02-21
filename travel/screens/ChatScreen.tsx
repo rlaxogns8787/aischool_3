@@ -175,9 +175,10 @@ export default function ChatScreen() {
       // 도슨트 안내 메시지 추가
       const docentGuideMessage: Message = {
         id: (Date.now() + 2).toString(),
-        text: "🎧 안내사항: 여행 중 AI 도슨트 서비스 이용을 위해 헤드폰 또는 에어팟 착용이 필요합니다.",
+        text: "🎧 안내사항: 여행 중 AI 도슨트 서비스 이용을 위해서는 헤드폰 또는 에어팟 착용이 필요합니다.",
         isBot: true,
         timestamp: new Date().toISOString(),
+        customStyle: "#FFF1C1", // 추가: 커스텀 배경색 지정
       };
 
       // 다음 질문 (예산)

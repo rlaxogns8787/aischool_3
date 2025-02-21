@@ -16,7 +16,7 @@ import OptionCard from "./OptionCard";
 import OptionModal from "./OptionModal"; // OptionModal import 추가
 import StyleToggleButton from "./StyleToggleButton";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { addSchedule,addrecord } from "../api/loginapi";
+import { addSchedule, addrecord } from "../api/loginapi";
 
 const { width: screenWidth } = Dimensions.get("window");
 
@@ -155,6 +155,9 @@ export default function MessageList({
                 style={[
                   styles.messageBubble,
                   message.isBot ? styles.botBubble : styles.userBubble,
+                  message.customStyle && {
+                    backgroundColor: message.customStyle,
+                  },
                 ]}
               >
                 <Text

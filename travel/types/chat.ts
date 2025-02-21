@@ -10,15 +10,17 @@ export type StyleOption = {
   selected: boolean;
 };
 
-export type Message = {
+export interface Message {
   id: string;
   text: string;
   isBot: boolean;
   timestamp: string;
+  customStyle?: string;
   options?: MessageOption[];
   styleOptions?: StyleOption[];
   isLoading?: boolean;
-};
+}
+
 export type TripInfo = {
   styles: string[] | undefined; // 여행 스타일을 나타내는 문자열 배열입니다. 예: ["자연/힐링", "문화/역사"]
   destination: string | undefined; // 여행 목적지입니다. 예: "서울"
