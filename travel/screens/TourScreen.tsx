@@ -953,13 +953,17 @@ export default function TourScreen() {
           {
             role: "system",
             content: `You are a ${selectedCharacter.personality} tour guide.
-Your role is to provide an engaging and informative explanation about ${currentPlace.title} for tourists who are interested in ${userPreference}. 
+Your role is to provide an engaging and informative explanation about ${
+              currentPlace.title
+            } for tourists who are interested in ${userPreference}. 
 
 Time: ${currentPlace.time}
 Duration: ${currentPlace.duration}
-Location: ${currentPlace.address}
+Location: ${currentPlace.address.split(" ").slice(0, 2).join(" ")}
 
-Your explanation style should align with ${selectedCharacter.style}, and your tone should remain ${selectedCharacter.tone}. 
+Your explanation style should align with ${
+              selectedCharacter.style
+            }, and your tone should remain ${selectedCharacter.tone}. 
 The explanation must include:
 
 ### **Critical Instructions:**
@@ -969,6 +973,7 @@ The explanation must include:
 - STRICTLY NO REPETITION of words, concepts, or themes.
 - Avoid redundant expressions.
 - If mentioning a place or concept, describe it only once.
+- Use varied expressions for location descriptions (e.g., "자리잡은", "위치한", "있는", "들어선", "~의", "~에서 만나볼 수 있는" etc.).
 - Focus on diverse aspects in a structured way:
   1. Start with location and main purpose
   2. Describe unique features and processes
