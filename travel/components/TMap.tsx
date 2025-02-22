@@ -13,8 +13,13 @@ interface LocationData {
 const TMap: React.FC = () => {
   const [location, setLocation] = useState<LocationData | null>(null);
   const webviewRef = useRef<WebView | null>(null);
+  const [initialLocation, setInitialLocation] = useState<LocationData | null>(
+    null
+  );
 
   useEffect(() => {
+    let locationSubscription: Location.LocationSubscription;
+
     (async () => {
       try {
         let { status } = await Location.requestForegroundPermissionsAsync();
@@ -35,6 +40,7 @@ const TMap: React.FC = () => {
           latitude: currentLocation.coords.latitude,
           longitude: currentLocation.coords.longitude,
         };
+        setInitialLocation(newLocation);
         setLocation(newLocation);
 
         // WebView에 위치 정보 전달
@@ -46,7 +52,7 @@ const TMap: React.FC = () => {
         }
 
         // 위치 변경 감지 시작
-        Location.watchPositionAsync(
+        locationSubscription = await Location.watchPositionAsync(
           {
             accuracy: Location.Accuracy.High,
             timeInterval: 5000,
@@ -63,7 +69,7 @@ const TMap: React.FC = () => {
             // WebView에 업데이트된 위치 정보 전달
             if (webviewRef.current) {
               webviewRef.current.injectJavaScript(`
-                updateUserLocation(${updatedLocation.latitude}, ${updatedLocation.longitude});
+                updateUserMarker(${updatedLocation.latitude}, ${updatedLocation.longitude});
                 true;
               `);
             }
@@ -73,9 +79,19 @@ const TMap: React.FC = () => {
         console.error("Error getting location:", error);
       }
     })();
+
+    // Cleanup (컴포넌트 언마운트 시 리스너 제거)
+    return () => {
+      if (locationSubscription) {
+        locationSubscription.remove();
+      }
+    };
   }, []);
 
-  const htmlContent = `
+  const htmlContent = React.useMemo(() => {
+    const lat = initialLocation?.latitude || 37.566481;
+    const lng = initialLocation?.longitude || 126.985032;
+    return `
     <!DOCTYPE html>
     <html>
       <head>
@@ -86,7 +102,7 @@ const TMap: React.FC = () => {
           #map { width: 100%; height: 100%; }
           .current-location-button {
             position: absolute;
-            bottom: 30px;
+            bottom: 90px;
             left: 15px;
             width: 40px;
             height: 40px;
@@ -107,7 +123,7 @@ const TMap: React.FC = () => {
           .current-location-button svg {
             width: 24px;
             height: 24px;
-            fill: #005EFF;
+            fill:rgb(8, 9, 10);
             // transform: rotate(-45deg);
           }
         </style>
@@ -125,37 +141,11 @@ const TMap: React.FC = () => {
           var currentLocationCircle;
           var lastKnownLocation;
 
-          function initMap() {
-            const lat = ${location?.latitude || 37.566481};
-            const lng = ${location?.longitude || 126.985032};
-            console.log("Initializing map with coordinates:", lat, lng);
+          // 마커와 원형만 업데이트하는 함수 (지도 중심 이동 없음)
+          function updateUserMarker(lat, lng) {
+            var userLocation = new Tmapv2.LatLng(lat, lng);
+            lastKnownLocation = { lat: lat, lng: lng };
 
-            map = new Tmapv2.Map("map", {
-              center: new Tmapv2.LatLng(lat, lng),
-              width: "100%",
-              height: "100%",
-              zoom: 16
-            });
-
-            // 현재 위치 버튼 이벤트 리스너
-            document.getElementById('currentLocationBtn').addEventListener('click', function() {
-              if (lastKnownLocation) {
-                updateUserLocation(lastKnownLocation.lat, lastKnownLocation.lng);
-                // 현재 위치 버튼 클릭시 줌 레벨 설정
-                map.setZoom(16);
-              }
-            });
-
-            // 초기 사용자 위치 표시
-            updateUserLocation(lat, lng);
-          }
-
-          function updateUserLocation(lat, lng) {
-            console.log("Updating user location:", lat, lng);
-            const userLocation = new Tmapv2.LatLng(lat, lng);
-            lastKnownLocation = { lat, lng };
-
-            // 기존 마커와 원형 마커 제거
             if (userMarker) {
               userMarker.setMap(null);
             }
@@ -223,12 +213,47 @@ const TMap: React.FC = () => {
             });
           }
 
+          function updateUserLocation(lat, lng) {
+            updateUserMarker(lat, lng);
+            var userLocation = new Tmapv2.LatLng(lat, lng);
+            map.panTo(userLocation, {
+              animate: true,
+              duration: 500
+            });
+          }
+
+          function initMap() {
+            var lat = ${lat};
+            var lng = ${lng};
+            console.log("Initializing map with coordinates:", lat, lng);
+
+            map = new Tmapv2.Map("map", {
+              center: new Tmapv2.LatLng(lat, lng),
+              width: "100%",
+              height: "100%",
+              zoom: 16
+            });
+
+            // 초기 사용자 위치 표시
+            updateUserLocation(lat, lng);
+
+            // 현재 위치 버튼 이벤트 리스너
+            document.getElementById('currentLocationBtn').addEventListener('click', function() {
+              if (lastKnownLocation) {
+                updateUserLocation(lastKnownLocation.lat, lastKnownLocation.lng);
+                // 현재 위치 버튼 클릭시 줌 레벨 설정
+                map.setZoom(16);
+              }
+            });     
+          }                    
+
           // 초기 지도 생성
           initMap();
         </script>
       </body>
     </html>
   `;
+  }, [initialLocation]);
 
   return (
     <View style={styles.container}>

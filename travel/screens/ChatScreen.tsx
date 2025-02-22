@@ -7,6 +7,7 @@ import {
   Text,
   Alert,
   TextInput,
+  Button,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useNavigation, NavigationProp } from "@react-navigation/native";
@@ -32,6 +33,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 type RootStackParamList = {
   Chat: undefined;
   Schedule: undefined;
+  // TMapScreen: undefined;
   // 다른 스크린들도 필요하다면 여기에 추가
 };
 
@@ -833,6 +835,11 @@ export default function ChatScreen() {
 
           // 여행 정보를 AsyncStorage에 저장
           await AsyncStorage.setItem("scheduleData", JSON.stringify(tripInfo));
+
+          // 저장된 여행 정보 확인
+          const jsonData = await AsyncStorage.getItem("scheduleData");
+          console.log("🔵 저장된 tripInfo 확인:", jsonData);
+          console.log("🟢 여행 일정이 저장됨:", tripInfo); // ✅ 저장 확인 로그!
 
           // 먼저 확인 메시지 표시
           const confirmMessage: Message = {

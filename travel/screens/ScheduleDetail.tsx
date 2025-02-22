@@ -12,7 +12,11 @@ import { ArrowLeft } from "lucide-react-native";
 import { Schedule } from "../types/schedule";
 import { useRoute, RouteProp, useNavigation } from "@react-navigation/native";
 import TrashIcon from "../assets/trash.svg";
-import { deleteSchedule as deleteScheduleAPI, getSchedules } from "../api/loginapi";
+import {
+  deleteSchedule as deleteScheduleAPI,
+  getSchedules,
+} from "../api/loginapi";
+import TMap_Route from "../components/TMap_Route"; // ✅ TMapScreen 대신 TMap_Route를 임포트
 
 type RouteParams = {
   ScheduleDetail: {
@@ -59,6 +63,15 @@ export default function ScheduleDetail() {
     fetchSchedules();
   }, []);
 
+  const tripInfo = {
+    // Define the tripInfo object with the necessary properties
+    id: schedule.id || schedule.tripId,
+    destination: schedule.destination,
+    startDate: schedule.startDate,
+    endDate: schedule.endDate,
+    itinerary: schedule.itinerary,
+  };
+
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
@@ -72,6 +85,9 @@ export default function ScheduleDetail() {
           <TrashIcon width={24} height={24} color="#FF4D4D" />
         </TouchableOpacity>
       </View>
+
+      {/* ✅ 지도 추가 (TMapScreen) */}
+      <TMap_Route />
 
       <ScrollView style={styles.content}>
         <View style={styles.destinationSection}>
