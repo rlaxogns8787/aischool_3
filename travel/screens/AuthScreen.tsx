@@ -221,6 +221,8 @@ export default function AuthScreen({ navigation, route }: AuthScreenProps) {
   const [selectedMusicGenres, setSelectedMusicGenres] = useState<string[]>([]);
   const [isNicknameChecked, setIsNicknameChecked] = useState(false);
   const [isNicknameValid, setIsNicknameValid] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [loginAttempts, setLoginAttempts] = useState(0);
 
   // 사용자 정보 상태
   const [formData, setFormData] = useState({
@@ -414,6 +416,8 @@ export default function AuthScreen({ navigation, route }: AuthScreenProps) {
 
   const handleLogin = async () => {
     try {
+      if (isLoading) return; // 이미 로딩 중이면 중복 요청 방지
+
       console.log("로그인 요청 시작");
 
       if (!email || !password) {
@@ -421,6 +425,9 @@ export default function AuthScreen({ navigation, route }: AuthScreenProps) {
         Alert.alert("오류", "이메일과 비밀번호를 입력해주세요.");
         return;
       }
+
+      setIsLoading(true);
+      setLoginAttempts((prev) => prev + 1);
 
       const loginData = {
         username: email,
@@ -444,7 +451,20 @@ export default function AuthScreen({ navigation, route }: AuthScreenProps) {
       }
     } catch (error: any) {
       console.error("로그인 에러:", error);
-      Alert.alert("오류", error.message || "로그인에 실패했습니다.");
+
+      // 네트워크 에러인 경우 사용자에게 알림
+      if (error.message === "Network Error") {
+        Alert.alert("네트워크 오류", "인터넷 연결을 확인해주세요.", [
+          {
+            text: "확인",
+            onPress: () => console.log("네트워크 에러 알림 확인"),
+          },
+        ]);
+      } else {
+        Alert.alert("오류", error.message || "로그인에 실패했습니다.");
+      }
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -888,11 +908,18 @@ export default function AuthScreen({ navigation, route }: AuthScreenProps) {
             )}
 
             <TouchableOpacity
-              style={styles.signUpButton}
+              style={[styles.signUpButton, isLoading && styles.disabledButton]}
               onPress={isSignUp ? handleSignUp : handleLogin}
+              disabled={isLoading}
             >
               <Text style={styles.signUpButtonText}>
-                {isSocialSignUp ? "시작하기" : isSignUp ? "회원가입" : "로그인"}
+                {isLoading
+                  ? "처리중..."
+                  : isSocialSignUp
+                  ? "시작하기"
+                  : isSignUp
+                  ? "회원가입"
+                  : "로그인"}
               </Text>
             </TouchableOpacity>
 
@@ -1598,5 +1625,8 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "600",
     color: "#FFFFFF",
+  },
+  disabledButton: {
+    backgroundColor: "#999",
   },
 });
