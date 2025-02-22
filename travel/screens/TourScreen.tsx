@@ -8,6 +8,7 @@ import {
   ActivityIndicator,
   Platform,
   Alert,
+  Pressable,
 } from "react-native";
 import axios from "axios";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -30,6 +31,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import BackToStoryIcon from "../assets/backtostory.svg";
 import { AudioService } from "../services/audioService";
 import MicIcon from "../assets/mic.svg";
+import CameraIcon from "../assets/camera.svg";
 import Animated, {
   useAnimatedStyle,
   withRepeat,
@@ -339,6 +341,7 @@ export default function TourScreen() {
   const [isPlaying, setIsPlaying] = useState(false);
   const [userData, setUserData] = useState<UserData | null>(null);
   const youtubePlayerRef = useRef(null);
+  const [showCamera, setShowCamera] = useState(false);
 
   // 사용자 관심사를 DB에서 가져오기(기본값은 '전체'설정)
   const userPreference = user?.preferences?.[0] || "전체";
@@ -1440,6 +1443,38 @@ Additional context: ${currentPlace.description}`,
     }
   };
 
+  // 카메라 버튼 핸들러
+  const handleCameraPress = () => {
+    navigation.navigate("Camera", {
+      onPhotoTaken: async (photoUri: string) => {
+        try {
+          // 사진 저장 로직 구현
+          const response = await fetch("YOUR_API_ENDPOINT/photos", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              userId: user?.id,
+              photoUri,
+              location: currentLocation,
+              timestamp: new Date().toISOString(),
+            }),
+          });
+
+          if (response.ok) {
+            Alert.alert("성공", "사진이 저장되었습니다!");
+          } else {
+            throw new Error("사진 저장에 실패했습니다.");
+          }
+        } catch (error) {
+          console.error("Photo save error:", error);
+          Alert.alert("오류", "사진 저장 중 문제가 발생했습니다.");
+        }
+      },
+    });
+  };
+
   if (!isAudioReady) {
     return (
       <View style={styles.loadingContainer}>
@@ -1460,9 +1495,17 @@ Additional context: ${currentPlace.description}`,
           <ArrowLeft size={24} color="#fff" />
         </TouchableOpacity>
         <Text style={[styles.title, { color: "#fff" }]}>여행 도슨트</Text>
-        <TouchableOpacity style={styles.mapButton} onPress={handleMapPress}>
-          <Map size={24} color="#fff" />
-        </TouchableOpacity>
+        <View style={styles.headerRight}>
+          <TouchableOpacity
+            style={styles.voiceButton}
+            onPress={() => setShowVoiceModal(true)}
+          >
+            <VoiceIcon width={24} height={24} />
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.mapButton} onPress={handleMapPress}>
+            <Map size={24} color="#fff" />
+          </TouchableOpacity>
+        </View>
       </View>
 
       {isInitializing ? (
@@ -1500,9 +1543,9 @@ Additional context: ${currentPlace.description}`,
           <View style={styles.actions}>
             <TouchableOpacity
               style={styles.squareButton}
-              onPress={() => setShowVoiceModal(true)}
+              onPress={handleCameraPress}
             >
-              <VoiceIcon width={24} height={24} />
+              <CameraIcon width={24} height={24} />
             </TouchableOpacity>
 
             <View style={styles.micButtonContainer}>
@@ -1544,8 +1587,14 @@ Additional context: ${currentPlace.description}`,
       </View>
 
       {showVoiceModal && (
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
+        <Pressable
+          style={styles.modalOverlay}
+          onPress={() => setShowVoiceModal(false)}
+        >
+          <Pressable
+            style={styles.modalContent}
+            onPress={(e) => e.stopPropagation()}
+          >
             <Text style={styles.modalTitle}>음성 선택</Text>
             {voiceTypes.map((voice) => (
               <TouchableOpacity
@@ -1581,8 +1630,8 @@ Additional context: ${currentPlace.description}`,
                 )}
               </TouchableOpacity>
             ))}
-          </View>
-        </View>
+          </Pressable>
+        </Pressable>
       )}
 
       {showMusicButton && !isLoadingStory && <MusicButton />}
@@ -1634,8 +1683,20 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     padding: 16,
   },
-  backButton: { padding: 8 },
-  mapButton: { padding: 8 },
+  headerRight: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  backButton: {
+    padding: 8,
+  },
+  voiceButton: {
+    padding: 8,
+    marginRight: 12,
+  },
+  mapButton: {
+    padding: 8,
+  },
   title: { fontSize: 18, fontWeight: "600" },
   interestsContainer: {
     paddingVertical: 12,
@@ -1704,7 +1765,7 @@ const styles = StyleSheet.create({
     width: 64,
     height: 64,
     borderRadius: 32,
-    backgroundColor: "#FFFFFF",
+    backgroundColor: "rgba(255, 255, 255, 0.3)",
     justifyContent: "center",
     alignItems: "center",
     position: "relative",
@@ -1785,6 +1846,8 @@ const styles = StyleSheet.create({
     height: 64,
     justifyContent: "center",
     alignItems: "center",
+    backgroundColor: "rgba(255, 255, 255, 0.3)",
+    borderRadius: 32,
   },
   playButton: {
     width: 54,
@@ -1826,7 +1889,7 @@ const styles = StyleSheet.create({
     width: "90%",
     maxWidth: 400,
     position: "absolute",
-    bottom: 100,
+    bottom: 40,
     alignSelf: "center",
   },
   modalTitle: {
@@ -1958,5 +2021,13 @@ const styles = StyleSheet.create({
   },
   musicControlButtonActive: {
     backgroundColor: "#4E7EB8",
+  },
+  cameraButton: {
+    width: 64,
+    height: 64,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "rgba(255, 255, 255, 0.3)",
+    borderRadius: 32,
   },
 });
