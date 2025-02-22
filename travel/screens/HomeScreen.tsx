@@ -22,7 +22,11 @@ import {
   getCurrentWeather,
   type WeatherData,
 } from "../services/weatherService";
-import { useNavigation, NavigationProp } from "@react-navigation/native";
+import {
+  useNavigation,
+  NavigationProp,
+  DrawerNavigationProp,
+} from "@react-navigation/native";
 import { getSchedules } from "../api/loginapi";
 
 // 임시 데이터
@@ -56,7 +60,7 @@ type RootStackParamList = {
   Tour: undefined;
 };
 
-type HomeScreenNavigationProp = NavigationProp<RootStackParamList>;
+type HomeScreenNavigationProp = DrawerNavigationProp<RootStackParamList>;
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
 
@@ -78,26 +82,70 @@ export default function HomeScreen() {
     setWeatherPhrase(WEATHER_PHRASES[randomIndex]);
   }, []);
 
+  const getCurrentLocation = async () => {
+    try {
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== "granted") {
+        setError("위치 권한이 필요합니다");
+        return null;
+      }
+
+      const location = await Location.getCurrentPositionAsync({
+        accuracy: Location.Accuracy.High,
+      });
+
+      // 위도/경도로 실제 주소 가져오기
+      const [address] = await Location.reverseGeocodeAsync({
+        latitude: location.coords.latitude,
+        longitude: location.coords.longitude,
+      });
+
+      // 주소 구성 (국가에 따라 다르게 처리)
+      let locationString = "";
+      if (address.country === "South Korea" || address.country === "대한민국") {
+        // 한국인 경우
+        locationString = `${address.region} ${
+          address.subregion || address.district || ""
+        }`.trim();
+      } else {
+        // 해외인 경우
+        locationString = [address.city, address.region, address.country]
+          .filter(Boolean)
+          .join(", ");
+      }
+
+      return {
+        coords: location.coords,
+        address: locationString,
+      };
+    } catch (error) {
+      console.error("Location error:", error);
+      return null;
+    }
+  };
+
   useEffect(() => {
     async function loadWeatherData() {
       try {
-        const { status } = await Location.requestForegroundPermissionsAsync();
-        if (status !== "granted") {
-          setError("위치 권한이 필요합니다");
+        const locationData = await getCurrentLocation();
+        if (!locationData) {
+          setError("위치를 가져올 수 없습니다");
           setIsLoading(false);
           return;
         }
 
-        const location = await Location.getCurrentPositionAsync({});
         const weatherData = await getCurrentWeather(
-          location.coords.latitude,
-          location.coords.longitude
+          locationData.coords.latitude,
+          locationData.coords.longitude
         );
 
-        setWeather(weatherData);
+        setWeather({
+          ...weatherData,
+          location: locationData.address, // 실제 주소로 위치 설정
+        });
       } catch (err) {
+        console.error("날씨 정보를 가져오는데 실패했습니다:", err);
         setError("날씨 정보를 가져오는데 실패했습니다");
-        console.error(err);
       } finally {
         setIsLoading(false);
       }
@@ -112,18 +160,68 @@ export default function HomeScreen() {
         try {
           const scheduleData = await getSchedules();
           if (!scheduleData || scheduleData.length === 0) {
-            setSchedule(null); // scheduleData가 없을 경우 null로 설정
+            setSchedule(null);
             return;
           }
+
+          // 현재 날짜 (시간 제외)
+          const today = new Date();
+          today.setHours(0, 0, 0, 0);
+
+          // 유효한 일정 필터링
+          const validSchedules = scheduleData.filter((schedule: any) => {
+            const startDate = new Date(schedule.startDate);
+            startDate.setHours(0, 0, 0, 0);
+            const endDate = new Date(schedule.endDate);
+            endDate.setHours(0, 0, 0, 0);
+
+            // 여행 기간 계산 (일수)
+            const tripDuration = Math.ceil(
+              (endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)
+            );
+
+            // 당일치기(0박1일) 여행이고 시작일이 오늘 이전인 경우 제외
+            if (tripDuration === 0 && startDate < today) {
+              return false;
+            }
+
+            // 시작일이 오늘 이후이거나,
+            // 1박 이상이면서 종료일이 오늘 이후인 경우 포함
+            return startDate >= today || (tripDuration > 0 && endDate >= today);
+          });
+
+          if (validSchedules.length === 0) {
+            setSchedule(null);
+            return;
+          }
+
+          // 일정들을 날짜 기준으로 정렬
+          const sortedSchedules = validSchedules.sort((a: any, b: any) => {
+            const dateA = new Date(a.startDate);
+            const dateB = new Date(b.startDate);
+
+            // 시작 날짜가 같은 경우 tripId로 정렬 (먼저 등록된 순)
+            if (dateA.getTime() === dateB.getTime()) {
+              return a.tripId - b.tripId;
+            }
+
+            // 시작 날짜로 정렬
+            return dateA.getTime() - dateB.getTime();
+          });
+
+          // 가장 가까운 일정 선택
+          const nearestSchedule = sortedSchedules[0];
+
           // 변환: keywords 데이터를 travelStyle로 변환
           const transformedScheduleData = {
-            ...scheduleData[0],
-            travelStyle: scheduleData[0].keywords || [], // keywords가 없는 경우 빈 배열 반환
+            ...nearestSchedule,
+            travelStyle: nearestSchedule.keywords || [],
           };
+
           setSchedule(transformedScheduleData);
         } catch (error) {
           console.error("Failed to load schedule from database:", error);
-          setSchedule(null); // 에러 발생 시 schedule을 null로 설정
+          setSchedule(null);
         }
       }
 
@@ -182,17 +280,19 @@ export default function HomeScreen() {
               <>
                 <View style={styles.locationContainer}>
                   <LocationIcon width={16} height={16} color="#FFFFFF" />
-                  <Text style={styles.location}>서울 잠실동</Text>
+                  <Text style={styles.location}>위치 정보 없음</Text>
                 </View>
-                <Text style={styles.temperature}>24°</Text>
-                <Text style={styles.weatherCondition}>맑음</Text>
-                <Text style={styles.tempRange}>최고 27° / 최저 19°</Text>
+                <Text style={styles.temperature}>--°</Text>
+                <Text style={styles.weatherCondition}>--</Text>
+                <Text style={styles.tempRange}>최고 --° / 최저 --°</Text>
               </>
             ) : weather ? (
               <>
                 <View style={styles.locationContainer}>
                   <LocationIcon width={16} height={16} color="#FFFFFF" />
-                  <Text style={styles.location}>{weather.location}</Text>
+                  <Text style={styles.location}>
+                    {weather.location || "위치 정보 없음"}
+                  </Text>
                 </View>
                 <Text style={styles.temperature}>{weather.temperature}°</Text>
                 <Text style={styles.weatherCondition}>{weather.condition}</Text>
@@ -380,7 +480,6 @@ const styles = StyleSheet.create({
     padding: 16,
     height: 80,
     backgroundColor: "rgba(75, 126, 208, 0.3)",
-    backdropFilter: "blur(45px)",
     borderBottomLeftRadius: 12,
     borderBottomRightRadius: 12,
   },

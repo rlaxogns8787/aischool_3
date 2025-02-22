@@ -55,23 +55,28 @@ export default function CustomDrawerContent(
 
   const menuItems = [
     { label: "알림 설정", onPress: () => {} },
-    { label: "문의하기", onPress: () => {} },
+    {
+      label: "문의하기",
+      onPress: () => {
+        navigation.navigate("CustomerSupport");
+      },
+    },
     { label: "공지사항", onPress: () => {} },
     {
       label: "이용약관",
       onPress: () => {
         navigation.navigate("TermsDetail", {
           title: "이용약관",
-          content: TERMS_CONTENT.service,
-          showHeader: true,
+          type: "service",
         });
       },
     },
     {
       label: "개인정보 처리방침",
       onPress: () => {
-        navigation.navigate("Agreement", {
-          showHeader: true,
+        navigation.navigate("TermsDetail", {
+          title: "개인정보 처리방침",
+          type: "privacy",
         });
       },
     },

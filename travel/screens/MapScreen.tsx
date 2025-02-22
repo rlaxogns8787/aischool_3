@@ -1,105 +1,74 @@
-import React, { useEffect, useState } from "react"
-import { View, StyleSheet, Text, TouchableOpacity } from "react-native"
-import MapView, { Marker } from "react-native-maps"
-import * as Location from "expo-location"
+import React from "react";
+import { View, StyleSheet, TouchableOpacity, Text } from "react-native";
+import { useNavigation } from "@react-navigation/native";
+import { ArrowLeft } from "lucide-react-native";
+import EarIcon from "../assets/ear.svg";
+import TMap from "../components/TMap";
 
-export default function MapScreen() {
-  const [location, setLocation] = useState(null)
-  const [errorMsg, setErrorMsg] = useState(null)
+const MapScreen = () => {
+  const navigation = useNavigation();
 
-  useEffect(() => {
-    ;(async () => {
-      const { status } = await Location.requestForegroundPermissionsAsync()
-      if (status !== "granted") {
-        setErrorMsg("위치 권한이 필요합니다")
-        return
-      }
+  const handleBackPress = () => {
+    navigation.navigate("Main");
+  };
 
-      const location = await Location.getCurrentPositionAsync({})
-      setLocation(location)
-    })()
-  }, [])
-
-  if (errorMsg) {
-    return (
-      <View style={styles.container}>
-        <Text style={styles.errorText}>{errorMsg}</Text>
-      </View>
-    )
-  }
+  const handleEarPress = () => {
+    navigation.navigate("Tour");
+  };
 
   return (
     <View style={styles.container}>
-      {location ? (
-        <>
-          <MapView
-            style={styles.map}
-            initialRegion={{
-              latitude: location.coords.latitude,
-              longitude: location.coords.longitude,
-              latitudeDelta: 0.0922,
-              longitudeDelta: 0.0421,
-            }}
-            showsUserLocation
-            followsUserLocation
-          >
-            <Marker
-              coordinate={{
-                latitude: location.coords.latitude,
-                longitude: location.coords.longitude,
-              }}
-              title="현재 위치"
-              description="여기에서 시작합니다"
-            />
-          </MapView>
-          <TouchableOpacity style={styles.button} onPress={() => alert("AI 가이드가 시작됩니다!")}>
-            <Text style={styles.buttonText}>가이드 시작</Text>
-          </TouchableOpacity>
-        </>
-      ) : (
-        <Text style={styles.text}>위치를 불러오는 중...</Text>
-      )}
+      <TMap />
+      <View style={styles.dimLayer} />
+      <View style={styles.header}>
+        <TouchableOpacity style={styles.backButton} onPress={handleBackPress}>
+          <ArrowLeft size={24} color="#fff" />
+        </TouchableOpacity>
+        <Text style={styles.title}>지도</Text>
+        <TouchableOpacity style={styles.earButton} onPress={handleEarPress}>
+          <EarIcon width={24} height={24} />
+        </TouchableOpacity>
+      </View>
     </View>
-  )
-}
+  );
+};
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#fff",
   },
-  map: {
-    flex: 1,
-  },
-  text: {
-    fontSize: 16,
-    textAlign: "center",
-    marginTop: 20,
-  },
-  errorText: {
-    fontSize: 16,
-    color: "red",
-    textAlign: "center",
-    marginTop: 20,
-  },
-  button: {
+  dimLayer: {
     position: "absolute",
-    bottom: 40,
-    alignSelf: "center",
-    backgroundColor: "#007AFF",
-    paddingHorizontal: 30,
-    paddingVertical: 15,
-    borderRadius: 25,
-    elevation: 5,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
+    top: 0,
+    left: 0,
+    right: 0,
+    height: 100,
+    backgroundColor: "rgba(0, 0, 0, 0.4)",
+    zIndex: 1,
   },
-  buttonText: {
-    color: "#fff",
+  header: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    padding: 16,
+    paddingTop: 48,
+    zIndex: 2,
+  },
+  backButton: {
+    padding: 8,
+  },
+  title: {
     fontSize: 18,
-    fontWeight: "bold",
+    fontWeight: "600",
+    color: "#fff",
   },
-})
+  earButton: {
+    padding: 8,
+  },
+});
 
+export default MapScreen;

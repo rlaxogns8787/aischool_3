@@ -24,7 +24,11 @@ import { MessageCircle } from "lucide-react-native";
 import MyProfileScreen from "./screens/MyProfileScreen";
 import EditProfileScreen from "./screens/EditProfileScreen";
 import ScheduleDetail from "./screens/ScheduleDetail";
+import TravelLogDetail from "./screens/TravelLogDetail";
+import TermsDetailScreen from "./screens/TermsDetailScreen";
+import CustomerSupportScreen from "./screens/CustomerSupportScreen";
 import TMapScreen from "./screens/TMapScreen";
+import MapScreen from "./screens/MapScreen";
 
 export type RootStackParamList = {
   Auth: undefined;
@@ -46,9 +50,12 @@ export type RootStackParamList = {
   Main: undefined;
   Chat: undefined;
   Tour: undefined;
+  Map: undefined;
   MyProfile: undefined;
   ScheduleDetail: undefined;
-  TMapScreen: undefined;
+  TravelLogDetail: undefined;
+  CustomerSupport: undefined;
+  TMap: undefined;
 };
 
 enableScreens();
@@ -96,12 +103,17 @@ function MainTabs() {
         name="홈"
         component={HomeScreen}
         options={{
-          tabBarIcon: ({ focused }: { focused: boolean }) => (
-            <HomeIcon
-              width={24}
-              height={24}
-              color={focused ? "#ffffff" : "rgba(255, 255, 255, 0.6)"}
-            />
+          tabBarIcon: ({ color }) => (
+            <HomeIcon width={24} height={24} color={color} />
+          ),
+        }}
+      />
+      <Tab.Screen
+        name="지도"
+        component={TMapScreen}
+        options={{
+          tabBarIcon: ({ color }) => (
+            <MessageCircle width={24} height={24} color={color} />
           ),
         }}
       />
@@ -109,12 +121,8 @@ function MainTabs() {
         name="가이드"
         component={TourScreen}
         options={{
-          tabBarIcon: ({ focused }: { focused: boolean }) => (
-            <MessageCircle
-              width={24}
-              height={24}
-              color={focused ? "#ffffff" : "rgba(255, 255, 255, 0.6)"}
-            />
+          tabBarIcon: ({ color }) => (
+            <MessageCircle width={24} height={24} color={color} />
           ),
         }}
       />
@@ -122,12 +130,8 @@ function MainTabs() {
         name="내일정"
         component={ScheduleScreen}
         options={{
-          tabBarIcon: ({ focused }: { focused: boolean }) => (
-            <CalendarIcon
-              width={24}
-              height={24}
-              color={focused ? "#ffffff" : "rgba(255, 255, 255, 0.6)"}
-            />
+          tabBarIcon: ({ color }) => (
+            <CalendarIcon width={24} height={24} color={color} />
           ),
         }}
       />
@@ -135,12 +139,8 @@ function MainTabs() {
         name="여행기록"
         component={TravelLogScreen}
         options={{
-          tabBarIcon: ({ focused }: { focused: boolean }) => (
-            <GalleryIcon
-              width={24}
-              height={24}
-              color={focused ? "#ffffff" : "rgba(255, 255, 255, 0.6)"}
-            />
+          tabBarIcon: ({ color }) => (
+            <GalleryIcon width={24} height={24} color={color} />
           ),
         }}
       />
@@ -203,6 +203,12 @@ export default function App() {
               })}
             />
 
+            {/* 고객센터 화면 추가 */}
+            <Stack.Screen
+              name="CustomerSupport"
+              component={CustomerSupportScreen}
+            />
+
             <Stack.Screen name="Onboarding" component={OnboardingScreen} />
             <Stack.Screen name="Main" component={MainDrawer} />
             <Stack.Screen
@@ -232,13 +238,35 @@ export default function App() {
               component={ScheduleDetail} // 추가
               options={{ headerShown: false }}
             />
-            {/* ✅ TMapScreen 추가 */}
             <Stack.Screen
-              name="TMapScreen"
+              name="TravelLogDetail"
+              component={TravelLogDetail} // 추가
+              options={{ headerShown: false }}
+            />
+
+            {/* TermsDetailScreen 추가 */}
+            <Stack.Screen
+              name="TermsDetail"
+              component={TermsDetailScreen}
+              options={{
+                headerShown: true, // 헤더 표시
+                animation: "slide_from_right",
+                gestureDirection: "horizontal",
+              }}
+            />
+
+            <Stack.Screen
+              name="TMap"
               component={TMapScreen}
               options={{
-                headerShown: false, // 헤더를 안 보이게 설정
+                headerShown: false,
               }}
+            />
+
+            <Stack.Screen
+              name="Map"
+              component={MapScreen}
+              options={{ headerShown: false }}
             />
           </Stack.Navigator>
         </NavigationContainer>

@@ -10,7 +10,7 @@ import {
   Platform,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { ChevronLeft, Camera } from "lucide-react-native";
+import { ChevronLeft, Camera, ChevronRight } from "lucide-react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { DrawerNavigationProp } from "@react-navigation/drawer";
 import * as ImagePicker from "expo-image-picker";
@@ -21,6 +21,9 @@ interface UserInfo {
   nickname: string;
   birthyear: number;
   gender: string;
+  email: string;
+  preferences: string[];
+  music_genres: string[];
 }
 
 type MyProfileScreenProps = {
@@ -90,6 +93,115 @@ export default function MyProfileScreen({ navigation }: MyProfileScreenProps) {
     }
   };
 
+  const renderProfileMenu = () => {
+    return (
+      <View style={styles.menuContainer}>
+        <Text style={styles.menuTitle}>계정 정보</Text>
+        <TouchableOpacity
+          style={styles.menuItem}
+          onPress={() =>
+            navigation.navigate("EditProfile", {
+              field: "email",
+              currentValue: userInfo?.email,
+            })
+          }
+        >
+          <Text style={styles.menuLabel}>이메일</Text>
+          <View style={styles.menuValueContainer}>
+            <Text style={styles.menuValue}>{userInfo?.email}</Text>
+            <ChevronRight size={20} color="#C7C7CC" />
+          </View>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={styles.menuItem}
+          onPress={() =>
+            navigation.navigate("EditProfile", {
+              field: "nickname",
+              currentValue: userInfo?.nickname,
+            })
+          }
+        >
+          <Text style={styles.menuLabel}>닉네임</Text>
+          <View style={styles.menuValueContainer}>
+            <Text style={styles.menuValue}>{userInfo?.nickname}</Text>
+            <ChevronRight size={20} color="#C7C7CC" />
+          </View>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={styles.menuItem}
+          onPress={() =>
+            navigation.navigate("EditProfile", {
+              field: "birthyear",
+              currentValue: userInfo?.birthyear?.toString(),
+            })
+          }
+        >
+          <Text style={styles.menuLabel}>생년월일</Text>
+          <View style={styles.menuValueContainer}>
+            <Text style={styles.menuValue}>{userInfo?.birthyear}</Text>
+            <ChevronRight size={20} color="#C7C7CC" />
+          </View>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={styles.menuItem}
+          onPress={() =>
+            navigation.navigate("EditProfile", {
+              field: "gender",
+              currentValue: userInfo?.gender,
+            })
+          }
+        >
+          <Text style={styles.menuLabel}>성별</Text>
+          <View style={styles.menuValueContainer}>
+            <Text style={styles.menuValue}>
+              {userInfo?.gender === "male" ? "남자" : "여자"}
+            </Text>
+            <ChevronRight size={20} color="#C7C7CC" />
+          </View>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={styles.menuItem}
+          onPress={() =>
+            navigation.navigate("EditProfile", {
+              field: "preferences",
+              currentValue: {
+                preferences: userInfo?.preferences || [],
+                music_genres: userInfo?.music_genres || [],
+              },
+            })
+          }
+        >
+          <Text style={styles.menuLabel}>취향 수정</Text>
+          <View style={styles.menuValueContainer}>
+            <Text style={styles.menuValue}>
+              {(userInfo?.preferences?.length || 0) +
+                (userInfo?.music_genres?.length || 0)}
+              개 선택됨
+            </Text>
+            <ChevronRight size={20} color="#C7C7CC" />
+          </View>
+        </TouchableOpacity>
+
+        <Text style={[styles.menuTitle, { marginTop: 24 }]}>계정 보안</Text>
+        <TouchableOpacity
+          style={styles.infoItem}
+          onPress={() => handleEditField("password")}
+        >
+          <Text style={styles.label}>비밀번호 변경</Text>
+          <ChevronRight
+            size={20}
+            color="#C7C7CC"
+            style={{ transform: [{ rotate: "180deg" }] }}
+          />
+        </TouchableOpacity>
+      </View>
+    );
+  };
+
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
@@ -115,70 +227,7 @@ export default function MyProfileScreen({ navigation }: MyProfileScreenProps) {
           </View>
         </View>
 
-        <View style={styles.infoSection}>
-          <Text style={styles.sectionTitle}>계정 정보</Text>
-          <View style={styles.infoItem}>
-            <Text style={styles.label}>이메일</Text>
-            <Text style={styles.value}>{userInfo?.username || "{email}"}</Text>
-          </View>
-          <TouchableOpacity
-            style={styles.infoItem}
-            onPress={() => handleEditField("nickname", userInfo?.nickname)}
-          >
-            <Text style={styles.label}>닉네임</Text>
-            <Text style={styles.value}>
-              {userInfo?.nickname || "{nickname}"}
-            </Text>
-            <ChevronLeft
-              size={20}
-              color="#C7C7CC"
-              style={{ transform: [{ rotate: "180deg" }] }}
-            />
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.infoItem}
-            onPress={() =>
-              handleEditField("birthyear", userInfo?.birthyear?.toString())
-            }
-          >
-            <Text style={styles.label}>생년월일</Text>
-            <Text style={styles.value}>{userInfo?.birthyear || "2000"}</Text>
-            <ChevronLeft
-              size={20}
-              color="#C7C7CC"
-              style={{ transform: [{ rotate: "180deg" }] }}
-            />
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.infoItem}
-            onPress={() => handleEditField("gender", userInfo?.gender)}
-          >
-            <Text style={styles.label}>성별</Text>
-            <Text style={styles.value}>
-              {userInfo?.gender === "Female" ? "여자" : "남자"}
-            </Text>
-            <ChevronLeft
-              size={20}
-              color="#C7C7CC"
-              style={{ transform: [{ rotate: "180deg" }] }}
-            />
-          </TouchableOpacity>
-        </View>
-
-        <View style={styles.infoSection}>
-          <Text style={styles.sectionTitle}>계정 보안</Text>
-          <TouchableOpacity
-            style={styles.infoItem}
-            onPress={() => handleEditField("password")}
-          >
-            <Text style={styles.label}>비밀번호 변경</Text>
-            <ChevronLeft
-              size={20}
-              color="#C7C7CC"
-              style={{ transform: [{ rotate: "180deg" }] }}
-            />
-          </TouchableOpacity>
-        </View>
+        {renderProfileMenu()}
       </ScrollView>
     </SafeAreaView>
   );
@@ -234,6 +283,39 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     justifyContent: "center",
     alignItems: "center",
+  },
+  menuContainer: {
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    backgroundColor: "#FFFFFF",
+  },
+  menuTitle: {
+    fontSize: 14,
+    color: "#8E8E93",
+    marginBottom: 8,
+    marginLeft: 12,
+  },
+  menuItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 16,
+    paddingHorizontal: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: "#EEEEEE",
+  },
+  menuLabel: {
+    flex: 1,
+    fontSize: 16,
+    color: "#000000",
+  },
+  menuValueContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  menuValue: {
+    fontSize: 16,
+    color: "#8E8E93",
+    marginRight: 8,
   },
   infoSection: {
     paddingHorizontal: 16,

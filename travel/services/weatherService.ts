@@ -1,11 +1,11 @@
 import axios from "axios";
 
 const OPENWEATHERMAP_KEY = "d8b6ec4b0d962bb74c5f798fd68d197b";
-const KAKAO_API_KEY = "a98b3d67979288daf0c29c88075998ab";
-const REVERSE_GEOCODING_URL = "http://api.openweathermap.org/geo/1.0/reverse";
+// const KAKAO_API_KEY = "a98b3d67979288daf0c29c88075998ab";  // 주석 처리
+const REVERSE_GEOCODING_URL = "https://api.openweathermap.org/geo/1.0/reverse";
 const FORECAST_URL = "https://api.openweathermap.org/data/2.5/forecast";
 const BASE_URL = "https://api.openweathermap.org/data/2.5/weather";
-const KAKAO_GEO_URL = "https://dapi.kakao.com/v2/local/geo/coord2regioncode.json";
+// const KAKAO_GEO_URL = "https://dapi.kakao.com/v2/local/geo/coord2regioncode.json";  // 주석 처리
 
 export interface WeatherData {
   temperature: number;
@@ -28,7 +28,8 @@ interface ForecastEntry {
   dt_txt: string;
 }
 
-// Kakao API를 사용하여 구 단위 주소 가져오기
+// Kakao API 함수 주석 처리
+/*
 async function getDistrictName(latitude: number, longitude: number): Promise<string> {
   try {
     const response = await axios.get(KAKAO_GEO_URL, {
@@ -44,14 +45,65 @@ async function getDistrictName(latitude: number, longitude: number): Promise<str
     return "위치 정보 없음";
   }
 }
+*/
 
-export async function getCurrentWeather(latitude: number, longitude: number): Promise<WeatherData> {
+// OpenWeather API의 reverse geocoding 사용
+async function getLocationName(
+  latitude: number,
+  longitude: number
+): Promise<string> {
+  try {
+    // 1. 언어 코드를 ko로 수정
+    const response = await axios.get(
+      `${REVERSE_GEOCODING_URL}?lat=${latitude}&lon=${longitude}&limit=1&appid=${OPENWEATHERMAP_KEY}&lang=ko`
+    );
+
+    const [location] = response.data;
+    if (!location) {
+      return "위치 정보 없음";
+    }
+
+    // 2. 응답 데이터 구조에 맞게 수정
+    let locationString = "";
+
+    // 한국의 경우
+    if (location.country === "KR") {
+      // state는 시/도, name은 구/군 정보
+      locationString = location.state
+        ? `${location.state} ${location.name}`
+        : location.name;
+    } else {
+      // 해외의 경우
+      locationString = location.name;
+      if (location.state) {
+        locationString += `, ${location.state}`;
+      }
+      locationString += `, ${location.country}`;
+    }
+
+    return locationString;
+  } catch (error) {
+    if (axios.isAxiosError(error)) {
+      console.error(
+        "Reverse Geocoding Error:",
+        error.response?.data || error.message
+      );
+    }
+    return "위치 정보 없음";
+  }
+}
+
+export async function getCurrentWeather(
+  latitude: number,
+  longitude: number
+): Promise<WeatherData> {
   try {
     const weatherUrl = `${BASE_URL}?lat=${latitude}&lon=${longitude}&appid=${OPENWEATHERMAP_KEY}&units=metric&lang=kr`;
     const response = await axios.get(weatherUrl);
     const weatherData = response.data;
 
-    const locationName = await getDistrictName(latitude, longitude);
+    // Kakao API 대신 OpenWeather의 reverse geocoding 사용
+    const locationName = await getLocationName(latitude, longitude);
 
     const forecastUrl = `${FORECAST_URL}?lat=${latitude}&lon=${longitude}&appid=${OPENWEATHERMAP_KEY}&units=metric&lang=kr`;
     const forecastResponse = await axios.get(forecastUrl);
@@ -82,16 +134,10 @@ export async function getCurrentWeather(latitude: number, longitude: number): Pr
 
     return {
       temperature: roundedTemp,
-
       condition: weatherData.weather[0].description || "맑음",
-
-      // 반올림된 값이 같으면 예보 API 사용, 다르면 OpenWeather 값 사용
       high: roundedHigh === roundedTemp ? forecastHigh : roundedHigh,
-
       low: roundedLow === roundedTemp ? forecastLow : roundedLow,
-
       location: locationName,
-
       hourly: forecastList.slice(0, 6).map((entry, index) => ({
         time: `${9 + index}AM`,
         temp: Math.round(entry.main.temp),

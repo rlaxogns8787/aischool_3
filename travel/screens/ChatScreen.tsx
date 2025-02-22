@@ -174,9 +174,18 @@ export default function ChatScreen() {
         timestamp: new Date().toISOString(),
       };
 
+      // 도슨트 안내 메시지 추가
+      const docentGuideMessage: Message = {
+        id: (Date.now() + 2).toString(),
+        text: "🎧 안내사항: 여행 중 AI 도슨트 서비스 이용을 위해서는 헤드폰 또는 에어팟 착용이 필요합니다.",
+        isBot: true,
+        timestamp: new Date().toISOString(),
+        customStyle: "#FFF1C1", // 추가: 커스텀 배경색 지정
+      };
+
       // 다음 질문 (예산)
       const nextQuestion: Message = {
-        id: (Date.now() + 2).toString(),
+        id: (Date.now() + 3).toString(),
         text: "여행 예산은 어느 정도로 생각하고 계신가요?(만원단위 - 숫자만 입력)",
         isBot: true,
         timestamp: new Date().toISOString(),
@@ -190,7 +199,12 @@ export default function ChatScreen() {
               !msg.text.includes("누구와 함께 여행하시나요") &&
               !msg.text.includes("아래 두 옵션 중 하나를 선택")
           )
-          .concat([userMessage, confirmMessage, nextQuestion])
+          .concat([
+            userMessage,
+            confirmMessage,
+            docentGuideMessage,
+            nextQuestion,
+          ])
       );
 
       return;

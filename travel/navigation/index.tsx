@@ -11,6 +11,7 @@ import MapScreen from "../screens/MapScreen";
 import TourScreen from "../screens/TourScreen";
 import CustomDrawerContent from "../components/CustomDrawerContent";
 import ScheduleDetail from "../screens/ScheduleDetail";
+import TravelLogDetail from "../screens/TravelLogDetail";
 import TermsDetailScreen from "../screens/TermsDetailScreen";
 import AgreementScreen from "../screens/AgreementScreen";
 import MyProfileScreen from "../screens/MyProfileScreen";
@@ -81,6 +82,13 @@ export default function RootNavigator() {
       <Stack.Screen
         name="ScheduleDetail"
         component={ScheduleDetail}
+        options={{
+          headerShown: false,
+        }}
+      />
+      <Stack.Screen
+        name="TravelLogDetail"
+        component={TravelLogDetail}
         options={{
           headerShown: false,
         }}

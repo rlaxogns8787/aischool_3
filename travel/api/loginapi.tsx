@@ -4,14 +4,25 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 // Flask 백엔드 서버 기본 URL
 const BASE_URL = "https://5a031-gce0e3fhexdbh4c6.eastus-01.azurewebsites.net";
 
+interface RegisterUserData {
+  username: string;
+  password: string;
+  nickname: string;
+  birthyear: number;
+  gender: string;
+  marketing_consent: number;
+  preferences?: string[]; // Optional
+  music_genres?: string[]; // Optional
+}
+
 /**
  * 회원가입 API 요청
  */
-export const registerUser = async (userData) => {
+export const registerUser = async (userData: RegisterUserData) => {
   try {
     const response = await axios.post(`${BASE_URL}/register`, userData);
     return response.data;
-  } catch (error) {
+  } catch (error: any) {
     throw error.response ? error.response.data : { message: "Network error" };
   }
 };
@@ -197,3 +208,125 @@ export const getSchedules = async () => {
     );
   }
 };
+
+/**
+ * 여행 기록 추가 API_2
+ */
+export const addrecord = async (scheduleData) => {
+  try {
+    const userData = await AsyncStorage.getItem("userData");
+    if (!userData) {
+      throw new Error("사용자 정보를 찾을 수 없습니다.");
+    }
+    const userInfo = JSON.parse(userData);
+    console.log("User Info:", userInfo); // 사용자 정보 확인
+    const formattedScheduleData = {
+      username: userInfo.username,
+      tripId: scheduleData.tripId,
+      timestamp: new Date().toISOString(),
+      title: scheduleData.title,
+      companion: scheduleData.companion,
+      startDate: scheduleData.startDate,
+      endDate: scheduleData.endDate,
+      duration: scheduleData.duration,
+      budget: scheduleData.budget,
+      transportation: scheduleData.transportation,
+      keywords: scheduleData.keywords,
+      summary: scheduleData.summary,
+      days: scheduleData.days,
+      extraInfo: scheduleData.extraInfo,
+      generatedScheduleRaw: JSON.stringify(scheduleData),
+    };
+    console.log("Formatted Schedule Data:", formattedScheduleData); // 포맷된 일정 데이터 확인
+    const response = await axios.post(
+      `${BASE_URL}/additional_schedule`,
+      formattedScheduleData
+    );
+    console.log("Add record Response:", response.data); // 서버 응답 확인
+    return response.data;
+  } catch (error) {
+    console.error("Add record error:", error);
+    throw new Error(
+      error.response?.data?.message || "일정 추가에 실패했습니다."
+    );
+  }
+};
+
+/**
+ * 여행 기록 삭제 API
+ */
+export const deleterecord = async (scheduleId) => {
+  try {
+    const userData = await AsyncStorage.getItem("userData");
+    if (!userData) {
+      throw new Error("사용자 정보를 찾을 수 없습니다.");
+    }
+
+    const userInfo = JSON.parse(userData);
+
+    const response = await axios.delete(
+      `${BASE_URL}/additional_schedule/${scheduleId}`,
+      {
+        params: { username: userInfo.username },
+      }
+    );
+
+    return response.data;
+  } catch (error) {
+    console.error("Delete schedule error:", error);
+    throw new Error(
+      error.response?.data?.message || "일정 삭제에 실패했습니다."
+    );
+  }
+};
+
+/**
+ * 여행 기록 조회 API
+ */
+export const getrecord = async () => {
+  try {
+    const userData = await AsyncStorage.getItem("userData");
+    if (!userData) {
+      throw new Error("사용자 정보를 찾을 수 없습니다.");
+    }
+
+    const userInfo = JSON.parse(userData);
+
+    const response = await axios.get(`${BASE_URL}/additional_schedule`, {
+      params: { username: userInfo.username },
+    });
+
+    return response.data;
+  } catch (error) {
+    console.error("Get schedules error:", error);
+    throw new Error(
+      error.response?.data?.message || "일정 조회에 실패했습니다."
+    );
+  }
+};
+
+/**
+ * 닉네임 중복 확인 API(임시 주석처리)
+ */
+// export const checkNicknameDuplicate = async (nickname: string) => {
+//   try {
+//     // 실제 서버의 닉네임 중복 확인 엔드포인트로 수정
+//     const response = await axios.post(`${BASE_URL}/check-duplicate`, {
+//       type: "nickname",
+//       value: nickname,
+//     });
+//     return response.data;
+//   } catch (error: any) {
+//     // 서버 응답 에러 처리 개선
+//     if (error.response) {
+//       // 서버가 응답한 경우
+//       throw error.response.data;
+//     } else if (error.request) {
+//       // 요청은 보냈지만 응답을 받지 못한 경우
+//       throw { message: "서버에서 응답이 없습니다. 잠시 후 다시 시도해주세요." };
+//     } else {
+//       // 요청 자체를 보내지 못한 경우
+//       throw { message: "네트워크 연결을 확인해주세요." };
+//     }
+//   }
+// };
