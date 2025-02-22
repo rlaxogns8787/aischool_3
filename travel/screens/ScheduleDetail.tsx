@@ -16,7 +16,7 @@ import {
   deleteSchedule as deleteScheduleAPI,
   getSchedules,
 } from "../api/loginapi";
-import TMapScreen from "../screens/TMapScreen";
+import TMap_Route from "../components/TMap_Route"; // ✅ TMapScreen 대신 TMap_Route를 임포트
 
 type RouteParams = {
   ScheduleDetail: {
@@ -87,7 +87,7 @@ export default function ScheduleDetail() {
       </View>
 
       {/* ✅ 지도 추가 (TMapScreen) */}
-      <TMapScreen tripInfo={tripInfo} />
+      <TMap_Route />
 
       <ScrollView style={styles.content}>
         <View style={styles.destinationSection}>
