@@ -17,6 +17,7 @@ import * as Speech from "expo-speech";
 import * as sdk from "microsoft-cognitiveservices-speech-sdk";
 import "react-native-get-random-values";
 import { useAzureBot } from "../src/hooks/useAzureBot";
+import { StackNavigationProp } from "@react-navigation/stack";
 import { useNavigation } from "@react-navigation/native";
 import { LinearGradient } from "expo-linear-gradient";
 import BackToStoryIcon from "../assets/backtostory.svg";
@@ -181,8 +182,15 @@ interface ScheduleResponse {
   schedules: ServerSchedule[];
 }
 
+// 네비게이션 스택 타입 정의
+type RootStackParamList = {
+  TourScreen: undefined;
+  TMapScreen: { tripInfo: Schedule }; // tripInfo 데이터 전달
+};
+
 export default function TourScreen() {
-  const navigation = useNavigation();
+  const [scheduleData, setScheduleData] = useState<Schedule | null>(null);
+  const navigation = useNavigation<StackNavigationProp<RootStackParamList>>();
   const [displayedText, setDisplayedText] = useState("");
   const [fullText, setFullText] = useState("");
   const [isRecording, setIsRecording] = useState(false);
@@ -700,8 +708,12 @@ export default function TourScreen() {
   };
 
   const handleMapPress = () => {
-    console.log("handleMapPress 호출");
-    navigation.navigate("Map");
+    if (!scheduleData) {
+      console.warn("⚠️ 여행 일정 데이터 없음!");
+      return;
+    }
+
+    navigation.navigate("TMapScreen", { tripInfo: scheduleData });
   };
 
   // generateTourGuide 함수 수정

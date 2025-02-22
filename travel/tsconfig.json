@@ -14,13 +14,15 @@
     "isolatedModules": true,
     "jsx": "react-native", // react-native로 설정
     "incremental": true,
+    "baseUrl": "./",
     "plugins": [
       {
         "name": "next"
       }
     ],
     "paths": {
-      "@/*": ["./*"]
+      "@/*": ["./*"],
+      "@assets/*": ["assets/*"]
     },
     "types": ["react", "react-native"]
   },
@@ -29,7 +31,9 @@
     "**/*.ts",
     "**/*.tsx",
     ".next/types/**/*.ts",
-    "types/**/*.d.ts"
+    "types/**/*.d.ts",
+    "declarations.d.ts",
+    "src/**/*"
   ],
   "exclude": ["node_modules"],
   "extends": "expo/tsconfig.base"

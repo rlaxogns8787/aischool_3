@@ -7,6 +7,7 @@ import {
   Text,
   Alert,
   TextInput,
+  Button,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useNavigation, NavigationProp } from "@react-navigation/native";
@@ -32,7 +33,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 type RootStackParamList = {
   Chat: undefined;
   Schedule: undefined;
-  TMapScreen: undefined;
+  // TMapScreen: undefined;
   // 다른 스크린들도 필요하다면 여기에 추가
 };
 
@@ -92,18 +93,6 @@ export default function ChatScreen() {
   const [disabledButtons, setDisabledButtons] = useState<{
     [key: string]: boolean;
   }>({});
-
-  // 여행 일정 데이터 AsyncStorage에서 가져와 TMapScreen으로 이동
-  const handleShowMap = async () => {
-    const jsonData = await AsyncStorage.getItem("scheduleData");
-    console.log("🗺️ 지도 보기 버튼 클릭됨! 저장된 데이터:", jsonData);
-
-    if (jsonData) {
-      navigation.navigate("TMapScreen"); // 📌 정상 작동!
-    } else {
-      alert("저장된 여행 일정이 없습니다.");
-    }
-  };
 
   // AI 응답 저장을 위한 state 추가
   const [aiResponses, setAiResponses] = useState<AIResponse[]>([]);
@@ -1186,11 +1175,6 @@ export default function ChatScreen() {
             setDisabledButtons={setDisabledButtons} // ✅ 추가
           />
         </View>
-
-        {/* 🗺 지도 보기 버튼 추가 */}
-        <TouchableOpacity style={styles.mapButton} onPress={handleShowMap}>
-          <Text style={styles.mapButtonText}>🗺 지도에서 보기</Text>
-        </TouchableOpacity>
 
         {/* DatePicker를 항상 표시 */}
         {messages.some((msg) =>

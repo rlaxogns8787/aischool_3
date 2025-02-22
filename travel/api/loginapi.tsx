@@ -41,9 +41,9 @@ export const loginUser = async (userData) => {
 };
 
 /**
- * 사용자 정보 업데이트 API 요청 (토큰 인증 제거)
+ * 사용자 정보 업데이트 API 요청
  */
-export const updateUserInfo = async (field, value, password) => {
+export const updateUserInfo = async (field, value, password?) => {
   try {
     const userData = await AsyncStorage.getItem("userData");
     if (!userData) {
@@ -51,22 +51,27 @@ export const updateUserInfo = async (field, value, password) => {
     }
 
     const userInfo = JSON.parse(userData);
-    const username = userInfo.username; // username 가져오기
+    const username = userInfo.username;
 
     if (!username) {
       throw new Error("username이 없습니다.");
     }
 
-    console.log("Sending update request:", { username, field, value });
+    // 서버에 보낼 데이터 구성
+    let updateData = {
+      username, // username 추가
+      field,
+      value,
+    };
 
-    // 서버에서 요구하는 형식에 맞춰 요청 데이터 구성
-    const updateData = {
-      [field]: value, // 동적으로 field와 value로 구성
-      ...(password && {
+    // 비밀번호 변경의 경우
+    if (password) {
+      updateData = {
+        ...updateData,
         oldPassword: password.oldPassword,
         newPassword: password.newPassword,
-      }),
-    };
+      };
+    }
 
     const response = await axios.put(
       `${BASE_URL}/user/${username}`,
@@ -75,15 +80,24 @@ export const updateUserInfo = async (field, value, password) => {
 
     console.log("Update response:", response.data);
 
-    if (response.data.user_info) {
-      await AsyncStorage.setItem(
-        "userData",
-        JSON.stringify(response.data.user_info)
-      );
+    if (response.data.message === "User information updated successfully") {
+      // 로컬 userData 업데이트
+      const currentUserData = JSON.parse(userData);
+      let updatedUserData = { ...currentUserData };
+
+      // preferences나 music_genres 업데이트인 경우
+      if (field === "preferences" || field === "music_genres") {
+        updatedUserData[field] = value; // 새로운 값으로 업데이트
+      } else {
+        updatedUserData[field] = value;
+      }
+
+      await AsyncStorage.setItem("userData", JSON.stringify(updatedUserData));
+      return { success: true, message: response.data.message };
     }
 
     return response.data;
-  } catch (error) {
+  } catch (error: any) {
     console.error("Update error details:", error);
     throw new Error(
       error.response?.data?.message || "정보 업데이트에 실패했습니다."
@@ -137,7 +151,7 @@ export const addSchedule = async (scheduleData) => {
 /**
  * 여행 일정 삭제 API
  */
-export const deleteSchedule = async (tripId) => {
+export const deleteSchedule = async (scheduleId) => {
   try {
     const userData = await AsyncStorage.getItem("userData");
     if (!userData) {
@@ -146,8 +160,8 @@ export const deleteSchedule = async (tripId) => {
 
     const userInfo = JSON.parse(userData);
 
-    const response = await axios.delete(`${BASE_URL}/schedule/${tripId}`, {
-      params: { username: userInfo.username }, // 백엔드에서 username을 요청 쿼리로 받음
+    const response = await axios.delete(`${BASE_URL}/schedule/${scheduleId}`, {
+      params: { username: userInfo.username },
     });
 
     return response.data;
@@ -158,7 +172,6 @@ export const deleteSchedule = async (tripId) => {
     );
   }
 };
-
 
 /**
  * 여행 일정 조회 API
@@ -176,33 +189,11 @@ export const getSchedules = async () => {
       params: { username: userInfo.username },
     });
 
-    const transformedData = transformScheduleData(response.data); // 변환 함수 호출
-    return transformedData; // 변환된 데이터를 반환
+    return response.data;
   } catch (error) {
     console.error("Get schedules error:", error);
     throw new Error(
       error.response?.data?.message || "일정 조회에 실패했습니다."
     );
   }
-};
-
-export const transformScheduleData = (dbData: any) => {
-  // dbData는 데이터베이스에서 불러온 데이터입니다.
-  const schedule = dbData[0]; // 배열에서 첫 번째 요소를 가져옵니다.
-
-  return {
-    tripId: schedule.tripId,
-    timestamp: schedule.timestamp,
-    title: schedule.title,
-    companion: schedule.companion,
-    startDate: schedule.startDate,
-    endDate: schedule.endDate,
-    duration: schedule.duration,
-    budget: schedule.budget,
-    transportation: schedule.transportation,
-    keywords: schedule.keywords,
-    summary: schedule.summary,
-    days: schedule.days, // days는 그대로 사용
-    extraInfo: schedule.extraInfo, // extraInfo도 그대로 사용
-  };
 };

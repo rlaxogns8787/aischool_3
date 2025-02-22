@@ -24,6 +24,7 @@ import { MessageCircle } from "lucide-react-native";
 import MyProfileScreen from "./screens/MyProfileScreen";
 import EditProfileScreen from "./screens/EditProfileScreen";
 import ScheduleDetail from "./screens/ScheduleDetail";
+import TMapScreen from "./screens/TMapScreen";
 
 export type RootStackParamList = {
   Auth: undefined;
@@ -47,6 +48,7 @@ export type RootStackParamList = {
   Tour: undefined;
   MyProfile: undefined;
   ScheduleDetail: undefined;
+  TMapScreen: undefined;
 };
 
 enableScreens();
@@ -229,6 +231,14 @@ export default function App() {
               name="ScheduleDetail"
               component={ScheduleDetail} // 추가
               options={{ headerShown: false }}
+            />
+            {/* ✅ TMapScreen 추가 */}
+            <Stack.Screen
+              name="TMapScreen"
+              component={TMapScreen}
+              options={{
+                headerShown: false, // 헤더를 안 보이게 설정
+              }}
             />
           </Stack.Navigator>
         </NavigationContainer>

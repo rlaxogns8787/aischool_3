@@ -196,7 +196,9 @@ export default function HomeScreen() {
                 </View>
                 <Text style={styles.temperature}>{weather.temperature}°</Text>
                 <Text style={styles.weatherCondition}>{weather.condition}</Text>
-                <Text style={styles.tempRange}>최고 {weather.high}° / 최저 {weather.low}°</Text>
+                <Text style={styles.tempRange}>
+                  최고 {weather.high}° / 최저 {weather.low}°
+                </Text>
               </>
             ) : null}
           </View>
@@ -445,5 +447,5 @@ const styles = StyleSheet.create({
     color: "#fff",
     opacity: 0.8,
     marginTop: 2,
-  },  
+  },
 });
