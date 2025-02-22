@@ -109,15 +109,6 @@ function MainTabs() {
         }}
       />
       <Tab.Screen
-        name="지도"
-        component={TMapScreen}
-        options={{
-          tabBarIcon: ({ color }) => (
-            <MessageCircle width={24} height={24} color={color} />
-          ),
-        }}
-      />
-      <Tab.Screen
         name="가이드"
         component={TourScreen}
         options={{
