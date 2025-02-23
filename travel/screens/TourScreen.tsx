@@ -797,15 +797,8 @@ export default function TourScreen() {
       try {
         const nearbySpot = await findNearbySpot(location.coords);
         if (nearbySpot) {
-          await generateTourGuide(
-            [{ AREA_CLTUR_TRRSRT_NM: nearbySpot.title }],
-            {
-              title: nearbySpot.title,
-              description: nearbySpot.description,
-              order: nearbySpot.order,
-              totalPlaces: nearbySpot.totalPlaces,
-            }
-          );
+          // 파라미터 없이 호출
+          await generateTourGuide();
           setIsGuiding(true);
         } else {
           // 근처 장소를 찾지 못했을 때 조용히 처리
@@ -921,7 +914,8 @@ export default function TourScreen() {
         }
       );
 
-      generateTourGuide(response.data.value);
+      // 파라미터 없이 호출
+      generateTourGuide();
     } catch (error) {
       console.error("Nearby spots search failed:", error);
     }
@@ -1046,64 +1040,57 @@ export default function TourScreen() {
   };
 
   // generateTourGuide 함수 수정
-  const generateTourGuide = async (
-    // spots: { AREA_CLTUR_TRRSRT_NM: string }[],
-    // scheduleInfo?: {
-    //   title: string;
-    //   description?: string;
-    //   time?: string;
-    //   order?: number;
-    //   totalPlaces?: number;
-    // }
-    spots: unknown,
-    scheduleInfo?: unknown
-  ) => {
+  const generateTourGuide = async () => {
     try {
       setIsLoadingStory(true);
+
+      // 실제 일정 데이터 가져오기
+      const storedScheduleStr = await AsyncStorage.getItem("confirmedSchedule");
+      if (!storedScheduleStr) {
+        console.log("일정을 찾을 수 없습니다.");
+        return;
+      }
+
+      const scheduleFromStorage: Schedule = JSON.parse(storedScheduleStr);
+      setScheduleData(scheduleFromStorage);
+
+      const today = new Date().toISOString().split("T")[0];
+      const todaySchedule = scheduleFromStorage.days.find(
+        (day) => day.date === today
+      );
+
+      if (!todaySchedule) {
+        console.log("오늘의 일정을 찾을 수 없습니다.");
+        return;
+      }
+
+      // 현재 장소 정보 찾기
+      const currentPlace = todaySchedule.places[tourState.currentPlaceIndex];
+      if (!currentPlace) {
+        console.log("현재 장소 정보를 찾을 수 없습니다.");
+        return;
+      }
+
       console.log("🎯 [TourGuide] 이야기 생성 시작", {
         userId: user?.id,
-        spotCount: spots.length,
+        장소: currentPlace.title,
       });
 
-      const spotNames = spots.map((s) => s.AREA_CLTUR_TRRSRT_NM).join(", ");
       const selectedCharacter = characterTraits[selectedVoice.id];
-
-      // 사용자 관심사를 기반으로 이야기 생성
-      let userPreferences = user?.preferences || ["전체"];
+      const userPreferences = user?.preferences || ["전체"];
 
       console.log("🎯 [TourGuide] 장소 설명 생성 시작", {
-        장소: spotNames,
+        장소: currentPlace.title,
         사용자ID: user?.id,
         전체관심사: userPreferences,
       });
-
-      // // 장소 정보 분석
-      // const placeInfo = `${spotNames} ${
-      //   scheduleInfo?.description || ""
-      // }`.toLowerCase();
-      // console.log("📍 [TourGuide] 장소 정보 분석", { 장소정보: placeInfo });
-
-      // // 관심사 키워드 매칭
-      // const matchingPreferences = userPreferences.filter((pref) => {
-      //   const keywords =
-      //     keywordMappings[pref as keyof typeof keywordMappings] || [];
-      //   return (
-      //     placeInfo.includes(pref.toLowerCase()) ||
-      //     keywords.some((keyword) => placeInfo.includes(keyword))
-      //   );
-      // });
-
-      // console.log("🔍 [TourGuide] 관심사 매칭 결과", {
-      //   매칭된_관심사:
-      //     matchingPreferences.length > 0 ? matchingPreferences : "매칭 없음",
-      // });
 
       // 장소 설명에 가장 적합한 관심사 선택
       let selectedPreference = userPreferences[0];
       if (userPreferences.length > 1 && userPreferences[0] !== "전체") {
         // 장소 이름과 설명에서 관심사와 관련된 키워드 찾기
-        const placeInfo = `${spotNames} ${
-          scheduleInfo?.description || ""
+        const placeInfo = `${currentPlace.title} ${
+          currentPlace.description || ""
         }`.toLowerCase();
         console.log("📍 [TourGuide] 장소 정보 분석", {
           장소정보: placeInfo,
@@ -1477,49 +1464,16 @@ export default function TourScreen() {
 3. 사용자의 관심사와 장소의 특징을 자연스럽게 연결해주세요.
 
 ### 장소 정보:
-- 장소명: ${spotNames}
-- 방문 순서: ${scheduleInfo?.order}번째 장소 (총 ${
-        scheduleInfo?.totalPlaces
+- 장소명: ${currentPlace.title}
+- 방문 순서: ${tourState.currentPlaceIndex + 1}번째 장소 (총 ${
+        todaySchedule.places.length
       }곳 중)
-- 방문 예정 시간: ${scheduleInfo?.time}
-- 장소 설명: ${scheduleInfo?.description || ""}
-
-### 추가 정보:
-${extraDetails}
+- 방문 예정 시간: ${currentPlace.time}
+- 장소 설명: ${currentPlace.description || ""}
 
 ### 스토리 스타일:
 - ${selectedCharacter.style}
 - ${selectedCharacter.tone}로 자연스럽게 설명해주세요.`;
-
-      // 실제 일정 데이터 가져오기
-      const storedScheduleStr = await AsyncStorage.getItem("confirmedSchedule");
-      if (!storedScheduleStr) {
-        console.log("일정을 찾을 수 없습니다.");
-        return;
-      }
-
-      const scheduleFromStorage: Schedule = JSON.parse(storedScheduleStr);
-      setScheduleData(scheduleFromStorage);
-
-      const today = new Date().toISOString().split("T")[0];
-      const todaySchedule = scheduleFromStorage.days.find(
-        (day: { date: string }) => day.date === today
-      );
-
-      if (!todaySchedule) {
-        console.log("오늘의 일정을 찾을 수 없습니다.");
-        return;
-      }
-
-      // 현재 장소 정보 찾기
-      const currentPlace = todaySchedule.places.find(
-        (place: { title: string }) => place.title === spotNames
-      );
-
-      if (!currentPlace) {
-        console.log("현재 장소 정보를 찾을 수 없습니다.");
-        return;
-      }
 
       const body = {
         messages: [
@@ -1536,38 +1490,16 @@ Location: ${currentPlace.address.split(" ").slice(0, 2).join(" ")}
 
 Your explanation style should align with ${
               selectedCharacter.style
-            }, and your tone should remain ${selectedCharacter.tone}. 
-The explanation must include:
-
-### **Critical Instructions:**
-- Keep the response within **200 characters**.
-- Use **short and concise sentences**.
-- Each sentence MUST provide completely new information.
-- STRICTLY NO REPETITION of words, concepts, or themes.
-- Avoid redundant expressions.
-- If mentioning a place or concept, describe it only once.
-- Use varied expressions for location descriptions (e.g., "자리잡은", "위치한", "있는", "들어선", "~의", "~에서 만나볼 수 있는" etc.).
-- Focus on diverse aspects in a structured way:
-  1. Start with location and main purpose
-  2. Describe unique features and processes
-  3. Add interesting historical facts
-  4. End with cultural significance
-- Each paragraph should be separated by a line break.
-- Ensure **proper Korean spelling and spacing**.
-- The response **must be in Korean**.
-- If this is part of today's schedule, mention the visit timing and how it connects to other destinations.
-
-### **Example Output Style:**
-${selectedCharacter.examples}`,
+            }, and your tone should remain ${selectedCharacter.tone}.`,
           },
           {
             role: "user",
             content: `Please describe ${
               currentPlace.title
-            }, considering it's the ${scheduleInfo?.order}${
-              scheduleInfo?.order === 1 ? "st" : "th"
+            }, considering it's the ${tourState.currentPlaceIndex + 1}${
+              tourState.currentPlaceIndex === 0 ? "st" : "th"
             } destination out of ${
-              scheduleInfo?.totalPlaces
+              todaySchedule.places.length
             } places for today's schedule.
 Additional context: ${currentPlace.description}`,
           },
@@ -1602,6 +1534,8 @@ Additional context: ${currentPlace.description}`,
         .replace(/undefined/g, "")
         .replace(/^\s+/, "")
         .replace(/\s+$/, "")
+        // 마크다운 ** 제거
+        .replace(/\*\*/g, "")
         // 숫자와 단위가 줄바꿈으로 분리되는 것 방지
         .replace(/(\d+)\.\s*\n\s*(\d+)([a-zA-Z가-힣]+)/g, "$1.$2$3")
         // 불필요한 줄바꿈 정리
@@ -1612,6 +1546,8 @@ Additional context: ${currentPlace.description}`,
         .replace(/\n{3,}/g, "\n\n")
         // 단독 마침표 제거
         .replace(/^\s*\.\s*$/gm, "")
+        // "감사." 를 제거
+        .replace(/감사\./g, "")
         // 마지막 빈줄 정리
         .trim();
 
@@ -1624,11 +1560,15 @@ Additional context: ${currentPlace.description}`,
 
       if (!isLastPlace || !isLastDay) {
         content +=
-          "\n\n" +
+          "\n\n다음 여정을 향해 활기차게 출발할 수 있기를 바랍니다.\n\n" +
           selectedCharacter.formatMessage(
             "노래를 들으면서 다음 장소로 이동해보세요!"
           );
+      } else {
+        content +=
+          "\n\n오늘의 모든 여정이 마무리되었습니다. 즐거운 시간 보내셨기를 바랍니다.";
       }
+
       setTourState((prev) => ({ ...prev, showNextButton: true }));
 
       setTourGuide("");
@@ -1750,13 +1690,8 @@ Additional context: ${currentPlace.description}`,
         totalPlaces: currentDay.places.length,
       });
 
-      await generateTourGuide([{ AREA_CLTUR_TRRSRT_NM: nextPlace.title }], {
-        title: nextPlace.title,
-        description: nextPlace.description,
-        time: nextPlace.time,
-        order: currentPlaceIndex + 1,
-        totalPlaces: currentDay.places.length,
-      });
+      // 파라미터 없이 호출
+      await generateTourGuide();
 
       console.log("handleNextPlace: 다음 장소 가이드 생성 완료");
     } catch (error) {
