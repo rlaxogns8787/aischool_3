@@ -305,6 +305,33 @@ export const getrecord = async () => {
   }
 };
 
+// 특정 ID만 가져오기
+export const fetchScheduleById = async (id: string) => {
+  try {
+    console.log("📌 요청한 scheduleId:", id);
+
+    const schedules = await getSchedules();
+
+    if (!Array.isArray(schedules)) {
+      console.error("🚨 getSchedules()가 배열을 반환하지 않음:", schedules);
+      return null;
+    }
+
+    const matchedSchedule = schedules.find((sched: any) => sched.tripId === id);
+
+    if (!matchedSchedule) {
+      console.warn("해당 scheduleId를 가진 일정이 없습니다:", id);
+      return null;
+    }
+    // console.log("✅ 찾은 일정 데이터:", matchedSchedule);
+
+    return matchedSchedule;
+  } catch (error) {
+    console.error("일정 가져오기 실패:", error);
+    return null;
+  }
+};
+
 /**
  * 닉네임 중복 확인 API(임시 주석처리)
  */

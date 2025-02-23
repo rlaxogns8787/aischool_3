@@ -18,14 +18,13 @@ import {
 } from "../api/loginapi";
 import TMap_Route from "../components/TMap_Route"; // ✅ TMapScreen 대신 TMap_Route를 임포트
 
-type RouteParams = {
-  ScheduleDetail: {
-    schedule: Schedule;
-  };
-};
+type ScheduleDetailRouteProp = RouteProp<
+  { ScheduleDetail: { schedule: Schedule } }, // ✅ 올바른 params 타입 명시
+  "ScheduleDetail"
+>;
 
 export default function ScheduleDetail() {
-  const route = useRoute<RouteProp<RouteParams, "ScheduleDetail">>();
+  const route = useRoute<ScheduleDetailRouteProp>();
   const navigation = useNavigation();
   const { schedule } = route.params;
 
@@ -87,7 +86,7 @@ export default function ScheduleDetail() {
       </View>
 
       {/* ✅ 지도 추가 (TMapScreen) */}
-      <TMap_Route />
+      <TMap_Route scheduleId={schedule.id} />
 
       <ScrollView style={styles.content}>
         <View style={styles.destinationSection}>
