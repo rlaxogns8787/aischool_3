@@ -203,4 +203,61 @@ ${originalGuide}
       return null;
     }
   }
+
+  // 피드백 후 종료 메시지 생성
+  async generateFarewellMessage(
+    hasFeedback: boolean,
+    feedbackData?: FeedbackData
+  ): Promise<string> {
+    try {
+      if (!hasFeedback) {
+        return "오늘 여행은 여기까지입니다. 다음에 또 만나요!";
+      }
+
+      // 피드백이 있는 경우, 감정에 따라 다른 메시지 생성
+      if (feedbackData) {
+        const prompt = `
+사용자의 피드백:
+- 별점: ${feedbackData.rating}/5
+- 감정: ${feedbackData.emotion}
+- 내용: "${feedbackData.feedback}"
+
+위 피드백을 받은 AI 도슨트가 여행을 마무리하며 할 인사말을 작성해주세요.
+다음 내용을 반드시 포함해주세요:
+1. 피드백에 대한 감사 인사
+2. 개선 약속
+3. 다음 만남에 대한 기대감
+
+응답은 2-3문장으로 간단하게 작성해주세요.`;
+
+        const response = await fetch(
+          `${this.AZURE_OPENAI_ENDPOINT}/openai/deployments/${this.DEPLOYMENT_NAME}/chat/completions?api-version=2024-02-15-preview`,
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "api-key": this.AZURE_OPENAI_KEY,
+            },
+            body: JSON.stringify({
+              messages: [{ role: "user", content: prompt }],
+              temperature: 0.7,
+              max_tokens: 200,
+            }),
+          }
+        );
+
+        if (!response.ok) {
+          throw new Error("Failed to generate farewell message");
+        }
+
+        const data = await response.json();
+        return data.choices[0].message.content;
+      }
+
+      return "피드백 감사합니다. 다음에 만날 때는 좀 더 개선된 이야기를 해드릴게요!";
+    } catch (error) {
+      console.error("Farewell message generation error:", error);
+      return "피드백 감사합니다. 다음에 만날 때는 좀 더 개선된 이야기를 해드릴게요!";
+    }
+  }
 }

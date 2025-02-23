@@ -48,8 +48,15 @@ import { getSchedules } from "../api/loginapi";
 import { MusicService } from "../services/musicService";
 import VoiceIcon from "../assets/voice.svg";
 import SongIcon from "../assets/song.svg";
+import { FeedbackModal } from "../components/FeedbackModal";
+import { FeedbackService } from "../services/feedbackService";
+import type {
+  AVPlaybackSource as ExpoAVPlaybackSource,
+  AVPlaybackStatus as ExpoAVPlaybackStatus,
+  AVPlaybackStatusToSet as ExpoAVPlaybackStatusToSet,
+} from "expo-av/build/AV.types";
 
-// 상단에 타입 정의 추가
+// VoiceCharacterType 인터페이스 추가
 interface VoiceCharacterType {
   [key: string]: {
     personality: string;
@@ -60,9 +67,11 @@ interface VoiceCharacterType {
   };
 }
 
-// User 타입 정의 추가
+// User 타입 정의 수정
 interface User {
-  preferences: string[];
+  id?: string;
+  username?: string;
+  preferences?: string[];
   birthYear: number;
   musicGenres: string[];
 }
@@ -259,20 +268,24 @@ interface UserData {
   birthYear: number;
   musicGenres: string[];
 }
-
 // Audio 타입 정의 추가
-type AVPlaybackSource = {
-  uri?: string;
-  headers?: Record<string, string>;
-  overrideFileExtensionAndroid?: string;
-};
+// type AVPlaybackSource = {
+//   uri?: string;
+//   headers?: Record<string, string>;
+//   overrideFileExtensionAndroid?: string;
+// };
 
-type AVPlaybackStatus = {
-  isLoaded: boolean;
-  // 다른 필요한 속성들 추가
-};
+// type AVPlaybackStatus = {
+//   isLoaded: boolean;
+//   // 다른 필요한 속성들 추가
+// };
 
-type AVPlaybackStatusToSet = Partial<AVPlaybackStatus>;
+// type AVPlaybackStatusToSet = Partial<AVPlaybackStatus>;
+
+// Audio 타입 재정의
+type AVPlaybackSource = ExpoAVPlaybackSource;
+type AVPlaybackStatus = ExpoAVPlaybackStatus;
+type AVPlaybackStatusToSet = ExpoAVPlaybackStatusToSet;
 
 type SoundObject = {
   sound: Audio.Sound;
@@ -342,6 +355,12 @@ export default function TourScreen() {
   const [userData, setUserData] = useState<UserData | null>(null);
   const youtubePlayerRef = useRef(null);
   const [showCamera, setShowCamera] = useState(false);
+  const [showFeedbackModal, setShowFeedbackModal] = useState(false);
+  const [showExitButton, setShowExitButton] = useState(false);
+  const feedbackService = useRef(new FeedbackService());
+  const [scheduleData, setScheduleData] = useState<Schedule | null>(null);
+  const [currentLocationName, setCurrentLocationName] = useState<string>("");
+  const currentSound = useRef<Audio.Sound | null>(null);
 
   // 사용자 관심사를 DB에서 가져오기(기본값은 '전체'설정)
   const userPreference = user?.preferences?.[0] || "전체";
@@ -547,6 +566,30 @@ export default function TourScreen() {
     }
 
     try {
+      // 이전 음성 재생 중지 및 완료 대기
+      if (isSpeaking) {
+        console.log("startSpeaking: 이전 음성 중지 시작");
+        await Speech.stop();
+        // 음성이 완전히 중단될 때까지 짧게 대기
+        await new Promise((resolve) => setTimeout(resolve, 100));
+        setIsSpeaking(false);
+        console.log("startSpeaking: 이전 음성 중지 완료");
+      }
+
+      // 이전 사운드 언로드 및 완료 대기
+      if (currentSound.current) {
+        console.log("startSpeaking: 이전 사운드 언로드 시작");
+        await currentSound.current.unloadAsync();
+        currentSound.current = null;
+        console.log("startSpeaking: 이전 사운드 언로드 완료");
+      }
+
+      // 텍스트 애니메이션 중단
+      if (textTimeoutRef.current) {
+        clearTimeout(textTimeoutRef.current);
+        textTimeoutRef.current = null;
+      }
+
       setIsLoadingStory(true);
       setShowMusicSection(false); // 음성 재생 시작할 때 음악 섹션 숨기기
       console.log("Starting Azure TTS (REST) with voice:", selectedVoice.id);
@@ -929,15 +972,17 @@ export default function TourScreen() {
       prompt += `${spotNames}에 대해 방문객의 관심사를 고려하여 설명해주세요.`;
 
       // 실제 일정 데이터 가져오기
-      const storedSchedule = await AsyncStorage.getItem("confirmedSchedule");
-      if (!storedSchedule) {
+      const storedScheduleStr = await AsyncStorage.getItem("confirmedSchedule");
+      if (!storedScheduleStr) {
         console.log("일정을 찾을 수 없습니다.");
         return;
       }
 
-      const schedule: Schedule = JSON.parse(storedSchedule);
+      const scheduleFromStorage: Schedule = JSON.parse(storedScheduleStr);
+      setScheduleData(scheduleFromStorage);
+
       const today = new Date().toISOString().split("T")[0];
-      const todaySchedule = schedule.days.find(
+      const todaySchedule = scheduleFromStorage.days.find(
         (day: { date: string }) => day.date === today
       );
 
@@ -1051,14 +1096,11 @@ Additional context: ${currentPlace.description}`,
         .trim();
 
       // 마지막 장소가 아닌 경우에만 다음 장소 안내 추가
-      const scheduleData: Schedule = JSON.parse(
-        (await AsyncStorage.getItem("confirmedSchedule")) || "{}"
-      );
-      const currentDay = scheduleData.days[tourState.currentDayIndex];
+      const currentDay = scheduleFromStorage.days[tourState.currentDayIndex];
       const isLastPlace =
         tourState.currentPlaceIndex === currentDay.places.length - 1;
       const isLastDay =
-        tourState.currentDayIndex === scheduleData.days.length - 1;
+        tourState.currentDayIndex === scheduleFromStorage.days.length - 1;
 
       if (!isLastPlace || !isLastDay) {
         content +=
@@ -1066,8 +1108,8 @@ Additional context: ${currentPlace.description}`,
           selectedCharacter.formatMessage(
             "노래를 들으면서 다음 장소로 이동해보세요!"
           );
-        setTourState((prev) => ({ ...prev, showNextButton: true }));
       }
+      setTourState((prev) => ({ ...prev, showNextButton: true }));
 
       setTourGuide("");
       await startSpeaking(content);
@@ -1103,21 +1145,73 @@ Additional context: ${currentPlace.description}`,
     }
   };
 
-  // 다음 장소로 이동하는 함수 추가
+  // handleNextPlace 함수 수정
   const handleNextPlace = async () => {
     try {
-      const storedSchedule: Schedule = JSON.parse(
-        (await AsyncStorage.getItem("confirmedSchedule")) || "{}"
-      );
-      let { currentDayIndex, currentPlaceIndex } = tourState;
+      console.log("handleNextPlace: 다음 장소로 이동 시작");
 
+      // 현재 재생 중인 음성 중단
+      if (isSpeaking) {
+        console.log("handleNextPlace: 이전 음성 재생 중지 시작");
+        await Speech.stop();
+        setIsSpeaking(false);
+        console.log("handleNextPlace: 이전 음성 재생 중지 완료");
+      }
+
+      // 텍스트 애니메이션 중단
+      if (textTimeoutRef.current) {
+        console.log("handleNextPlace: 이전 텍스트 애니메이션 중지");
+        clearTimeout(textTimeoutRef.current);
+        textTimeoutRef.current = null;
+      }
+      setTourGuide(""); // 텍스트 내용 초기화
+
+      // 현재 재생 중인 사운드가 있다면 중단
+      if (currentSound.current) {
+        console.log("handleNextPlace: 이전 사운드 언로드 시작");
+        await currentSound.current.unloadAsync();
+        currentSound.current = null;
+        console.log("handleNextPlace: 이전 사운드 언로드 완료");
+      }
+
+      const storedScheduleStr = await AsyncStorage.getItem("confirmedSchedule");
+      if (!storedScheduleStr) {
+        console.log("handleNextPlace: 일정을 찾을 수 없음");
+        return;
+      }
+
+      const storedSchedule: Schedule = JSON.parse(storedScheduleStr);
+      let { currentDayIndex, currentPlaceIndex } = tourState;
       const currentDay = storedSchedule.days[currentDayIndex];
 
+      // 마지막 장소인지 확인
+      const isLastPlace = currentPlaceIndex === currentDay.places.length - 1;
+      const isLastDay = currentDayIndex === storedSchedule.days.length - 1;
+
+      console.log("handleNextPlace: 현재 상태", {
+        currentDayIndex,
+        currentPlaceIndex,
+        isLastPlace,
+        isLastDay,
+      });
+
+      // 현재 장소 정보 저장
+      const currentPlace = currentDay.places[currentPlaceIndex];
+      setCurrentLocationName(currentPlace.title);
+
+      // 마지막 장소일 때 피드백 모달 표시
+      if (isLastPlace) {
+        console.log("handleNextPlace: 마지막 장소 도달, 피드백 모달 표시");
+        setShowFeedbackModal(true);
+        return;
+      }
+
+      // 마지막 장소가 아닌 경우에만 다음 장소로 이동
       if (currentPlaceIndex < currentDay.places.length - 1) {
-        // 같은 날의 다음 장소로 이동
+        console.log("handleNextPlace: 같은 날의 다음 장소로 이동");
         currentPlaceIndex++;
       } else if (currentDayIndex < storedSchedule.days.length - 1) {
-        // 다음 날의 첫 장소로 이동
+        console.log("handleNextPlace: 다음 날의 첫 장소로 이동");
         currentDayIndex++;
         currentPlaceIndex = 0;
       }
@@ -1130,6 +1224,12 @@ Additional context: ${currentPlace.description}`,
 
       const nextPlace =
         storedSchedule.days[currentDayIndex].places[currentPlaceIndex];
+      console.log("handleNextPlace: 다음 장소 정보", {
+        title: nextPlace.title,
+        order: currentPlaceIndex + 1,
+        totalPlaces: currentDay.places.length,
+      });
+
       await generateTourGuide([{ AREA_CLTUR_TRRSRT_NM: nextPlace.title }], {
         title: nextPlace.title,
         description: nextPlace.description,
@@ -1137,8 +1237,10 @@ Additional context: ${currentPlace.description}`,
         order: currentPlaceIndex + 1,
         totalPlaces: currentDay.places.length,
       });
+
+      console.log("handleNextPlace: 다음 장소 가이드 생성 완료");
     } catch (error) {
-      console.error("Error moving to next place:", error);
+      console.error("handleNextPlace 에러:", error);
     }
   };
 
@@ -1235,48 +1337,37 @@ Additional context: ${currentPlace.description}`,
   };
 
   // cleanup 함수 수정
-  const cleanup = () => {
-    // 음성 재생 중지
-    Speech.stop();
+  const cleanup = async () => {
+    try {
+      // 음성 재생 중지
+      await Speech.stop();
 
-    // 현재 재생 중인 모든 음성 객체 정리
-    const originalCreateAsync = Audio.Sound.createAsync;
-    Audio.Sound.createAsync = async (
-      source: any, // 임시로 any 타입 사용
-      initialStatus?: AVPlaybackStatusToSet,
-      onPlaybackStatusUpdate?: ((status: AVPlaybackStatus) => void) | null,
-      downloadFirst?: boolean
-    ): Promise<SoundObject> => {
-      const sound = new Audio.Sound();
-      try {
-        await sound.unloadAsync();
-      } catch (error) {
-        const err = error as Error;
-        console.error("Sound cleanup error:", err);
+      // 현재 재생 중인 사운드 정리
+      if (currentSound.current) {
+        await currentSound.current.unloadAsync();
+        currentSound.current = null;
       }
-      return {
-        sound,
-        status: { isLoaded: true } as AVPlaybackStatus,
-      };
-    };
 
-    // 텍스트 애니메이션 타이머 정리
-    if (textTimeoutRef.current) {
-      clearTimeout(textTimeoutRef.current);
+      // 텍스트 애니메이션 타이머 정리
+      if (textTimeoutRef.current) {
+        clearTimeout(textTimeoutRef.current);
+      }
+
+      // 녹음 중지
+      if (isRecording) {
+        setIsRecording(false);
+      }
+
+      // 가이드 상태 초기화
+      setIsGuiding(false);
+      setIsSpeaking(false);
+      setTourGuide(""); // 텍스트 내용도 초기화
+      setPausedGuideText(null);
+      setIsLoadingStory(false);
+      setShowMusicSection(false); // 컴포넌트 정리 시 음악 섹션 숨기기
+    } catch (error) {
+      console.error("Cleanup error:", error);
     }
-
-    // 녹음 중지
-    if (isRecording) {
-      setIsRecording(false);
-    }
-
-    // 가이드 상태 초기화
-    setIsGuiding(false);
-    setIsSpeaking(false);
-    setTourGuide(""); // 텍스트 내용도 초기화
-    setPausedGuideText(null);
-    setIsLoadingStory(false);
-    setShowMusicSection(false); // 컴포넌트 정리 시 음악 섹션 숨기기
   };
 
   // 뒤로가기 핸들러
@@ -1475,6 +1566,66 @@ Additional context: ${currentPlace.description}`,
     });
   };
 
+  // 마지막 장소 체크 함수
+  const isLastLocation = () => {
+    if (!scheduleData) return false;
+
+    const currentDay = tourState.currentDayIndex;
+    const currentPlace = tourState.currentPlaceIndex;
+    return (
+      currentDay === scheduleData.days.length - 1 &&
+      currentPlace === scheduleData.days[currentDay].places.length - 1
+    );
+  };
+
+  // 피드백 제출 핸들러 수정
+  const handleFeedbackSubmit = async (feedback: {
+    rating: number;
+    emotion: string;
+    feedback: string;
+  }) => {
+    try {
+      const feedbackData = {
+        ...feedback,
+        location: currentLocationName,
+        timestamp: new Date().toISOString(),
+      };
+
+      // 피드백 저장
+      await feedbackService.current.saveFeedback(feedbackData);
+
+      // 피드백 제출 후 메시지
+      const thankYouMessage =
+        "피드백 감사합니다. 다음에 만날 때는 좀 더 개선된 이야기를 해드릴게요";
+      setShowFeedbackModal(false);
+      await startSpeaking(thankYouMessage);
+      setShowExitButton(true);
+    } catch (error) {
+      console.error("Feedback submission error:", error);
+      Alert.alert("오류", "피드백 제출 중 문제가 발생했습니다.");
+    }
+  };
+
+  // 피드백 스킵 핸들러 수정
+  const handleFeedbackSkip = async () => {
+    try {
+      const farewellMessage = "오늘 여행은 여기까지입니다. 다음에 또 만나요";
+      setShowFeedbackModal(false);
+      await startSpeaking(farewellMessage);
+      setShowExitButton(true);
+    } catch (error) {
+      console.error("Feedback skip error:", error);
+      setShowFeedbackModal(false);
+      setShowExitButton(true);
+    }
+  };
+
+  // 종료 버튼 핸들러
+  const handleExit = () => {
+    cleanup();
+    navigation.navigate("Home");
+  };
+
   if (!isAudioReady) {
     return (
       <View style={styles.loadingContainer}>
@@ -1571,7 +1722,14 @@ Additional context: ${currentPlace.description}`,
             </View>
 
             <View style={styles.rightButtonContainer}>
-              {tourState.showNextButton ? (
+              {showExitButton ? (
+                <TouchableOpacity
+                  style={styles.exitButton}
+                  onPress={handleExit}
+                >
+                  <Text style={styles.exitButtonText}>종료</Text>
+                </TouchableOpacity>
+              ) : tourState.showNextButton ? (
                 <TouchableOpacity
                   style={styles.nextButton}
                   onPress={handleNextPlace}
@@ -1670,6 +1828,13 @@ Additional context: ${currentPlace.description}`,
           </View>
         </View>
       )}
+
+      <FeedbackModal
+        visible={showFeedbackModal}
+        onClose={() => setShowFeedbackModal(false)}
+        onSubmit={handleFeedbackSubmit}
+        onSkip={handleFeedbackSkip}
+      />
     </SafeAreaView>
   );
 }
@@ -2029,5 +2194,18 @@ const styles = StyleSheet.create({
     alignItems: "center",
     backgroundColor: "rgba(255, 255, 255, 0.3)",
     borderRadius: 32,
+  },
+  exitButton: {
+    width: 64,
+    height: 40,
+    backgroundColor: "#FF3B30",
+    borderRadius: 20,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  exitButtonText: {
+    color: "#FFFFFF",
+    fontSize: 16,
+    fontWeight: "500",
   },
 });

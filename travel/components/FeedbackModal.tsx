@@ -14,6 +14,7 @@ import {
   Dimensions,
   Image,
 } from "react-native";
+import { X } from "lucide-react-native";
 
 const EMOTIONS = [
   {
@@ -100,12 +101,14 @@ interface FeedbackModalProps {
     emotion: string;
     feedback: string;
   }) => void;
+  onSkip: () => void;
 }
 
 export const FeedbackModal: React.FC<FeedbackModalProps> = ({
   visible,
   onClose,
   onSubmit,
+  onSkip,
 }) => {
   const [rating, setRating] = useState(0);
   const [selectedEmotion, setSelectedEmotion] = useState("");
@@ -151,7 +154,12 @@ export const FeedbackModal: React.FC<FeedbackModalProps> = ({
         <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
           <View style={styles.modalContent}>
             <View style={styles.header}>
-              <Text style={styles.title}>오늘 일정은 어떠셨나요?</Text>
+              <View style={styles.headerContent}>
+                <Text style={styles.title}>오늘 일정은 어떠셨나요?</Text>
+                <TouchableOpacity style={styles.closeButton} onPress={onClose}>
+                  <X size={24} color="#000000" />
+                </TouchableOpacity>
+              </View>
               <Text style={styles.subtitle}>
                 도슨트 개선을 위해 피드백을 남겨주세요
               </Text>
@@ -236,8 +244,8 @@ export const FeedbackModal: React.FC<FeedbackModalProps> = ({
             </View>
 
             <View style={styles.buttonSection}>
-              <TouchableOpacity style={styles.cancelButton} onPress={onClose}>
-                <Text style={styles.cancelButtonText}>취소</Text>
+              <TouchableOpacity style={styles.skipButton} onPress={onSkip}>
+                <Text style={styles.skipButtonText}>넘어가기</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={styles.submitButton}
@@ -269,6 +277,15 @@ const styles = StyleSheet.create({
   },
   header: {
     marginBottom: 16,
+  },
+  headerContent: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 8,
+  },
+  closeButton: {
+    padding: 8,
   },
   title: {
     fontSize: 24,
@@ -317,7 +334,6 @@ const styles = StyleSheet.create({
     width: 48,
     height: 48,
     borderRadius: 24,
-
     justifyContent: "center",
     alignItems: "center",
     marginBottom: 8,
@@ -358,7 +374,6 @@ const styles = StyleSheet.create({
     color: "#686868",
     fontWeight: "500",
     textAlign: "center",
-    // marginTop: 4,
     fontFamily: Platform.OS === "ios" ? "Inter" : "normal",
   },
   feedbackSection: {
@@ -378,13 +393,18 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     gap: 8,
   },
-  cancelButton: {
+  skipButton: {
     flex: 0.5,
     height: 48,
     backgroundColor: "#EDEDED",
     borderRadius: 8,
     justifyContent: "center",
     alignItems: "center",
+  },
+  skipButtonText: {
+    fontSize: 16,
+    color: "#000000",
+    fontWeight: "600",
   },
   submitButton: {
     flex: 1,
@@ -393,10 +413,6 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     justifyContent: "center",
     alignItems: "center",
-  },
-  cancelButtonText: {
-    fontSize: 16,
-    color: "#000000",
   },
   submitButtonText: {
     fontSize: 16,
