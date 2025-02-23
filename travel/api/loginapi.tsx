@@ -330,3 +330,42 @@ export const getrecord = async () => {
 //     }
 //   }
 // };
+
+/**
+ * 피드백 저장 API
+ */
+interface FeedbackData {
+  rating: number;
+  emotion: string;
+  feedback: string;
+  location: string;
+  timestamp: string;
+  username?: string;
+}
+
+export const saveFeedback = async (feedbackData: FeedbackData) => {
+  try {
+    const userData = await AsyncStorage.getItem("userData");
+    if (!userData) {
+      throw new Error("사용자 정보를 찾을 수 없습니다.");
+    }
+
+    const userInfo = JSON.parse(userData);
+    const formattedFeedbackData = {
+      ...feedbackData,
+      username: userInfo.username,
+    };
+
+    const response = await axios.post(
+      `${BASE_URL}/api/feedback`,
+      formattedFeedbackData
+    );
+
+    return response.data;
+  } catch (error: any) {
+    console.error("Save feedback error:", error);
+    throw new Error(
+      error.response?.data?.message || "피드백 저장에 실패했습니다."
+    );
+  }
+};

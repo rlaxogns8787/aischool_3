@@ -26,7 +26,7 @@ import * as Speech from "expo-speech";
 import * as sdk from "microsoft-cognitiveservices-speech-sdk";
 import "react-native-get-random-values";
 import { useAzureBot } from "../src/hooks/useAzureBot";
-import { useNavigation } from "@react-navigation/native";
+import { useNavigation, NavigationProp } from "@react-navigation/native";
 import { LinearGradient } from "expo-linear-gradient";
 import BackToStoryIcon from "../assets/backtostory.svg";
 import { AudioService } from "../services/audioService";
@@ -44,7 +44,7 @@ import * as FileSystem from "expo-file-system";
 import { encode as btoa } from "base-64";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useAuth } from "../contexts/AuthContext";
-import { getSchedules } from "../api/loginapi";
+import { getSchedules, saveFeedback } from "../api/loginapi";
 import { MusicService } from "../services/musicService";
 import VoiceIcon from "../assets/voice.svg";
 import SongIcon from "../assets/song.svg";
@@ -303,8 +303,22 @@ interface YouTubeEvent {
   data?: any;
 }
 
+type RootStackParamList = {
+  홈: undefined;
+  가이드: undefined;
+  내일정: undefined;
+  여행기록: undefined;
+  Tour: undefined;
+  Chat: undefined;
+  Schedule: undefined;
+  Map: undefined;
+  Camera: undefined;
+};
+
+type TourScreenNavigationProp = NavigationProp<RootStackParamList>;
+
 export default function TourScreen() {
-  const navigation = useNavigation<any>();
+  const navigation = useNavigation<TourScreenNavigationProp>();
   const [displayedText, setDisplayedText] = useState("");
   const [fullText, setFullText] = useState("");
   const [isRecording, setIsRecording] = useState(false);
@@ -1592,7 +1606,7 @@ Additional context: ${currentPlace.description}`,
       };
 
       // 피드백 저장
-      await feedbackService.current.saveFeedback(feedbackData);
+      await saveFeedback(feedbackData);
 
       // 피드백 제출 후 메시지
       const thankYouMessage =
@@ -1623,7 +1637,7 @@ Additional context: ${currentPlace.description}`,
   // 종료 버튼 핸들러
   const handleExit = () => {
     cleanup();
-    navigation.navigate("Home");
+    navigation.navigate("홈");
   };
 
   if (!isAudioReady) {
