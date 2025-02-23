@@ -914,7 +914,7 @@ export default function AuthScreen({ navigation, route }: AuthScreenProps) {
             >
               <Text style={styles.signUpButtonText}>
                 {isLoading
-                  ? "처리중..."
+                  ? "로그인중..."
                   : isSocialSignUp
                   ? "시작하기"
                   : isSignUp
@@ -1627,6 +1627,6 @@ const styles = StyleSheet.create({
     color: "#FFFFFF",
   },
   disabledButton: {
-    backgroundColor: "#999",
+    backgroundColor: "#E6E8E8",
   },
 });
