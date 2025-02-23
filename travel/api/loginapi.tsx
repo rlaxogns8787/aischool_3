@@ -343,7 +343,16 @@ interface FeedbackData {
   username?: string;
 }
 
-export const saveFeedback = async (feedbackData: FeedbackData) => {
+interface FeedbackResponse {
+  message: string;
+  feedback_id: number;
+  analysis: string;
+  improved_script: string;
+}
+
+export const saveFeedback = async (
+  feedbackData: FeedbackData
+): Promise<FeedbackResponse> => {
   try {
     const userData = await AsyncStorage.getItem("userData");
     if (!userData) {
@@ -356,7 +365,7 @@ export const saveFeedback = async (feedbackData: FeedbackData) => {
       username: userInfo.username,
     };
 
-    const response = await axios.post(
+    const response = await axios.post<FeedbackResponse>(
       `${BASE_URL}/api/feedback`,
       formattedFeedbackData
     );

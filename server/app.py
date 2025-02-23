@@ -111,6 +111,52 @@ def save_user_feedback():
             if field not in feedback_data:
                 print(f"Missing field: {field}")
                 return jsonify({'error': f'Missing required field: {field}'}), 400
+
+        # OpenAI를 통한 피드백 분석
+        analysis_prompt = f"""
+        다음 피드백을 분석하여 감정과 주요 키워드를 추출하고 개선점을 요약해주세요:
+        - 별점: {feedback_data['rating']}
+        - 감정: {feedback_data['emotion']}
+        - 피드백 내용: {feedback_data['feedback']}
+        - 장소: {feedback_data['location']}
+
+        출력 형식:
+        - 감정 분석: 긍정/부정/중립
+        - 주요 키워드: ["키워드1", "키워드2"]
+        - 개선할 점 요약
+        """
+
+        analysis_response = client.chat.completions.create(
+            model=AZURE_OPENAI_DEPLOYMENT,
+            messages=[{"role": "user", "content": analysis_prompt}],
+            max_tokens=300,
+            temperature=0.7
+        )
+
+        analysis_result = analysis_response.choices[0].message.content
+
+        # 개선된 도슨트 대본 생성
+        improvement_prompt = f"""
+        다음 피드백과 분석을 바탕으로 개선된 도슨트 대본을 작성해주세요:
+        
+        피드백 분석: {analysis_result}
+        장소: {feedback_data['location']}
+        
+        다음 사항을 고려하여 작성해주세요:
+        1. 사용자의 피드백에서 지적된 부분 개선
+        2. 더 자세한 역사적/문화적 정보 추가
+        3. 현대적 관점과 실용적 정보 포함
+        4. 스토리텔링 요소 강화
+        """
+
+        improvement_response = client.chat.completions.create(
+            model=AZURE_OPENAI_DEPLOYMENT,
+            messages=[{"role": "user", "content": improvement_prompt}],
+            max_tokens=500,
+            temperature=0.7
+        )
+
+        improved_script = improvement_response.choices[0].message.content
         
         # 피드백 데이터 파일이 없으면 생성
         if not os.path.exists(FEEDBACK_FILE):
@@ -129,7 +175,9 @@ def save_user_feedback():
             'feedback': feedback_data['feedback'],
             'location': feedback_data['location'],
             'timestamp': feedback_data['timestamp'],
-            'created_at': datetime.now().isoformat()
+            'created_at': datetime.now().isoformat(),
+            'analysis': analysis_result,
+            'improved_script': improved_script
         }
         feedback_list.append(new_feedback)
         print(f"Saving feedback: {new_feedback}")
@@ -139,7 +187,9 @@ def save_user_feedback():
         
         return jsonify({
             'message': 'Feedback saved successfully',
-            'feedback_id': new_feedback['id']
+            'feedback_id': new_feedback['id'],
+            'analysis': analysis_result,
+            'improved_script': improved_script
         }), 200
         
     except Exception as e:
