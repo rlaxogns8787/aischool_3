@@ -139,15 +139,32 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return;
       }
 
-      console.log("🔄 [AuthContext] 프로필 업데이트 시작", {
-        currentPreferences: user.preferences,
-        newPreferences: data.preferences,
-        currentMusicGenres: user.music_genres,
-        newMusicGenres: data.music_genres,
-      });
+      // 관심사 업데이트 로깅
+      if (data.preferences) {
+        console.log("🔄 [AuthContext] 관심사 업데이트", {
+          current: user.preferences || [],
+          new: data.preferences,
+          changed:
+            JSON.stringify(user.preferences) !==
+            JSON.stringify(data.preferences),
+        });
+      }
 
       const updatedUser = { ...user, ...data };
       await AsyncStorage.setItem(USER_STORAGE_KEY, JSON.stringify(updatedUser));
+
+      // userData도 함께 업데이트
+      const userDataStr = await AsyncStorage.getItem("userData");
+      if (userDataStr) {
+        const userData = JSON.parse(userDataStr);
+        const updatedUserData = { ...userData, ...data };
+        await AsyncStorage.setItem("userData", JSON.stringify(updatedUserData));
+        console.log("✅ [AuthContext] userData 동기화 완료", {
+          preferences: updatedUserData.preferences,
+          music_genres: updatedUserData.music_genres,
+        });
+      }
+
       console.log("✅ [AuthContext] 프로필 업데이트 완료", {
         preferences: updatedUser.preferences,
         music_genres: updatedUser.music_genres,

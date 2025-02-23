@@ -35,6 +35,12 @@ export const loginUser = async (userData) => {
     const response = await axios.post(`${BASE_URL}/login`, userData);
 
     if (response.data.user_info) {
+      console.log("📥 [LoginAPI] 서버에서 받은 사용자 정보:", {
+        username: response.data.user_info.username,
+        preferences: response.data.user_info.preferences || [],
+        music_genres: response.data.user_info.music_genres || [],
+      });
+
       await AsyncStorage.setItem(
         "userData",
         JSON.stringify(response.data.user_info)
@@ -43,7 +49,7 @@ export const loginUser = async (userData) => {
       await AsyncStorage.setItem("username", response.data.user_info.username);
     }
 
-    console.log("Login response:", response.data);
+    console.log("✅ [LoginAPI] 로그인 완료, 응답 데이터:", response.data);
     return response.data;
   } catch (error) {
     console.error("Login error:", error);
