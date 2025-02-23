@@ -394,17 +394,28 @@ export default function TourScreen() {
     {
       name: "지영",
       id: "ko-KR-SunHiNeural",
-      description: "차분하고 전문적인 성우 음성",
+      description: "전문 도슨트처럼 상세한 설명을 들려주는 음성",
     },
     {
       name: "하준",
       id: "ko-KR-HyunsuMultilingualNeural",
-      description: "밝고 친근한 청년 음성",
+      description: "친구같이 편하게 설명해주는 MZ 음성",
     },
     {
-      name: "진수",
+      name: "Stella",
+      id: "en-US-JaneNeural",
+      description: "Like a local friend showing you around",
+    },
+    {
+      name: "최불암",
       id: "ko-KR-InJoonNeural",
-      description: "부드럽고 차분한 남성 음성",
+      description: "할아버지의 정겨운 옛날이야기 같은 음성",
+      disabled: true,
+    },
+    {
+      name: "고두심",
+      id: "ko-KR-JiMinNeural",
+      description: "따뜻한 감성으로 이야기해주는 친근한 음성",
       disabled: true,
     },
   ];
