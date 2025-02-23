@@ -304,6 +304,7 @@ interface YouTubeEvent {
 }
 
 type RootStackParamList = {
+  Main: undefined;
   홈: undefined;
   가이드: undefined;
   내일정: undefined;
@@ -1637,7 +1638,26 @@ Additional context: ${currentPlace.description}`,
   // 종료 버튼 핸들러
   const handleExit = () => {
     cleanup();
-    navigation.navigate("홈");
+    navigation.reset({
+      index: 0,
+      routes: [
+        {
+          name: "Main",
+          state: {
+            routes: [
+              {
+                name: "MainTabs",
+                state: {
+                  routes: [{ name: "홈" }],
+                  index: 0,
+                },
+              },
+            ],
+            index: 0,
+          },
+        },
+      ],
+    });
   };
 
   if (!isAudioReady) {
