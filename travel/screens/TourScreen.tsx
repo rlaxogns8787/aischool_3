@@ -48,8 +48,6 @@ import { getSchedules } from "../api/loginapi";
 import { MusicService } from "../services/musicService";
 import VoiceIcon from "../assets/voice.svg";
 import SongIcon from "../assets/song.svg";
-import { FeedbackModal } from "../components/FeedbackModal";
-import { FeedbackService } from "../services/feedbackService";
 
 // 상단에 타입 정의 추가
 interface VoiceCharacterType {
@@ -344,8 +342,6 @@ export default function TourScreen() {
   const [userData, setUserData] = useState<UserData | null>(null);
   const youtubePlayerRef = useRef(null);
   const [showCamera, setShowCamera] = useState(false);
-  const [showFeedbackModal, setShowFeedbackModal] = useState(false);
-  const feedbackService = useRef(new FeedbackService());
 
   // 사용자 관심사를 DB에서 가져오기(기본값은 '전체'설정)
   const userPreference = user?.preferences?.[0] || "전체";
@@ -542,58 +538,17 @@ export default function TourScreen() {
     }
   };
 
-  // 현재 재생 중인 sound 객체를 추적하기 위한 ref 추가
-  const currentSoundRef = useRef<Audio.Sound | null>(null);
-
-  // 음성 및 애니메이션 정리 함수
-  const cleanupSpeechAndAnimation = async () => {
-    console.log("=== 음성 정리 시작 ===");
-    console.log("Speech.stop() 호출");
-    Speech.stop();
-
-    console.log("텍스트 애니메이션 타이머 정리");
-    if (textTimeoutRef.current) {
-      clearTimeout(textTimeoutRef.current);
-      console.log("텍스트 애니메이션 타이머 정리 완료");
-    }
-
-    console.log("현재 음성 상태:", { isSpeaking });
-    if (currentSoundRef.current) {
-      try {
-        console.log("현재 재생 중인 sound 객체 정리 시작");
-        await currentSoundRef.current.stopAsync();
-        await currentSoundRef.current.unloadAsync();
-        currentSoundRef.current = null;
-        console.log("현재 재생 중인 sound 객체 정리 완료");
-      } catch (error) {
-        console.log("Sound cleanup error:", error);
-      }
-    }
-
-    setIsSpeaking(false);
-    setTourGuide(""); // 현재 텍스트 초기화
-    console.log("=== 음성 정리 완료 ===");
-  };
-
   // Azure TTS 함수: REST API와 expo-av를 이용해 음성 합성 및 재생 (한 번만 실행)
   const startSpeaking = async (text: string | VoiceResponse) => {
-    console.log("=== startSpeaking 시작 ===");
+    console.log("startSpeaking 호출, text:", text);
     if (!text) {
       console.error("No text provided for TTS");
       return;
     }
 
     try {
-      console.log("이전 음성 정리 시작");
-      await cleanupSpeechAndAnimation();
-      console.log("이전 음성 정리 완료");
-
-      // 잠시 대기하여 이전 음성이 완전히 중단되도록 함
-      await new Promise((resolve) => setTimeout(resolve, 200));
-      console.log("음성 중단 대기 완료");
-
       setIsLoadingStory(true);
-      setShowMusicSection(false);
+      setShowMusicSection(false); // 음성 재생 시작할 때 음악 섹션 숨기기
       console.log("Starting Azure TTS (REST) with voice:", selectedVoice.id);
       setIsSpeaking(true);
 
@@ -659,32 +614,28 @@ export default function TourScreen() {
         encoding: FileSystem.EncodingType.Base64,
       });
 
-      console.log("새로운 sound 객체 생성");
       const soundObject = new Audio.Sound();
-      currentSoundRef.current = soundObject;
       await soundObject.loadAsync({ uri: fileUri });
 
       // 음성 파일의 재생 시간 가져오기
       const status = await soundObject.getStatusAsync();
       const durationMillis = status.isLoaded ? status.durationMillis : 0;
-      console.log("음성 파일 길이:", durationMillis, "ms");
 
       setIsLoadingStory(false);
 
-      // 텍스트 애니메이션 시작
+      // 텍스트 애니메이션 시작 (약간의 지연을 두고 시작)
       setTimeout(() => {
         animateText(processedText, durationMillis);
       }, 100);
 
-      console.log("음성 재생 시작");
+      // 음성 재생
       await soundObject.playAsync();
 
       soundObject.setOnPlaybackStatusUpdate((status) => {
         if (status.isLoaded && status.didJustFinish) {
-          console.log("음성 재생 완료");
           setIsSpeaking(false);
           soundObject.unloadAsync();
-          currentSoundRef.current = null;
+          // 웰컴 메시지가 아닐 때만 음악 섹션 표시
           if (!isInitializing) {
             setShowMusicSection(true);
           }
@@ -1152,32 +1103,15 @@ Additional context: ${currentPlace.description}`,
     }
   };
 
-  // 다음 장소로 이동하는 함수 수정
+  // 다음 장소로 이동하는 함수 추가
   const handleNextPlace = async () => {
     try {
-      console.log("=== 다음 장소로 이동 시작 ===");
-      // 현재 진행 중인 모든 음성 및 애니메이션 중단
-      await cleanupSpeechAndAnimation();
-
-      // 잠시 대기하여 모든 음성이 완전히 중단되도록 함
-      console.log("음성 중단 대기 시작");
-      await new Promise((resolve) => setTimeout(resolve, 200));
-      console.log("음성 중단 대기 완료");
-
       const storedSchedule: Schedule = JSON.parse(
         (await AsyncStorage.getItem("confirmedSchedule")) || "{}"
       );
       let { currentDayIndex, currentPlaceIndex } = tourState;
 
       const currentDay = storedSchedule.days[currentDayIndex];
-      const isLastPlace = currentPlaceIndex === currentDay.places.length - 1;
-      const isLastDay = currentDayIndex === storedSchedule.days.length - 1;
-
-      if (isLastPlace && isLastDay) {
-        // Show feedback modal for the last place
-        setShowFeedbackModal(true);
-        return;
-      }
 
       if (currentPlaceIndex < currentDay.places.length - 1) {
         // 같은 날의 다음 장소로 이동
@@ -1541,74 +1475,6 @@ Additional context: ${currentPlace.description}`,
     });
   };
 
-  // Add handleFeedback function inside TourScreen component
-  const handleFeedback = async (feedbackData: {
-    rating: number;
-    emotion: string;
-    feedback: string;
-  }) => {
-    try {
-      setIsLoading(true);
-
-      // Get current schedule and location
-      const storedSchedule = await AsyncStorage.getItem("confirmedSchedule");
-      if (!storedSchedule) {
-        throw new Error("일정을 찾을 수 없습니다.");
-      }
-
-      const schedule: Schedule = JSON.parse(storedSchedule);
-      const today = new Date().toISOString().split("T")[0];
-      const todaySchedule = schedule.days.find(
-        (day: { date: string }) => day.date === today
-      );
-
-      if (!todaySchedule) {
-        throw new Error("오늘의 일정을 찾을 수 없습니다.");
-      }
-
-      const currentPlace = todaySchedule.places[tourState.currentPlaceIndex];
-
-      // Analyze feedback
-      const analyzedFeedback = await feedbackService.current.analyzeFeedback({
-        ...feedbackData,
-        location: currentPlace.title,
-        timestamp: new Date().toISOString(),
-      });
-
-      // Generate improved guide
-      const improvedGuide = await feedbackService.current.generateImprovedGuide(
-        analyzedFeedback,
-        tourGuide,
-        currentPlace.title
-      );
-
-      // Save feedback and improved guide
-      await feedbackService.current.saveFeedback({
-        ...feedbackData,
-        location: currentPlace.title,
-        timestamp: new Date().toISOString(),
-      });
-
-      await feedbackService.current.saveImprovedGuide(
-        currentPlace.title,
-        improvedGuide
-      );
-
-      // Show success message
-      Alert.alert(
-        "피드백 전송 완료",
-        "소중한 의견 감사합니다. 더 나은 여행 가이드가 되도록 하겠습니다!"
-      );
-
-      setShowFeedbackModal(false);
-    } catch (error) {
-      console.error("Feedback handling error:", error);
-      Alert.alert("오류", "피드백 처리 중 문제가 발생했습니다.");
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
   if (!isAudioReady) {
     return (
       <View style={styles.loadingContainer}>
@@ -1804,12 +1670,6 @@ Additional context: ${currentPlace.description}`,
           </View>
         </View>
       )}
-
-      <FeedbackModal
-        visible={showFeedbackModal}
-        onClose={() => setShowFeedbackModal(false)}
-        onSubmit={handleFeedback}
-      />
     </SafeAreaView>
   );
 }
