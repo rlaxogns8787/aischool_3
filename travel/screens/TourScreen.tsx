@@ -1058,11 +1058,23 @@ export default function TourScreen() {
   ) => {
     try {
       setIsLoadingStory(true);
+      console.log("🎯 [TourGuide] 이야기 생성 시작", {
+        userId: user?.id,
+        spotCount: spots.length,
+      });
+
       const spotNames = spots.map((s) => s.AREA_CLTUR_TRRSRT_NM).join(", ");
       const selectedCharacter = characterTraits[selectedVoice.id];
 
       // 사용자 관심사를 기반으로 이야기 생성
       const userInterests: string[] = user?.preferences || ["전체"];
+      console.log("👤 [TourGuide] 사용자 관심사 정보", {
+        interests: userInterests,
+        isDefaultInterest: !user?.preferences,
+        characterId: selectedVoice.id,
+        characterPersonality: selectedCharacter.personality,
+      });
+
       let prompt = `당신은 ${selectedCharacter.personality}입니다.
 ### 사용자 관심사 정보:
 - 주요 관심사: ${userInterests.join(", ")}

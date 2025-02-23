@@ -43,12 +43,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const loadUser = async () => {
     try {
+      console.log("🔍 [AuthContext] 저장된 사용자 정보 불러오기 시작");
       const userJson = await AsyncStorage.getItem(USER_STORAGE_KEY);
       if (userJson) {
-        setUser(JSON.parse(userJson));
+        const parsedUser = JSON.parse(userJson);
+        console.log("📋 [AuthContext] 불러온 사용자 정보:", {
+          id: parsedUser.id,
+          preferences: parsedUser.preferences || [],
+          music_genres: parsedUser.music_genres || [],
+        });
+        setUser(parsedUser);
+      } else {
+        console.log("❌ [AuthContext] 저장된 사용자 정보 없음");
       }
     } catch (error) {
-      console.error("Failed to load user:", error);
+      console.error("❌ [AuthContext] 사용자 정보 불러오기 실패:", error);
     } finally {
       setLoading(false);
     }
@@ -123,14 +132,30 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const updateProfile = async (data: Partial<User>) => {
     try {
-      if (!user) return;
+      if (!user) {
+        console.log(
+          "❌ [AuthContext] 프로필 업데이트 실패: 로그인된 사용자 없음"
+        );
+        return;
+      }
+
+      console.log("🔄 [AuthContext] 프로필 업데이트 시작", {
+        currentPreferences: user.preferences,
+        newPreferences: data.preferences,
+        currentMusicGenres: user.music_genres,
+        newMusicGenres: data.music_genres,
+      });
 
       const updatedUser = { ...user, ...data };
       await AsyncStorage.setItem(USER_STORAGE_KEY, JSON.stringify(updatedUser));
+      console.log("✅ [AuthContext] 프로필 업데이트 완료", {
+        preferences: updatedUser.preferences,
+        music_genres: updatedUser.music_genres,
+      });
 
       setUser(updatedUser);
     } catch (error) {
-      console.error("Failed to update profile:", error);
+      console.error("❌ [AuthContext] 프로필 업데이트 실패:", error);
       throw error;
     }
   };
