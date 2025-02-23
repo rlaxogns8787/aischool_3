@@ -63,7 +63,8 @@ interface VoiceCharacterType {
     style: string;
     tone: string;
     examples: string;
-    formatMessage: (text: string) => string;
+    formatMessage: (text: string) => string | Promise<string>;
+    language: string;
   };
 }
 
@@ -160,6 +161,7 @@ const characterTraits: VoiceCharacterType = {
     style:
       "사용자의 관심사를 중심으로 장소의 맥락과 스토리를 풍부하게 전달하는",
     tone: "우아하고 세련된 존댓말",
+    language: "ko-KR",
     examples: `석촌호수는 서울 송파구에 위치한 도심 속 자연 휴식처입니다.
 
 이곳은 롯데월드타워와 조화를 이루며 도시와 자연이 공존하는 독특한 경관을 선보입니다.
@@ -170,47 +172,39 @@ const characterTraits: VoiceCharacterType = {
 
 오늘날에는 시민들의 휴식과 문화생활이 어우러진 복합문화공간으로 자리매김하였습니다.`,
     formatMessage: (text: string) => {
-      return (
-        text
-          // 기본적인 종결어미 수정
-          .replace(/했어요?/g, "했습니다")
-          .replace(/야|이야/g, "입니다")
-          .replace(/볼까\?/g, "살펴보겠습니다")
-          .replace(/봐/g, "보세요")
-          .replace(/줄게/g, "드리겠습니다")
-          .replace(/있어/g, "있습니다")
-          // 부자연스러운 조사 수정
-          .replace(/(\S+)이 있습니다/g, "$1가 있습니다")
-          .replace(/(\S+)이 되었습니다/g, "$1가 되었습니다")
-          // 부자연스러운 문장 연결 수정
-          .replace(/(\S+)하고 (\S+)하다/g, "$1하고 $2합니다")
-          .replace(/(\S+)하며 (\S+)하다/g, "$1하며 $2합니다")
-          // 불필요한 문장 부호 정리
-          .replace(/~+/g, "")
-          .replace(/!/g, ".")
-          // 띄어쓰기 교정
-          .replace(/(\S+)을통해/g, "$1을 통해")
-          .replace(/(\S+)를통해/g, "$1를 통해")
-          .replace(/(\S+)에서는/g, "$1에서는 ")
-          // 종결어미 없는 문장 처리
-          .replace(/([가-힣]) 제공\.?$/g, "$1합니다.")
-          .replace(/([가-힣]) 소개\.?$/g, "$1합니다.")
-          .replace(/([가-힣]) 추천\.?$/g, "$1합니다.")
-          .replace(/([가-힣]) 안내\.?$/g, "$1합니다.")
-          // 문장 마무리 정리
-          .replace(/([^.!?])$/g, "$1합니다.") // 문장 부호가 없을 때만 '합니다.' 추가
-          .replace(/\.{2,}/g, ".") // 두 개 이상의 연속된 마침표를 하나로
-          .replace(/\s+\./g, ".") // 마침표 앞의 불필요한 공백 제거
-          .replace(/합니다\.$/, ".") // 문장 끝의 불필요한 '합니다' 제거
-          .replace(/\.$\n*\.*$/g, ".") // 문장 끝의 불필요한 마침표 제거
-          .trim()
-      ); // 앞뒤 공백 제거
+      return text
+        .replace(/했어요?/g, "했습니다")
+        .replace(/야|이야/g, "입니다")
+        .replace(/볼까\?/g, "살펴보겠습니다")
+        .replace(/봐/g, "보세요")
+        .replace(/줄게/g, "드리겠습니다")
+        .replace(/있어/g, "있습니다")
+        .replace(/(\S+)이 있습니다/g, "$1가 있습니다")
+        .replace(/(\S+)이 되었습니다/g, "$1가 되었습니다")
+        .replace(/(\S+)하고 (\S+)하다/g, "$1하고 $2합니다")
+        .replace(/(\S+)하며 (\S+)하다/g, "$1하며 $2합니다")
+        .replace(/~+/g, "")
+        .replace(/!/g, ".")
+        .replace(/(\S+)을통해/g, "$1을 통해")
+        .replace(/(\S+)를통해/g, "$1를 통해")
+        .replace(/(\S+)에서는/g, "$1에서는 ")
+        .replace(/([가-힣]) 제공\.?$/g, "$1합니다.")
+        .replace(/([가-힣]) 소개\.?$/g, "$1합니다.")
+        .replace(/([가-힣]) 추천\.?$/g, "$1합니다.")
+        .replace(/([가-힣]) 안내\.?$/g, "$1합니다.")
+        .replace(/([^.!?])$/g, "$1합니다.")
+        .replace(/\.{2,}/g, ".")
+        .replace(/\s+\./g, ".")
+        .replace(/합니다\.$/, ".")
+        .replace(/\.$\n*\.*$/g, ".")
+        .trim();
     },
   },
   "ko-KR-HyunsuMultilingualNeural": {
     personality: "트렌디한 MZ 인플루언서",
     style: "사용자 관심사를 현대적 관점과 SNS 감성으로 재해석하는",
     tone: "활기차고 트렌디한 반말",
+    language: "ko-KR",
     examples: `석촌호수는 송파구의 핫플레이스야! 봄에 벚꽃축제 할땐 여기가 인생샷 스팟이자 힐링스팟임!
 
 롯데타워 뷰와 호수가 만나서 만드는 야경이 진짜 대박! 감성샷 건지기 완벽해!
@@ -236,7 +230,67 @@ const characterTraits: VoiceCharacterType = {
         .replace(/\./g, "!");
     },
   },
+  "en-US-JaneNeural": {
+    personality: "Friendly and knowledgeable local guide",
+    style: "Engaging storyteller who connects history with modern culture",
+    tone: "Warm and conversational English",
+    language: "en-US",
+    examples: `Welcome to Seokchon Lake, a serene urban oasis in Songpa District, Seoul.
+
+The lake creates a stunning harmony with Lotte World Tower, showcasing a unique blend of nature and urban architecture.
+
+Fed by water from the Han River, it plays a vital role in the city's ecosystem.
+
+This area carries rich cultural heritage from the Joseon Dynasty, now beautifully merged with modern development.
+
+Today, it serves as a vibrant cultural space where citizens come to relax and enjoy various activities.`,
+    formatMessage: (text: string) => {
+      // 한글 텍스트를 영어로 변환하는 로직
+      return translateToEnglish(text);
+    },
+  },
 };
+
+// 한글을 영어로 변환하는 함수 추가
+async function translateToEnglish(text: string): Promise<string> {
+  try {
+    const response = await fetch(
+      `${AZURE_OPENAI_ENDPOINT}/openai/deployments/${DEPLOYMENT_NAME}/chat/completions?api-version=2024-02-15-preview`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "api-key": AZURE_OPENAI_KEY,
+        },
+        body: JSON.stringify({
+          messages: [
+            {
+              role: "system",
+              content:
+                "You are a professional translator. Translate the following Korean text to natural, conversational English while maintaining the same meaning and tone. Keep the translation concise and engaging.",
+            },
+            {
+              role: "user",
+              content: text,
+            },
+          ],
+          temperature: 0.7,
+          max_tokens: 800,
+        }),
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error("Translation failed");
+    }
+
+    const data = await response.json();
+    return data.choices[0]?.message?.content || text;
+  } catch (error) {
+    console.error("Translation error:", error);
+    return text;
+  }
+}
 
 // 타입 정의 추가
 interface ServerSchedule {
@@ -431,15 +485,13 @@ export default function TourScreen() {
       const currentText = tourGuide;
 
       // 음성 변경
-      setSelectedVoice((prev) => (prev.id !== voice.id ? voice : prev));
+      setSelectedVoice(voice);
       setShowVoiceModal(false);
 
-      // 현재 텍스트가 있다면 새로운 음성 캐릭터에 맞게 포맷팅하고 말하기
+      // 현재 텍스트가 있다면 새로운 음성으로 말하기
       if (currentText) {
-        const formattedText =
-          characterTraits[voice.id].formatMessage(currentText);
         setTourGuide(""); // 텍스트 초기화
-        await startSpeaking(formattedText);
+        await startSpeaking(currentText);
       }
     } catch (error) {
       console.error("Voice selection error:", error);
@@ -596,7 +648,6 @@ export default function TourScreen() {
       if (isSpeaking) {
         console.log("startSpeaking: 이전 음성 중지 시작");
         await Speech.stop();
-        // 음성이 완전히 중단될 때까지 짧게 대기
         await new Promise((resolve) => setTimeout(resolve, 100));
         setIsSpeaking(false);
         console.log("startSpeaking: 이전 음성 중지 완료");
@@ -617,12 +668,29 @@ export default function TourScreen() {
       }
 
       setIsLoadingStory(true);
-      setShowMusicSection(false); // 음성 재생 시작할 때 음악 섹션 숨기기
+      setShowMusicSection(false);
       console.log("Starting Azure TTS (REST) with voice:", selectedVoice.id);
       setIsSpeaking(true);
 
       // 텍스트 전처리
-      const processedText = typeof text === "string" ? text : text.text;
+      let processedText = typeof text === "string" ? text : text.text;
+      if (!processedText) {
+        throw new Error("Invalid text format");
+      }
+
+      // 선택된 음성의 언어 확인 및 텍스트 변환
+      const voiceCharacter = characterTraits[selectedVoice.id];
+      console.log("Selected voice character:", voiceCharacter);
+
+      if (voiceCharacter.language === "en-US") {
+        console.log("Translating to English:", processedText);
+        processedText = await translateToEnglish(processedText);
+        console.log("Translated text:", processedText);
+      } else {
+        processedText = await Promise.resolve(
+          voiceCharacter.formatMessage(processedText)
+        );
+      }
 
       // TTS 토큰 발급 및 설정
       const tokenResponse = await fetch(
@@ -641,14 +709,16 @@ export default function TourScreen() {
 
       // SSML 생성
       const ssml = `
-        <speak version='1.0' xml:lang='ko-KR'>
-          <voice xml:lang='ko-KR' xml:gender='Female' name='${
-            selectedVoice.id
-          }'>
+        <speak version='1.0' xml:lang='${voiceCharacter.language}'>
+          <voice xml:lang='${
+            voiceCharacter.language
+          }' xml:gender='Female' name='${selectedVoice.id}'>
             ${processedText.replace(/\n/g, '<break time="500ms"/>')}
           </voice>
         </speak>
       `.trim();
+
+      console.log("Generated SSML:", ssml);
 
       // TTS REST API 요청
       const ttsResponse = await fetch(
@@ -692,7 +762,7 @@ export default function TourScreen() {
 
       setIsLoadingStory(false);
 
-      // 텍스트 애니메이션 시작 (약간의 지연을 두고 시작)
+      // 텍스트 애니메이션 시작
       setTimeout(() => {
         animateText(processedText, durationMillis);
       }, 100);
