@@ -31,6 +31,11 @@ export interface Schedule {
       place: string;
       description: string;
       cost: number;
+      coords: {
+        // ✅ 추가 (필수!)
+        lat: number;
+        lng: number;
+      };
     }[];
   }[];
   totalBudget: number;
