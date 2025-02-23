@@ -43,7 +43,7 @@ import { Audio, InterruptionModeAndroid, InterruptionModeIOS } from "expo-av";
 import * as FileSystem from "expo-file-system";
 import { encode as btoa } from "base-64";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { useAuth } from "../contexts/AuthContext";
+import { useAuth, User } from "../contexts/AuthContext";
 import { getSchedules, saveFeedback } from "../api/loginapi";
 import { MusicService } from "../services/musicService";
 import VoiceIcon from "../assets/voice.svg";
@@ -66,15 +66,6 @@ interface VoiceCharacterType {
     formatMessage: (text: string) => string | Promise<string>;
     language: string;
   };
-}
-
-// User 타입 정의 수정
-interface User {
-  id?: string;
-  username?: string;
-  preferences?: string[];
-  birthYear: number;
-  musicGenres: string[];
 }
 
 // 음성 관련 타입 수정
@@ -1071,10 +1062,32 @@ export default function TourScreen() {
       const selectedCharacter = characterTraits[selectedVoice.id];
 
       // 사용자 관심사를 기반으로 이야기 생성
-      const userInterests = userPreferences.join(", ");
-      let prompt = `당신은 ${selectedCharacter.personality}입니다. `;
-      prompt += `방문객이 ${userInterests}에 관심이 많습니다. `;
-      prompt += `${spotNames}에 대해 방문객의 관심사를 고려하여 설명해주세요.`;
+      const userInterests: string[] = user?.preferences || ["전체"];
+      let prompt = `당신은 ${selectedCharacter.personality}입니다.
+### 사용자 관심사 정보:
+- 주요 관심사: ${userInterests.join(", ")}
+
+### 설명 요구사항:
+1. 위 관심사들을 중심으로 장소를 설명해주세요.
+2. ${userInterests
+        .map(
+          (interest) =>
+            `${interest}과 관련된 특별한 관점이나 정보를 포함해주세요.`
+        )
+        .join("\n")}
+3. 사용자의 관심사와 장소의 특징을 자연스럽게 연결해주세요.
+
+### 장소 정보:
+- 장소명: ${spotNames}
+- 방문 순서: ${scheduleInfo?.order}번째 장소 (총 ${
+        scheduleInfo?.totalPlaces
+      }곳 중)
+- 방문 예정 시간: ${scheduleInfo?.time}
+- 장소 설명: ${scheduleInfo?.description || ""}
+
+### 스토리텔링 스타일:
+${selectedCharacter.style}
+${selectedCharacter.tone}로 설명해주세요.`;
 
       // 실제 일정 데이터 가져오기
       const storedScheduleStr = await AsyncStorage.getItem("confirmedSchedule");
