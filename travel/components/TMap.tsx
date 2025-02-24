@@ -10,12 +10,21 @@ interface LocationData {
   longitude: number;
 }
 
+// 추가: TMap_Route.tsx의 마커 기능을 위한 MarkerData 인터페이스 추가 (키: lat, lng)
+interface MarkerData {
+  lat: number;
+  lng: number;
+  title?: string;
+}
+
 const TMap: React.FC = () => {
   const [location, setLocation] = useState<LocationData | null>(null);
   const [initialLocation, setInitialLocation] = useState<LocationData | null>(
     null
   );
   const webviewRef = useRef<WebView | null>(null);
+  const recenterTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [markers, setMarkers] = useState<MarkerData[]>([]);
 
   useEffect(() => {
     let locationSubscription: Location.LocationSubscription;
@@ -69,6 +78,19 @@ const TMap: React.FC = () => {
                 true;
               `);
             }
+            // 추가: 기존 재설정 타이머가 있으면 제거
+            if (recenterTimeoutRef.current) {
+              clearTimeout(recenterTimeoutRef.current);
+            }
+            // 추가: 3초 후에 지도 중심을 현재 위치로 업데이트 (재설정)
+            recenterTimeoutRef.current = setTimeout(() => {
+              if (webviewRef.current) {
+                webviewRef.current.injectJavaScript(`
+                  updateUserLocation(${updatedLocation.latitude}, ${updatedLocation.longitude});
+                  true;
+                `);
+              }
+            }, 3000);
           }
         );
       } catch (error) {
@@ -81,8 +103,22 @@ const TMap: React.FC = () => {
       if (locationSubscription) {
         locationSubscription.remove();
       }
+      // 추가: 타이머 클리어
+      if (recenterTimeoutRef.current) {
+        clearTimeout(recenterTimeoutRef.current);
+      }
     };
   }, []);
+
+  // 추가: 외부 마커 데이터가 업데이트 될 때마다 WebView에 전달 (TMap_Route.tsx의 마커 기능)
+  useEffect(() => {
+    if (markers.length > 0 && webviewRef.current) {
+      webviewRef.current.injectJavaScript(`
+        updateMarkers(${JSON.stringify(markers)});
+        true;
+      `);
+    }
+  }, [markers]);
 
   // 지도 초기값
   const htmlContent = React.useMemo(() => {
@@ -205,6 +241,22 @@ const TMap: React.FC = () => {
             updateUserMarker(lat, lng);
             var newCenter = new Tmapv2.LatLng(lat, lng);
             map.setCenter(newCenter);
+          }
+
+          var externalMarkers = []; // 외부에서 전달 받은 마커 객체들을 저장
+
+          function updateMarkers(locations) {
+            // 기존에 찍힌 마커 제거
+            externalMarkers.forEach(function(marker) { marker.setMap(null); });
+            externalMarkers = [];
+            locations.forEach(function(loc) {
+              var marker = new Tmapv2.Marker({
+                position: new Tmapv2.LatLng(loc.lat, loc.lng),
+                map: map,
+                title: loc.title || "No Title"
+              });
+              externalMarkers.push(marker);
+            });
           }
 
           // 맵 초기화

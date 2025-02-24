@@ -1,8 +1,9 @@
 import React, { useEffect, useRef, useState } from "react";
 import { View, StyleSheet, Alert } from "react-native";
 import { WebView } from "react-native-webview";
-import { getSchedules } from "../api/loginapi";
+// import { getSchedules } from "../api/loginapi";
 import { fetchScheduleById } from "../api/loginapi";
+import * as Location from "expo-location"; // Expo Location 임포트
 
 const TMAP_API_KEY = "8ezbqMgfXa1X46n2tLOy7NtZv2HdDj03blR523oh";
 
@@ -33,30 +34,41 @@ const TMapRoute: React.FC<TMapRouteProps> = ({ scheduleId }) => {
   const webviewRef = useRef<WebView | null>(null);
   const [markers, setMarkers] = useState<LocationData[]>([]);
   const [routeType, setRouteType] = useState<RouteType>("car"); // 기본값: 자동차 경로
-  const [isRouteUpdated, setIsRouteUpdated] = useState(false); // ✅ 경로 업데이트 방지용 state
+  const [initialLocation, setInitialLocation] = useState<{
+    latitude: number;
+    longitude: number;
+  } | null>(null);
+  const [location, setLocation] = useState<{
+    latitude: number;
+    longitude: number;
+  } | null>(null);
 
   // ✅ 현재 위치 가져오기 (WebView → React Native)
   const handleGetCurrentLocation = async () => {
     try {
-      navigator.geolocation.getCurrentPosition(
-        (position) => {
-          const { latitude, longitude } = position.coords;
-          console.log("현재 위치:", latitude, longitude);
+      // 위치 권한 요청
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== "granted") {
+        console.error("위치 권한이 거부되었습니다.");
+        Alert.alert("권한 오류", "위치 접근 권한이 필요합니다.");
+        return;
+      }
 
-          // WebView로 현재 위치 전송
-          webviewRef.current?.injectJavaScript(`
-            updateCurrentLocation(${latitude}, ${longitude});
-            true;
-          `);
-        },
-        (error) => {
-          console.error("위치 가져오기 실패:", error);
-          Alert.alert("위치 오류", "현재 위치를 가져올 수 없습니다.");
-        },
-        { enableHighAccuracy: true, timeout: 5000, maximumAge: 1000 }
-      );
+      // 현재 위치 가져오기
+      const currentLocation = await Location.getCurrentPositionAsync({
+        accuracy: Location.Accuracy.High,
+      });
+      const { latitude, longitude } = currentLocation.coords;
+      console.log("현재 위치:", latitude, longitude);
+
+      // WebView에 현재 위치 전달
+      webviewRef.current?.injectJavaScript(`
+      updateUserLocation(${latitude}, ${longitude});
+      true;
+    `);
     } catch (error) {
-      console.error("위치 요청 실패:", error);
+      console.error("내 위치 가져오기 실패:", error);
+      Alert.alert("위치 오류", "현재 위치를 가져올 수 없습니다.");
     }
   };
 
@@ -141,23 +153,23 @@ const TMapRoute: React.FC<TMapRouteProps> = ({ scheduleId }) => {
       console.log("Parsed locations for map:", parsedLocations);
 
       // ✅ TMap 경로 요청 함수 호출
-      requestRoute(routeType, parsedLocations);
+      requestRoute(finalType, parsedLocations);
 
       // 지도 WebView에 주입 (조금 기다렸다가 or onLoadEnd에서 호출 가능)
       setTimeout(() => {
         if (webviewRef.current) {
           webviewRef.current.injectJavaScript(`
-              updateMarkers(${JSON.stringify(parsedLocations)});
-              true;
-            `);
-
-          // **추가**: 경로검색 API 호출 (routeType에 맞게)
-          webviewRef.current.injectJavaScript(`
-              requestRoute("${finalType}", ${JSON.stringify(parsedLocations)});
-              true;
-            `);
+            updateMarkers(${JSON.stringify(parsedLocations)});
+            ${
+              parsedLocations.length > 0
+                ? `updateUserLocation(${parsedLocations[0].lat}, ${parsedLocations[0].lng});`
+                : ""
+            }
+            requestRoute("${finalType}", ${JSON.stringify(parsedLocations)});
+            true;
+          `);
         }
-      }, 2000);
+      }, 500);
     };
 
     fetchSchedule();
@@ -186,14 +198,11 @@ const TMapRoute: React.FC<TMapRouteProps> = ({ scheduleId }) => {
       return;
     }
 
-    const start = locations[0];
-    const end = locations[locations.length - 1];
+    const start = locations[0]; // 출발지
+    const end = locations[locations.length - 1]; // 도착지
 
     console.log(
-      `[WebView] routeType: ${routeType}, Start:`,
-      start,
-      "End:",
-      end
+      `[WebView] routeType: ${routeType}, Start: ${start}, End: ${end}`
     );
 
     // 🛠️ TMap API URL 설정
@@ -214,6 +223,7 @@ const TMapRoute: React.FC<TMapRouteProps> = ({ scheduleId }) => {
         resCoordType: "EPSG3857",
         startName: "출발지",
         endName: "도착지",
+        searchOption: "0", // 교통최적 경로로
       };
 
       const response = await fetch(apiUrl, {
@@ -279,14 +289,17 @@ const TMapRoute: React.FC<TMapRouteProps> = ({ scheduleId }) => {
   const onMessage = (event: any) => {
     try {
       const rawData = event.nativeEvent.data;
+      const message = JSON.parse(rawData); // JSON 파싱
 
       // ✅ JSON 형식인지 먼저 확인
       if (typeof rawData !== "string" || !rawData.startsWith("{")) {
         console.warn("⚠️ WebView에서 비 JSON 메시지 수신:", rawData);
         return;
       }
-
-      const message = JSON.parse(rawData);
+      if (message.type === "getCurrentLocation") {
+        handleGetCurrentLocation(); // 위치 가져오기 함수 호출
+        return;
+      }
 
       if (message.type === "convertedRoute") {
         // console.log("✅ 변환된 WGS84 좌표 수신:", message.data);
@@ -382,9 +395,8 @@ const TMapRoute: React.FC<TMapRouteProps> = ({ scheduleId }) => {
         <button id="zoomOutBtn" class="button">-</button>
 
         <script>
-          var map;
-          var markerObjs = []; // 생성된 마커 객체들
-          var polyline; // 기존 경로 초기화용
+          var map, markerObjs = [], polyline;
+          var userMarker, outerCircle, innerCircle, lastKnownLocation;
           
           // 지도 초기화
           function initTmap() {
@@ -396,8 +408,8 @@ const TMapRoute: React.FC<TMapRouteProps> = ({ scheduleId }) => {
             });
 
             document.getElementById("currentLocationBtn").addEventListener("click", function() {
-              window.ReactNativeWebView.postMessage("getCurrentLocation");
-});
+              window.ReactNativeWebView.postMessage(JSON.stringify({ type: "getCurrentLocation" }));
+            });
 
             document.getElementById("zoomInBtn").addEventListener("click", function() {
               map.setZoom(map.getZoom() + 1);
@@ -490,9 +502,43 @@ const TMapRoute: React.FC<TMapRouteProps> = ({ scheduleId }) => {
             }));
           }
 
-          function updateCurrentLocation(lat, lng) {
+           // ====== 마커 & 원만 업데이트 (지도 중심 이동 X) ======
+          function updateUserMarker(lat, lng) {
+            lastKnownLocation = { lat: lat, lng: lng };
+            var userLocation = new Tmapv2.LatLng(lat, lng);
+            if (userMarker) userMarker.setMap(null);
+            if (outerCircle) outerCircle.setMap(null);
+            if (innerCircle) innerCircle.setMap(null);
+            outerCircle = new Tmapv2.Circle({
+              center: userLocation,
+              radius: 24,
+              fillColor: "#4A90E2",
+              fillOpacity: 0.15,
+              strokeColor: "#4A90E2",
+              strokeWeight: 1,
+              map: map
+            });
+            innerCircle = new Tmapv2.Circle({
+              center: userLocation,
+              radius: 12,
+              fillColor: "#005EFF",
+              fillOpacity: 0.8,
+              strokeColor: "#FFFFFF",
+              strokeWeight: 2,
+              map: map
+            });
+            userMarker = new Tmapv2.Marker({
+              position: userLocation,
+              icon: "https://tmapapi.sktelecom.com/upload/tmap/marker/pin_r_m_s.png",
+              map: map,
+              title: "현재 위치"
+            });
+          }
+
+          // ====== 마커 & 원 업데이트 후 지도 중심 이동 ======
+          function updateUserLocation(lat, lng) {
+            updateUserMarker(lat, lng);
             map.setCenter(new Tmapv2.LatLng(lat, lng));
-            map.setZoom(16);
           }
 
         </script>
