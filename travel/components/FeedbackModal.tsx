@@ -166,7 +166,6 @@ export const FeedbackModal: React.FC<FeedbackModalProps> = ({
             </View>
 
             <View style={styles.ratingSection}>
-              {/* <Text style={styles.sectionTitle}>별점을 선택해주세요</Text> */}
               <View style={styles.starContainer}>
                 {[1, 2, 3, 4, 5].map((star) => (
                   <TouchableOpacity
@@ -185,9 +184,16 @@ export const FeedbackModal: React.FC<FeedbackModalProps> = ({
                   </TouchableOpacity>
                 ))}
               </View>
+              <Text style={styles.ratingGuideText}>
+                별점은 일정 스토리와 함께 일정기록에 함께 기록됩니다.
+              </Text>
             </View>
 
             <View style={styles.emotionSection}>
+              <Text style={styles.emotionGuideText}>
+                아래 감정과 피드백을 주시면,{"\n"}도슨트 설명에 참고하여
+                개선하겠습니다.
+              </Text>
               <Text style={styles.sectionTitle}>여행 내내 기분은?</Text>
               <View style={styles.emotionContainer}>
                 {EMOTIONS.map((emotion) => (
@@ -310,6 +316,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "center",
     gap: 8,
+    marginBottom: 8,
   },
   starButton: {
     padding: 4,
@@ -417,5 +424,16 @@ const styles = StyleSheet.create({
   submitButtonText: {
     fontSize: 16,
     color: "#FFFFFF",
+  },
+  ratingGuideText: {
+    fontSize: 14,
+    color: "#767676",
+    textAlign: "center",
+  },
+  emotionGuideText: {
+    fontSize: 14,
+    color: "#767676",
+    textAlign: "center",
+    marginBottom: 24,
   },
 });
