@@ -17,6 +17,7 @@ import EmptyImage from "../assets/Image.svg"; // 기본 이미지 추가
 import Svg, { SvgProps } from "react-native-svg"; // SVG 렌더링을 위한 라이브러리 추가
 import defaultTravelImage1 from "../assets/default-travel-1.jpg"; // 이미지 파일 추가 필요
 import defaultTravelImage2 from "../assets/default-travel-2.jpg"; // 이미지 파일 추가 필요
+import ShareIcon from "../assets/share.svg";
 
 const { width: screenWidth } = Dimensions.get("window");
 
@@ -261,29 +262,43 @@ const OptionModal: React.FC<OptionModalProps> = ({
               </View>
             ))}
           </View>
-          <View style={styles.extraInfoSection}>
-            <Text style={styles.sectionTitle}>추가 정보</Text>
-            {schedule.extraInfo.estimatedCost.map(
-              (cost: { type: string; amount: number }, index: number) => (
-                <Text key={index} style={styles.extraInfoText}>
-                  {cost.type}: {cost.amount.toLocaleString()}원
+          {schedule.extraInfo && (
+            <View style={styles.extraInfoSection}>
+              <Text style={styles.sectionTitle}>추가 정보</Text>
+              {schedule.extraInfo.estimatedCost?.map(
+                (cost: { type: string; amount: number }, index: number) => (
+                  <Text key={index} style={styles.extraInfoText}>
+                    {cost.type}: {cost.amount.toLocaleString()}원
+                  </Text>
+                )
+              )}
+              {schedule.extraInfo.totalCost && (
+                <Text style={styles.extraInfoText}>
+                  총 비용: {schedule.extraInfo.totalCost.toLocaleString()}원
                 </Text>
-              )
-            )}
-            <Text style={styles.extraInfoText}>
-              총 비용: {schedule.extraInfo.totalCost.toLocaleString()}원
-            </Text>
-          </View>
+              )}
+            </View>
+          )}
         </ScrollView>
         <View style={styles.footerContainer}>
-          <TouchableOpacity
-            style={styles.shareWithColleaguesButton}
-            onPress={onShareWithColleagues}
-          >
-            <Text style={styles.shareWithColleaguesButtonText}>
-              동료에게 여행 장소 공유하기
-            </Text>
-          </TouchableOpacity>
+          <View style={styles.buttonRow}>
+            <TouchableOpacity
+              style={styles.confirmButton}
+              onPress={() => {
+                onClose();
+                // 일정 확정 메시지 전달
+                onUpdate({
+                  ...schedule,
+                  status: "confirmed",
+                });
+              }}
+            >
+              <Text style={styles.confirmButtonText}>일정이 마음에 들어요</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.shareButton} onPress={onShare}>
+              <ShareIcon width={24} height={24} />
+            </TouchableOpacity>
+          </View>
         </View>
       </View>
     </Modal>
@@ -483,19 +498,38 @@ const styles = StyleSheet.create({
   },
   footerContainer: {
     width: "100%",
-    padding: 24,
+    padding: 12,
     backgroundColor: "white",
+    borderTopWidth: 1,
+    borderTopColor: "#E5E5EA",
+    paddingBottom: 32,
   },
-  shareWithColleaguesButton: {
+  buttonRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+  },
+  confirmButton: {
+    flex: 1,
     backgroundColor: "#007AFF",
     padding: 15,
-    borderRadius: 5,
+    borderRadius: 12,
     alignItems: "center",
-    width: "100%",
   },
-  shareWithColleaguesButtonText: {
+  confirmButtonText: {
     color: "white",
     fontSize: 16,
+    fontWeight: "600",
+  },
+  shareButton: {
+    width: 48,
+    height: 48,
+    backgroundColor: "white",
+    borderRadius: 12,
+    justifyContent: "center",
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: "#E5E5EA",
   },
   scheduleTitle: {
     fontSize: 18,
@@ -520,12 +554,17 @@ const styles = StyleSheet.create({
     color: "#333",
   },
   extraInfoSection: {
+    marginTop: 16,
     marginBottom: 16,
+    backgroundColor: "#F6F6F6",
+    padding: 16,
+    borderRadius: 8,
   },
   extraInfoText: {
-    fontSize: 12,
-    color: "#999", // 연한 글씨 색상
-    marginBottom: 2,
+    fontSize: 14,
+    lineHeight: 18,
+    color: "#71727A",
+    marginTop: 8,
   },
 });
 
