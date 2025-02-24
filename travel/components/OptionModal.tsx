@@ -602,7 +602,7 @@ const styles = StyleSheet.create({
   extraInfoSection: {
     marginTop: 16,
     marginBottom: 16,
-    backgroundColor: "#F6F6F6",
+    backgroundColor: "#EBEEF4",
     padding: 16,
     borderRadius: 8,
   },
@@ -617,7 +617,7 @@ const styles = StyleSheet.create({
     lineHeight: 16,
     color: "#007AFF",
     fontWeight: "700",
-    marginTop: 8,
+    marginTop: 12,
   },
 });
 
