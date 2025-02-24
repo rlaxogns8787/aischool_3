@@ -20,6 +20,7 @@ import Svg, { SvgProps } from "react-native-svg"; // SVG 렌더링을 위한 라
 import defaultTravelImage1 from "../assets/default-travel-1.jpg"; // 이미지 파일 추가 필요
 import defaultTravelImage2 from "../assets/default-travel-2.jpg"; // 이미지 파일 추가 필요
 import ShareIcon from "../assets/share.svg";
+import { getMultipleRandomKoreaImages } from "../utils/imageUtils";
 
 const { width: screenWidth } = Dimensions.get("window");
 
@@ -64,6 +65,7 @@ const OptionModal: React.FC<OptionModalProps> = ({
 }) => {
   const [schedule, setSchedule] = useState<any>(null);
   const [activeSlide, setActiveSlide] = useState(0);
+  const [carouselImages, setCarouselImages] = useState<any[]>([]);
 
   useEffect(() => {
     const fetchSchedule = async () => {
@@ -73,6 +75,8 @@ const OptionModal: React.FC<OptionModalProps> = ({
       }
     };
     fetchSchedule();
+    // 랜덤 이미지 2개 설정
+    setCarouselImages(getMultipleRandomKoreaImages(2));
   }, []);
 
   if (!schedule) {
@@ -191,61 +195,27 @@ const OptionModal: React.FC<OptionModalProps> = ({
             <CloseIcon width={32} height={32} />
           </TouchableOpacity>
           <View style={styles.carouselContainer}>
-            {schedule.images && schedule.images.length > 0 ? (
-              <>
-                <Carousel
-                  data={schedule.images.slice(0, 2)}
-                  renderItem={({ item }: { item: { uri: string } }) => (
-                    <Image
-                      source={{ uri: item.uri }}
-                      style={styles.carouselImage}
-                    />
-                  )}
-                  sliderWidth={screenWidth}
-                  itemWidth={screenWidth}
-                  containerCustomStyle={styles.carouselContainer}
-                  onSnapToItem={(index) => setActiveSlide(index)}
-                  autoplay={true}
-                  autoplayDelay={5000}
-                />
-                <Pagination
-                  dotsLength={Math.min(schedule.images.length, 2)}
-                  activeDotIndex={activeSlide}
-                  containerStyle={styles.carouselIndicatorContainer}
-                  dotStyle={styles.activeDot}
-                  inactiveDotStyle={styles.inactiveDot}
-                  inactiveDotOpacity={0.4}
-                  inactiveDotScale={0.6}
-                />
-              </>
-            ) : (
-              <>
-                <Carousel
-                  data={[
-                    { uri: defaultTravelImage1 },
-                    { uri: defaultTravelImage2 },
-                  ]}
-                  renderItem={({ item }) => (
-                    <Image source={item.uri} style={styles.carouselImage} />
-                  )}
-                  sliderWidth={screenWidth}
-                  itemWidth={screenWidth}
-                  containerCustomStyle={styles.carouselContainer}
-                  onSnapToItem={(index) => setActiveSlide(index)}
-                  autoplay={true}
-                  autoplayDelay={5000}
-                />
-                <Pagination
-                  dotsLength={2}
-                  activeDotIndex={activeSlide}
-                  containerStyle={styles.carouselIndicatorContainer}
-                  dotStyle={styles.activeDot}
-                  inactiveDotStyle={styles.inactiveDot}
-                  inactiveDotOpacity={0.4}
-                  inactiveDotScale={0.6}
-                />
-              </>
-            )}
+            <Carousel
+              data={carouselImages}
+              renderItem={({ item }) => (
+                <Image source={item} style={styles.carouselImage} />
+              )}
+              sliderWidth={screenWidth}
+              itemWidth={screenWidth}
+              containerCustomStyle={styles.carouselContainer}
+              onSnapToItem={(index) => setActiveSlide(index)}
+              autoplay={true}
+              autoplayDelay={5000}
+            />
+            <Pagination
+              dotsLength={2}
+              activeDotIndex={activeSlide}
+              containerStyle={styles.carouselIndicatorContainer}
+              dotStyle={styles.activeDot}
+              inactiveDotStyle={styles.inactiveDot}
+              inactiveDotOpacity={0.4}
+              inactiveDotScale={0.6}
+            />
           </View>
           <View style={styles.companionContainerLeft}>
             <Text style={styles.companion}>{schedule.companion}</Text>

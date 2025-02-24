@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { View, Text, TouchableOpacity, StyleSheet, Image } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { getRandomKoreaImage } from "../utils/imageUtils";
 import Svg, { SvgProps } from "react-native-svg"; // SVG 렌더링을 위한 라이브러리 추가
 import EmptyImage from "../assets/Image.svg"; // 기본 이미지 추가
 import defaultTravelImage from "../assets/default-travel-1.jpg"; // 기본 이미지 import
@@ -11,6 +12,7 @@ type OptionCardProps = {
 
 const OptionCard: React.FC<OptionCardProps> = ({ onPress }) => {
   const [schedule, setSchedule] = useState<any>(null);
+  const [randomImage, setRandomImage] = useState<any>(null);
 
   useEffect(() => {
     const fetchSchedule = async () => {
@@ -20,6 +22,8 @@ const OptionCard: React.FC<OptionCardProps> = ({ onPress }) => {
       }
     };
     fetchSchedule();
+    // 랜덤 이미지 설정
+    setRandomImage(getRandomKoreaImage());
   }, []);
 
   useEffect(() => {
@@ -45,11 +49,7 @@ const OptionCard: React.FC<OptionCardProps> = ({ onPress }) => {
   return (
     <View>
       <View style={styles.card}>
-        {schedule.image ? (
-          <Image source={{ uri: schedule.image }} style={styles.image} />
-        ) : (
-          <Image source={defaultTravelImage} style={styles.image} />
-        )}
+        <Image source={randomImage} style={styles.image} />
         <View style={styles.companionContainer}>
           <Text style={styles.companion}>{schedule.companion}</Text>
         </View>
@@ -121,7 +121,7 @@ const styles = StyleSheet.create({
   button: {
     backgroundColor: "#007AFF",
     padding: 10,
-    borderRadius: 12,
+    borderRadius: 40,
     alignItems: "center",
     margin: 8,
     width: "90%",
