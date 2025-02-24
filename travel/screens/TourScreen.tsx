@@ -156,13 +156,13 @@ const characterTraits: VoiceCharacterType = {
     language: "ko-KR",
     examples: `석촌호수는 서울 송파구에 위치한 도심 속 자연 휴식처입니다.
 
-이곳은 롯데월드타워와 조화를 이루며 도시와 자연이 공존하는 독특한 경관을 선보입니다.
+              이곳은 롯데월드타워와 조화를 이루며 도시와 자연이 공존하는 독특한 경관을 선보입니다.
 
-한강에서 유입되는 물로 관리되며, 도시 생태계의 중요한 역할을 담당하고 있습니다.
+              한강에서 유입되는 물로 관리되며, 도시 생태계의 중요한 역할을 담당하고 있습니다.
 
-조선시대부터 이어져 온 이 지역의 문화적 맥락과 현대적 발전이 어우러져 있습니다.
+              조선시대부터 이어져 온 이 지역의 문화적 맥락과 현대적 발전이 어우러져 있습니다.
 
-오늘날에는 시민들의 휴식과 문화생활이 어우러진 복합문화공간으로 자리매김하였습니다.`,
+              오늘날에는 시민들의 휴식과 문화생활이 어우러진 복합문화공간으로 자리매김하였습니다.`,
     formatMessage: (text: string) => {
       // 1. 기본 텍스트 정리 (모든 캐릭터 공통)
       let formattedText = text
@@ -229,13 +229,13 @@ const characterTraits: VoiceCharacterType = {
     language: "ko-KR",
     examples: `석촌호수는 송파구의 핫플레이스야! 봄에 벚꽃축제 할땐 여기가 인생샷 스팟이자 힐링스팟임!
 
-롯데타워 뷰와 호수가 만나서 만드는 야경이 진짜 대박! 감성샷 건지기 완벽해!
+              롯데타워 뷰와 호수가 만나서 만드는 야경이 진짜 대박! 감성샷 건지기 완벽해!
 
-요즘 MZ들이 환경에 관심 많잖아? 이 호수가 도시 속 힐링 스팟이면서 환경 지킴이 역할도 한다는 거 알아?
+              요즘 MZ들이 환경에 관심 많잖아? 이 호수가 도시 속 힐링 스팟이면서 환경 지킴이 역할도 한다는 거 알아?
 
-여기가 옛날에 농사짓던 곳이었다는 게 신기하지 않아? 지금은 완전 다른 느낌이야!
+              여기가 옛날에 농사짓던 곳이었다는 게 신기하지 않아? 지금은 완전 다른 느낌이야!
 
-주말마다 플리마켓이랑 버스킹도 열리는데, 로컬 감성 제대로 느낄 수 있어!`,
+              주말마다 플리마켓이랑 버스킹도 열리는데, 로컬 감성 제대로 느낄 수 있어!`,
     formatMessage: (text: string) => {
       return (
         text
@@ -285,13 +285,13 @@ const characterTraits: VoiceCharacterType = {
     language: "en-US",
     examples: `Welcome to Seokchon Lake, a serene urban oasis in Songpa District, Seoul.
 
-The lake creates a stunning harmony with Lotte World Tower, showcasing a unique blend of nature and urban architecture.
+              The lake creates a stunning harmony with Lotte World Tower, showcasing a unique blend of nature and urban architecture.
 
-Fed by water from the Han River, it plays a vital role in the city's ecosystem.
+              Fed by water from the Han River, it plays a vital role in the city's ecosystem.
 
-This area carries rich cultural heritage from the Joseon Dynasty, now beautifully merged with modern development.
+              This area carries rich cultural heritage from the Joseon Dynasty, now beautifully merged with modern development.
 
-Today, it serves as a vibrant cultural space where citizens come to relax and enjoy various activities.`,
+              Today, it serves as a vibrant cultural space where citizens come to relax and enjoy various activities.`,
     formatMessage: (text: string) => {
       // 한글 텍스트를 영어로 변환하는 로직
       return translateToEnglish(text);
@@ -673,12 +673,14 @@ export default function TourScreen() {
       const voiceCharacter = characterTraits[selectedVoice.id];
       setIsSpeaking(true);
 
-      // 영어 음성인 경우 한국어 -> 영어 변환
+      // ➡️ 영어 음성인지 확인해서 번역/포맷팅
       if (voiceCharacter.language === "en-US") {
+        // 영어 성우 음성을 선택하면 한국어 텍스트를 영어로 변환
         console.log("Translating to English:", processedText);
         processedText = await translateToEnglish(processedText);
         console.log("Translated text:", processedText);
       } else {
+        // 한국어 음성이면 한국어 포맷팅
         processedText = await Promise.resolve(
           voiceCharacter.formatMessage(processedText)
         );
