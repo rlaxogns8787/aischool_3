@@ -179,8 +179,10 @@ const characterTraits: VoiceCharacterType = {
           .replace(/(\d+\.?\d*)\s*(평)/g, "$1평")
           .replace(/(\d+\.?\d*)\s*(도|°)/g, "$1°")
           .replace(/(\d+\.?\d*)\s*(원)/g, "$1원")
+          // 괄호와 괄호 안 내용 제거 (소괄호, 대괄호, 중괄호)
+          .replace(/[([{].*?[)\]}]/g, "")
           // 특수문자 제거
-          .replace(/[-#&]/g, "")
+          .replace(/[*\-#&~!@%^+=<>{}[\]|\\:;]/g, "")
           // 기존 포맷팅 규칙들
           .replace(/했어요?/g, "했습니다")
           .replace(/볼까\?/g, "살펴보겠습니다")
@@ -190,7 +192,6 @@ const characterTraits: VoiceCharacterType = {
           .replace(/(\S+)이 되었습니다/g, "$1가 되었습니다")
           .replace(/(\S+)하고 (\S+)하다/g, "$1하고 $2합니다")
           .replace(/(\S+)하며 (\S+)하다/g, "$1하며 $2합니다")
-          .replace(/~+/g, "")
           .replace(/!/g, ".")
           .replace(/(\S+)을통해/g, "$1을 통해")
           .replace(/(\S+)를통해/g, "$1를 통해")
@@ -207,6 +208,8 @@ const characterTraits: VoiceCharacterType = {
           .replace(/\s+\./g, ".")
           .replace(/합니다\.$/, ".")
           .replace(/\.$\n*\.*$/g, ".")
+          // 연속된 공백 제거
+          .replace(/\s+/g, " ")
           .trim()
       );
     },
