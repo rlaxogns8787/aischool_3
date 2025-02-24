@@ -2175,13 +2175,6 @@ Additional context: ${currentPlace.description}`,
       <View style={styles.footer}>
         <View style={styles.tabBar}>
           <View style={styles.actions}>
-            <TouchableOpacity
-              style={styles.squareButton}
-              onPress={handleCameraPress}
-            >
-              <CameraIcon width={24} height={24} />
-            </TouchableOpacity>
-
             <View style={styles.micButtonContainer}>
               <TouchableOpacity
                 style={[
@@ -2203,6 +2196,13 @@ Additional context: ${currentPlace.description}`,
                 )}
               </TouchableOpacity>
             </View>
+
+            <TouchableOpacity
+              style={styles.squareButton}
+              onPress={handleCameraPress}
+            >
+              <CameraIcon width={24} height={24} />
+            </TouchableOpacity>
 
             <View style={styles.rightButtonContainer}>
               {showExitButton ? (
