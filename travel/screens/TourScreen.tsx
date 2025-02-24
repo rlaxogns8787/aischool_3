@@ -158,31 +158,25 @@ const characterTraits: VoiceCharacterType = {
 
               이곳은 롯데월드타워와 조화를 이루며 도시와 자연이 공존하는 독특한 경관을 선보입니다.
 
-              한강에서 유입되는 물로 관리되며, 도시 생태계의 중요한 역할을 담당하고 있습니다.
+              한강에서 유입되는 물로 관리되며 도시 생태계의 중요한 역할을 담당하고 있습니다.
 
               조선시대부터 이어져 온 이 지역의 문화적 맥락과 현대적 발전이 어우러져 있습니다.
 
               오늘날에는 시민들의 휴식과 문화생활이 어우러진 복합문화공간으로 자리매김하였습니다.`,
     formatMessage: (text: string) => {
-      // 1. 기본 텍스트 정리 (모든 캐릭터 공통)
       let formattedText = text
-        // 특수문자 및 괄호 제거
         .replace(/[([{].*?[)\]}]/g, "")
         .replace(/[*\-#&~!@%^+=<>{}[\]|\\:;《》]/g, "")
-        // 연속된 공백 정리
+        .replace(/\d+\./g, "")
         .replace(/\s+/g, " ")
-        // 문단 구분을 위한 줄바꿈 추가
         .split(". ")
         .map((sentence) => sentence.trim())
         .filter((sentence) => sentence.length > 0)
         .join(".\n\n");
 
-      // 2. 캐릭터별 스타일 적용
       formattedText = formattedText
-        // 인사말 제거
-        .replace(/^(안녕하세요|반갑습니다)( 여러분)?[,.!]?\s*/g, "")
-        .replace(/^여러분[,.!]?\s*/g, "")
-        // 숫자와 단위 처리
+        .replace(/^(안녕하세요|반갑습니다)( 여러분)?[,.!?]\s*/g, "")
+        .replace(/^여러분[,.!?]\s*/g, "")
         .replace(/(\d+\.?\d*)\s*(미터|m|M)/g, "$1m")
         .replace(/(\d+\.?\d*)\s*(킬로미터|키로|km|KM)/g, "$1km")
         .replace(/(\d+\.?\d*)\s*(센티미터|cm|CM)/g, "$1cm")
@@ -192,7 +186,6 @@ const characterTraits: VoiceCharacterType = {
         .replace(/(\d+\.?\d*)\s*(평)/g, "$1평")
         .replace(/(\d+\.?\d*)\s*(도|°)/g, "$1°")
         .replace(/(\d+\.?\d*)\s*(원)/g, "$1원")
-        // 기존 포맷팅 규칙들
         .replace(/했어요?/g, "했습니다")
         .replace(/볼까\?/g, "살펴보겠습니다")
         .replace(/줄게/g, "드리겠습니다")
@@ -201,23 +194,19 @@ const characterTraits: VoiceCharacterType = {
         .replace(/(\S+)이 되었습니다/g, "$1가 되었습니다")
         .replace(/(\S+)하고 (\S+)하다/g, "$1하고 $2합니다")
         .replace(/(\S+)하며 (\S+)하다/g, "$1하며 $2합니다")
-        .replace(/!/g, ".")
+        .replace(/[!?][.,]/g, "$1") // 물음표나 느낌표 뒤의 마침표나 콤마를 제거하고 물음표/느낌표만 유지
+        .replace(/[.,][!?]/g, "$2") // 마침표나 콤마 뒤의 물음표나 느낌표는 물음표/느낌표만 유지
         .replace(/(\S+)을통해/g, "$1을 통해")
         .replace(/(\S+)를통해/g, "$1를 통해")
         .replace(/(\S+)에서는/g, "$1에서는 ")
-        .replace(/([가-힣])하다\.?$/g, "$1합니다.")
-        .replace(/([가-힣])되다\.?$/g, "$1됩니다.")
-        .replace(/([가-힣])지다\.?$/g, "$1집니다.")
-        .replace(/([^.!?])$/g, "$1합니다.")
+        .replace(/([가-힣])하다$/g, "$1합니다")
+        .replace(/([가-힣])되다$/g, "$1됩니다")
+        .replace(/([가-힣])지다$/g, "$1집니다")
+        .replace(/([^.!?])$/g, "$1합니다")
         .replace(/\.{2,}/g, ".")
         .replace(/\s+\./g, ".")
-        .replace(/합니다\.$/, ".")
-        .replace(/\.$\n*\.*$/g, ".");
-
-      // 3. 마지막 정리
-      if (!formattedText.endsWith(".")) {
-        formattedText = formattedText.trim() + ".";
-      }
+        .replace(/합니다[.,](?=[!?])/g, "합니다") // "합니다." 뒤에 물음표나 느낌표가 오는 경우 처리
+        .replace(/[.,]\s*$/g, ""); // 문장 끝의 마침표나 콤마 제거
 
       return formattedText.trim();
     },
@@ -237,45 +226,37 @@ const characterTraits: VoiceCharacterType = {
 
               주말마다 플리마켓이랑 버스킹도 열리는데, 로컬 감성 제대로 느낄 수 있어!`,
     formatMessage: (text: string) => {
-      return (
-        text
-          // 인사말 제거 (더 포괄적인 패턴)
-          .replace(/^(안녕하세요|반갑습니다)( 여러분)?[,.!]?\s*/g, "")
-          .replace(/^여러분[,.!]?\s*/g, "")
-          // 숫자와 단위 처리
-          .replace(/(\d+\.?\d*)\s*(미터|m|M)/g, "$1m")
-          .replace(/(\d+\.?\d*)\s*(킬로미터|키로|km|KM)/g, "$1km")
-          .replace(/(\d+\.?\d*)\s*(센티미터|cm|CM)/g, "$1cm")
-          .replace(/(\d+\.?\d*)\s*(밀리미터|mm|MM)/g, "$1mm")
-          .replace(/(\d+\.?\d*)\s*(제곱미터|㎡|m2)/g, "$1㎡")
-          .replace(/(\d+\.?\d*)\s*(평방미터|m²)/g, "$1㎡")
-          .replace(/(\d+\.?\d*)\s*(평)/g, "$1평")
-          .replace(/(\d+\.?\d*)\s*(도|°)/g, "$1°")
-          .replace(/(\d+\.?\d*)\s*(원)/g, "$1원")
-          // 괄호와 괄호 안 내용 제거 (소괄호, 대괄호, 중괄호)
-          .replace(/[([{].*?[)\]}]/g, "")
-          // 특수문자 제거
-          .replace(/[*\-#&~!@%^+=<>{}[\]|\\:;]/g, "")
-          // 기존 포맷팅 규칙들
-          .replace(/합니다/g, "해")
-          .replace(/했습니다/g, "했어")
-          .replace(/하겠습니다/g, "할게")
-          .replace(/살펴보겠습니다/g, "볼까?")
-          .replace(/있습니다/g, "있어")
-          .replace(/였습니다/g, "였어")
-          .replace(/드립니다/g, "줄게")
-          .replace(/니다/g, "야")
-          .replace(/시오/g, "어")
-          .replace(/보세요/g, "봐")
-          .replace(/이에요|예요/g, "이야")
-          .replace(/\./g, "!")
-          .replace(/\.{2,}/g, ".")
-          .replace(/\s+\./g, ".")
-          .replace(/\.$\n*\.*$/g, ".")
-          // 연속된 공백 제거
-          .replace(/\s+/g, " ")
-          .trim()
-      );
+      return text
+        .replace(/^(안녕하세요|반갑습니다)( 여러분)?[,.!?]\s*/g, "")
+        .replace(/^여러분[,.!?]\s*/g, "")
+        .replace(/(\d+\.?\d*)\s*(미터|m|M)/g, "$1m")
+        .replace(/(\d+\.?\d*)\s*(킬로미터|키로|km|KM)/g, "$1km")
+        .replace(/(\d+\.?\d*)\s*(센티미터|cm|CM)/g, "$1cm")
+        .replace(/(\d+\.?\d*)\s*(밀리미터|mm|MM)/g, "$1mm")
+        .replace(/(\d+\.?\d*)\s*(제곱미터|㎡|m2)/g, "$1㎡")
+        .replace(/(\d+\.?\d*)\s*(평방미터|m²)/g, "$1㎡")
+        .replace(/(\d+\.?\d*)\s*(평)/g, "$1평")
+        .replace(/(\d+\.?\d*)\s*(도|°)/g, "$1°")
+        .replace(/(\d+\.?\d*)\s*(원)/g, "$1원")
+        .replace(/[([{].*?[)\]}]/g, "")
+        .replace(/[*\-#&~!@%^+=<>{}[\]|\\:;]/g, "")
+        .replace(/합니다/g, "해")
+        .replace(/했습니다/g, "했어")
+        .replace(/하겠습니다/g, "할게")
+        .replace(/살펴보겠습니다/g, "볼까?")
+        .replace(/있습니다/g, "있어")
+        .replace(/였습니다/g, "였어")
+        .replace(/드립니다/g, "줄게")
+        .replace(/니다/g, "야")
+        .replace(/시오/g, "어")
+        .replace(/보세요/g, "봐")
+        .replace(/이에요|예요/g, "이야")
+        .replace(/\./g, "!")
+        .replace(/\.{2,}/g, ".")
+        .replace(/\s+\./g, ".")
+        .replace(/\.$\n*\.*$/g, ".")
+        .replace(/\s+/g, " ")
+        .trim();
     },
   },
   "en-US-JaneNeural": {

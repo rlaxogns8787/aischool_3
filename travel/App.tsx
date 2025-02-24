@@ -30,6 +30,7 @@ import CustomerSupportScreen from "./screens/CustomerSupportScreen";
 import TMapScreen from "./screens/TMapScreen";
 import MapScreen from "./screens/MapScreen";
 import SpontaneousTourScreen from "./screens/SpontaneousTourScreen";
+import AiSearchIcon from "./assets/aisearch.svg";
 
 export type RootStackParamList = {
   Auth: undefined;
@@ -111,11 +112,11 @@ function MainTabs() {
         }}
       />
       <Tab.Screen
-        name="가이드"
+        name="주변찾기"
         component={SpontaneousTourScreen}
         options={{
           tabBarIcon: ({ color }) => (
-            <MessageCircle width={24} height={24} color={color} />
+            <AiSearchIcon width={24} height={24} color={color} />
           ),
         }}
       />
