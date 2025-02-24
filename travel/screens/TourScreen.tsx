@@ -468,6 +468,7 @@ export default function TourScreen() {
   const [currentLocationName, setCurrentLocationName] = useState<string>("");
   const currentSound = useRef<Audio.Sound | null>(null);
   const [showTooltip, setShowTooltip] = useState<string | null>(null);
+  const tooltipTimer = useRef<NodeJS.Timeout | null>(null);
 
   // 사용자 관심사를 DB에서 가져오기(기본값은 '전체'설정)
   const userPreference = user?.preferences?.[0] || "전체";
@@ -504,8 +505,14 @@ export default function TourScreen() {
   ];
 
   const handleDisabledButtonPress = (feature: string) => {
+    console.log("툴팁 표시:", feature);
     setShowTooltip(feature);
-    setTimeout(() => setShowTooltip(null), 3000); // 3초 후 툴팁 숨김
+    if (tooltipTimer.current) {
+      clearTimeout(tooltipTimer.current);
+    }
+    tooltipTimer.current = setTimeout(() => {
+      setShowTooltip(null);
+    }, 3000);
   };
 
   // 음성 선택 핸들러
@@ -1657,6 +1664,14 @@ export default function TourScreen() {
     });
   };
 
+  useEffect(() => {
+    return () => {
+      if (tooltipTimer.current) {
+        clearTimeout(tooltipTimer.current);
+      }
+    };
+  }, []);
+
   if (!isAudioReady) {
     return (
       <View style={styles.loadingContainer}>
@@ -1727,34 +1742,24 @@ export default function TourScreen() {
               <TouchableOpacity
                 style={[styles.micButton, styles.disabledButton]}
                 onPress={() => handleDisabledButtonPress("mic")}
-                disabled={true}
               >
-                <MicIcon
-                  width={24}
-                  height={24}
-                  style={[styles.micIcon, styles.disabledIcon]}
-                />
+                <MicIcon width={24} height={24} style={styles.disabledIcon} />
+                {showTooltip === "mic" && (
+                  <View style={styles.tooltip}>
+                    <Text style={styles.tooltipText}>업데이트 예정</Text>
+                  </View>
+                )}
               </TouchableOpacity>
-              {showTooltip === "mic" && (
-                <View style={styles.tooltip}>
-                  <Text style={styles.tooltipText}>
-                    음성 안내 기능은 업데이트 예정입니다
-                  </Text>
-                </View>
-              )}
             </View>
 
             <TouchableOpacity
               style={[styles.squareButton, styles.disabledButton]}
               onPress={() => handleDisabledButtonPress("camera")}
-              disabled={true}
             >
               <CameraIcon width={24} height={24} style={styles.disabledIcon} />
               {showTooltip === "camera" && (
                 <View style={styles.tooltip}>
-                  <Text style={styles.tooltipText}>
-                    카메라 기능은 업데이트 예정입니다
-                  </Text>
+                  <Text style={styles.tooltipText}>업데이트 예정</Text>
                 </View>
               )}
             </TouchableOpacity>
@@ -1962,7 +1967,11 @@ const styles = StyleSheet.create({
     alignItems: "center",
     width: "100%",
   },
-  micButtonContainer: { width: 64, height: 64, position: "relative" },
+  micButtonContainer: {
+    position: "relative",
+    width: 64,
+    height: 64,
+  },
   micButton: {
     width: 64,
     height: 64,
@@ -2242,25 +2251,39 @@ const styles = StyleSheet.create({
     fontWeight: "500",
   },
   disabledButton: {
-    opacity: 0.6,
-    backgroundColor: "rgba(37, 103, 185, 0.2))",
+    opacity: 0.5,
+    backgroundColor: "rgba(37, 103, 185, 0.2)",
   },
   disabledIcon: {
     opacity: 0.5,
   },
   tooltip: {
     position: "absolute",
-    backgroundColor: "rgba(0, 0, 0, 0.8)",
-    padding: 10,
-    borderRadius: 8,
-    top: -45,
-    left: -40,
-    width: 140,
-    zIndex: 1000,
+    backgroundColor: "rgba(0, 0, 0, 0.9)",
+    padding: 8,
+    borderRadius: 6,
+    top: -35,
+    left: "50%",
+    transform: [{ translateX: -40 }],
+    width: 80,
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
+    zIndex: 9999,
   },
   tooltipText: {
     color: "#FFFFFF",
     fontSize: 12,
+    fontWeight: "500",
     textAlign: "center",
+    lineHeight: 12,
+    height: 12,
+    overflow: "hidden",
+    includeFontPadding: false,
   },
 });
