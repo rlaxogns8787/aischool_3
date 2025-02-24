@@ -6,6 +6,10 @@ const AZURE_OPENAI_KEY =
   "65fEqo2qsGl8oJPg7lzs8ZJk7pUgdTEgEhUx2tvUsD2e07hbowbCJQQJ99BBACfhMk5XJ3w3AAABACOGr7S4";
 const DEPLOYMENT_NAME = "gpt-4o";
 
+// YouTube API 설정
+const YOUTUBE_API_KEY = "AIzaSyBcAwJBnmuJVux4c3ZzcBfZrIKHbFF9jnk";
+const YOUTUBE_API_URL = "https://www.googleapis.com/youtube/v3/search";
+
 interface MusicTrack {
   title: string;
   artist: string;
@@ -29,6 +33,63 @@ export class MusicService {
   private isPlaying: boolean = false;
   private sound: Audio.Sound | null = null;
   private currentVideoId: string | null = null;
+  private currentLocation: string = "";
+
+  // 연령대별 장르 기본곡 매핑
+  private ageGroupRecommendations: {
+    [key: string]: { [key: string]: string };
+  } = {
+    child: {
+      // 13세 미만
+      pop: "NewJeans - Ditto",
+      "k-pop": "IVE - LOVE DIVE",
+      ballad: "IU - Eight",
+      rock: "DAY6 - You Were Beautiful",
+      hiphop: "BTS - Dynamite",
+      jazz: "Disney Jazz - When You Wish Upon A Star",
+      classical: "Yiruma - River Flows in You",
+    },
+    teen: {
+      // 13-19세
+      pop: "NewJeans - Super Shy",
+      "k-pop": "LE SSERAFIM - UNFORGIVEN",
+      ballad: "IU - Love poem",
+      rock: "The Rose - Sorry",
+      hiphop: "Stray Kids - S-Class",
+      jazz: "Jamie Cullum - What A Difference A Day Made",
+      classical: "Ludovico Einaudi - Experience",
+    },
+    adult: {
+      // 20-39세
+      pop: "Charlie Puth - Attention",
+      "k-pop": "BTS - Spring Day",
+      ballad: "성시경 - 거리에서",
+      rock: "넬 - 기억을 걷는 시간",
+      hiphop: "Epik High - 빈차",
+      jazz: "Michael Bublé - Feeling Good",
+      classical: "Joe Hisaishi - Summer",
+    },
+    middle: {
+      // 40-59세
+      pop: "ABBA - Dancing Queen",
+      "k-pop": "소녀시대 - Forever 1",
+      ballad: "이문세 - 광화문 연가",
+      rock: "버스커버스커 - 벚꽃엔딩",
+      hiphop: "다이나믹듀오 - 길",
+      jazz: "Louis Armstrong - What A Wonderful World",
+      classical: "Richard Clayderman - Mariage D Amour",
+    },
+    senior: {
+      // 60세 이상
+      pop: "Frank Sinatra - My Way",
+      "k-pop": "조용필 - 단발머리",
+      ballad: "김광석 - 서른즈음에",
+      rock: "신중현과 엽전들 - 미인",
+      hiphop: "현인 - 비와 당신",
+      jazz: "Nat King Cole - Unforgettable",
+      classical: "Claude Debussy - Clair de Lune",
+    },
+  };
 
   constructor() {
     this.sound = null;
@@ -53,25 +114,38 @@ export class MusicService {
     }
   }
 
+  // 연령대 판별 함수
+  private getAgeGroup(birthYear: number): string {
+    const age = new Date().getFullYear() - birthYear;
+    if (age < 13) return "child";
+    if (age < 20) return "teen";
+    if (age < 40) return "adult";
+    if (age < 60) return "middle";
+    return "senior";
+  }
+
   // OpenAI를 통한 음악 추천
   private async getAIRecommendation(
-    preferences: UserPreferences
+    preferences: UserPreferences,
+    location: string
   ): Promise<string> {
     try {
       const currentYear = new Date().getFullYear();
       const age = currentYear - preferences.birthYear;
+      const ageGroup = this.getAgeGroup(preferences.birthYear);
 
       const prompt = `당신은 음악 추천 전문가입니다.
-현재 ${age}세의 사용자가 ${preferences.musicGenre} 장르의 음악을 듣고 싶어합니다.
-이 사용자의 연령대와 선호 장르를 고려하여 딱 한 곡을 추천해주세요.
+현재 ${age}세의 사용자가 ${location}에 있습니다.
+선호하는 음악 장르는 ${preferences.musicGenre}입니다.
+이 장소와 사용자의 취향을 고려하여 딱 한 곡을 추천해주세요.
 
 응답 형식:
 아티스트명 - 곡명
 
 주의사항:
 1. 반드시 실제로 존재하는 곡이어야 합니다
-2. 연령대에 적합한 곡이어야 합니다
-3. 장르가 일치해야 합니다
+2. 연령대(${ageGroup})에 적합한 곡이어야 합니다
+3. 장르(${preferences.musicGenre})와 장소(${location})의 분위기가 어울려야 합니다
 4. 응답은 "아티스트명 - 곡명" 형식으로만 해주세요`;
 
       const response = await fetch(
@@ -98,54 +172,63 @@ export class MusicService {
       }
 
       const data = await response.json();
-      return data.choices[0].message.content.trim();
+      const recommendation = data.choices?.[0]?.message?.content;
+
+      // AI 추천이 실패하면 연령대별 기본 추천곡 반환
+      if (!recommendation) {
+        console.log("AI 추천 실패, 연령대별 기본 추천곡 사용");
+        const ageGroupSongs =
+          this.ageGroupRecommendations[this.getAgeGroup(preferences.birthYear)];
+        const defaultSong =
+          ageGroupSongs[preferences.musicGenre.toLowerCase()] ||
+          ageGroupSongs["pop"];
+        return defaultSong;
+      }
+
+      return recommendation.trim();
     } catch (error) {
       console.error("AI recommendation error:", error);
-      throw error;
+      // 에러 발생 시 연령대별 기본 추천곡 반환
+      const ageGroupSongs =
+        this.ageGroupRecommendations[this.getAgeGroup(preferences.birthYear)];
+      const defaultSong =
+        ageGroupSongs[preferences.musicGenre.toLowerCase()] ||
+        ageGroupSongs["pop"];
+      return defaultSong;
     }
   }
 
-  // 음악 검색 및 재생
-  private async searchAndPlayMusic(query: string): Promise<{
+  // YouTube에서 음악 검색
+  private async searchYouTubeMusic(query: string): Promise<{
     videoId: string | null;
     title: string;
     artist: string;
   }> {
     try {
-      // 테스트용 오디오 URL 사용
-      const testAudioUrl =
-        "https://www2.cs.uic.edu/~i101/SoundFiles/CantinaBand3.wav";
+      const response = await fetch(
+        `${YOUTUBE_API_URL}?part=snippet&q=${encodeURIComponent(
+          query + " official music video"
+        )}&type=video&videoCategoryId=10&key=${YOUTUBE_API_KEY}&maxResults=1`
+      );
 
-      if (this.sound) {
-        await this.sound.unloadAsync();
+      if (!response.ok) {
+        throw new Error("YouTube search failed");
       }
 
-      console.log("Loading audio...");
-      this.sound = new Audio.Sound();
-      await this.sound.loadAsync({ uri: testAudioUrl });
+      const data = await response.json();
 
-      console.log("Playing audio...");
-      await this.sound.playAsync();
-      this.isPlaying = true;
+      if (data.items && data.items.length > 0) {
+        const video = data.items[0];
+        return {
+          videoId: video.id.videoId,
+          title: video.snippet.title,
+          artist: video.snippet.channelTitle,
+        };
+      }
 
-      // 재생 상태 모니터링
-      this.sound.setOnPlaybackStatusUpdate((status) => {
-        if (status.isLoaded) {
-          this.isPlaying = status.isPlaying;
-          console.log(
-            "Playback status:",
-            status.isPlaying ? "playing" : "paused"
-          );
-        }
-      });
-
-      return {
-        videoId: "test",
-        title: "Test Audio",
-        artist: "Sample",
-      };
+      throw new Error("No videos found");
     } catch (error) {
-      console.error("Audio playback error:", error);
+      console.error("YouTube search error:", error);
       return {
         videoId: null,
         title: "",
@@ -155,27 +238,41 @@ export class MusicService {
   }
 
   // 사용자 취향 기반 음악 재생
-  async playUserPreferredMusic(preferences: {
-    birthYear: number;
-    musicGenre: string;
-  }): Promise<{
+  async playUserPreferredMusic(
+    preferences: {
+      birthYear: number;
+      musicGenre: string;
+    },
+    location: string
+  ): Promise<{
     videoId: string | null;
     message: string;
     title: string;
     artist: string;
   }> {
     try {
+      // 이전 곡이 재생 중이면 중지
+      if (this.currentLocation !== location) {
+        await this.stop();
+      }
+
       // OpenAI로부터 음악 추천 받기
-      const recommendation = await this.getAIRecommendation(preferences);
+      const recommendation = await this.getAIRecommendation(
+        preferences,
+        location
+      );
       console.log("AI Recommended song:", recommendation);
 
-      // 추천받은 곡 검색 및 재생
-      const result = await this.searchAndPlayMusic(recommendation);
+      // YouTube에서 추천받은 곡 검색
+      const result = await this.searchYouTubeMusic(recommendation);
 
       if (result.videoId) {
+        this.currentVideoId = result.videoId;
+        this.currentLocation = location;
+        this.isPlaying = true;
         return {
           videoId: result.videoId,
-          message: `AI가 추천한 "${result.title}"을(를) 재생합니다!`,
+          message: `${location}에서 "${result.title}"을(를) 재생합니다!`,
           title: result.title,
           artist: result.artist,
         };
@@ -200,43 +297,18 @@ export class MusicService {
 
   // 음악 일시정지
   async pause(): Promise<void> {
-    try {
-      if (this.sound && this.isPlaying) {
-        console.log("Pausing audio...");
-        await this.sound.pauseAsync();
-        this.isPlaying = false;
-      }
-    } catch (error) {
-      console.error("Error pausing audio:", error);
-    }
+    this.isPlaying = false;
   }
 
   // 음악 재생
   async play(): Promise<void> {
-    try {
-      if (this.sound && !this.isPlaying) {
-        console.log("Resuming audio...");
-        await this.sound.playAsync();
-        this.isPlaying = true;
-      }
-    } catch (error) {
-      console.error("Error playing audio:", error);
-    }
+    this.isPlaying = true;
   }
 
   // 음악 중지
   async stop(): Promise<void> {
-    try {
-      if (this.sound) {
-        console.log("Stopping audio...");
-        await this.sound.stopAsync();
-        await this.sound.unloadAsync();
-        this.isPlaying = false;
-        this.currentVideoId = null;
-      }
-    } catch (error) {
-      console.error("Error stopping audio:", error);
-    }
+    this.isPlaying = false;
+    this.currentVideoId = null;
   }
 
   // 현재 재생 상태 확인
@@ -257,9 +329,11 @@ export class MusicService {
     artist?: string;
   }> {
     try {
-      const result = await this.searchAndPlayMusic(`${location} ambient music`);
+      const result = await this.searchYouTubeMusic(`${location} ambient music`);
 
       if (result.videoId) {
+        this.currentVideoId = result.videoId;
+        this.isPlaying = true;
         return {
           videoId: result.videoId,
           message: `${location}의 분위기에 어울리는 음악을 찾았습니다!`,

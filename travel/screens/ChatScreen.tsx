@@ -69,6 +69,51 @@ interface AIResponse {
   };
 }
 
+// 국내 여행지 리스트 추가
+const DOMESTIC_DESTINATIONS = [
+  "제주도",
+  "부산",
+  "강릉",
+  "경주",
+  "전주",
+  "여수",
+  "속초",
+  "통영",
+  "안동",
+  "군산",
+  "포항",
+  "거제도",
+  "울릉도",
+  "양양",
+  "목포",
+  "순천",
+  "대구",
+  "인천",
+  "강화도",
+  "보령",
+];
+
+// 랜덤 날짜 생성 함수
+const generateRandomDates = () => {
+  const today = new Date();
+  const maxDaysInFuture = 60; // 최대 60일 이내의 날짜
+  const minDaysInFuture = 1; // 최소 1일 이후
+
+  // 시작일 랜덤 설정 (1~60일 사이)
+  const startDaysFromNow =
+    Math.floor(Math.random() * (maxDaysInFuture - minDaysInFuture)) +
+    minDaysInFuture;
+  const randomStartDate = new Date(today);
+  randomStartDate.setDate(today.getDate() + startDaysFromNow);
+
+  // 여행 기간 랜덤 설정 (1~5일)
+  const tripDuration = Math.floor(Math.random() * 5) + 1;
+  const randomEndDate = new Date(randomStartDate);
+  randomEndDate.setDate(randomStartDate.getDate() + tripDuration);
+
+  return { startDate: randomStartDate, endDate: randomEndDate };
+};
+
 export default function ChatScreen() {
   const navigation = useNavigation<NavigationProp<RootStackParamList>>();
   const [messages, setMessages] = useState<Message[]>([]);
@@ -120,13 +165,121 @@ export default function ChatScreen() {
   const handleOptionSelect = async (option: number) => {
     // 초기 메시지 옵션 선택 처리
     if (
-      messages.some((msg) => msg.text.includes("아래 두 옵션 중 하나를 선택"))
+      messages.some((msg) => msg.text.includes("아래 세 옵션 중 하나를 선택"))
     ) {
       setShowOptions(false);
-      const optionText =
-        option === 1
-          ? "저는 이미 생각한 여행일정 있어요."
-          : "여행은 가고싶지만 처음부터 도와주세요";
+      let optionText = "";
+      let nextStep = "";
+
+      if (option === 2) {
+        // 즉흥여행 옵션 처리
+        const randomDestination =
+          DOMESTIC_DESTINATIONS[
+            Math.floor(Math.random() * DOMESTIC_DESTINATIONS.length)
+          ];
+        const { startDate: randomStartDate, endDate: randomEndDate } =
+          generateRandomDates();
+
+        // 날짜 포맷
+        const formattedStartDate = randomStartDate.toLocaleDateString("ko-KR", {
+          year: "numeric",
+          month: "long",
+          day: "numeric",
+        });
+        const formattedEndDate = randomEndDate.toLocaleDateString("ko-KR", {
+          year: "numeric",
+          month: "long",
+          day: "numeric",
+        });
+
+        // 여행 정보 설정
+        const tripInfo: TripInfo = {
+          styles: ["자연", "힐링", "맛집"], // 기본 스타일
+          destination: randomDestination,
+          startDate: randomStartDate,
+          endDate: randomEndDate,
+          duration: `${formattedStartDate}부터 ${formattedEndDate}까지`,
+          companion: "혼자",
+          budget: "50만원", // 기본 예산
+          transportation: ["대중교통", "도보"], // 기본 교통수단
+        };
+
+        // 사용자 선택 메시지
+        const userMessage: Message = {
+          id: Date.now().toString(),
+          text: "2. 막연하지만 즉흥여행 떠날래요",
+          isBot: false,
+          timestamp: new Date().toISOString(),
+        };
+
+        // AI 응답 메시지
+        const aiMessage: Message = {
+          id: (Date.now() + 1).toString(),
+          text: `즉흥여행을 준비해드리겠습니다! 🎲
+
+랜덤으로 선택된 여행 정보입니다:
+• 여행지: ${randomDestination}
+• 일정: ${formattedStartDate} ~ ${formattedEndDate}
+• 여행 인원: 혼자
+
+지금 바로 일정을 생성해드리겠습니다!`,
+          isBot: true,
+          timestamp: new Date().toISOString(),
+        };
+
+        // 로딩 메시지
+        const loadingMessage: Message = {
+          id: (Date.now() + 2).toString(),
+          text: "🔄 AI가 여행 일정을 생성하고 있습니다...",
+          isBot: true,
+          timestamp: new Date().toISOString(),
+          isLoading: true,
+        };
+
+        // 메시지 업데이트
+        setMessages((prev) =>
+          prev
+            .filter((msg) => !msg.text.includes("아래 세 옵션 중 하나를 선택"))
+            .concat([userMessage, aiMessage, loadingMessage])
+        );
+
+        try {
+          // AI 일정 생성
+          const aiResponse = await generateTravelSchedule(tripInfo);
+
+          // 생성된 일정 메시지
+          const scheduleMessage: Message = {
+            id: Date.now().toString(),
+            text: `🗓 새로운 일정이 생성되었습니다!\n\n${aiResponse}`,
+            isBot: true,
+            timestamp: new Date().toISOString(),
+          };
+
+          // 로딩 메시지 제거하고 일정 메시지 추가
+          setMessages((prev) =>
+            prev.filter((msg) => !msg.isLoading).concat([scheduleMessage])
+          );
+
+          setShowScheduleButtons(true);
+          return;
+        } catch (error) {
+          console.error("Schedule generation error:", error);
+          const errorMessage: Message = {
+            id: Date.now().toString(),
+            text: "죄송합니다. 일정 생성 중 오류가 발생했습니다. 다시 시도해주세요.",
+            isBot: true,
+            timestamp: new Date().toISOString(),
+          };
+          setMessages((prev) => [...prev, errorMessage]);
+          return;
+        }
+      } else {
+        // 1번(처음부터 도와주기)과 3번(이미 계획있음) 옵션 처리
+        optionText =
+          option === 1
+            ? "여행은 가고싶지만 처음부터 도와주세요"
+            : "저는 이미 생각한 여행일정 있어요.";
+      }
 
       // 사용자 선택 메시지
       const userMessage: Message = {
@@ -139,11 +292,24 @@ export default function ChatScreen() {
       // 초기 메시지 제거 후 사용자 메시지만 추가
       setMessages((prev) =>
         prev
-          .filter((msg) => !msg.text.includes("아래 두 옵션 중 하나를 선택"))
+          .filter((msg) => !msg.text.includes("아래 세 옵션 중 하나를 선택"))
           .concat(userMessage)
       );
 
-      await handleSendMessage(optionText + "_selected");
+      if (option !== 2) {
+        // 즉흥여행이 아닌 경우에만 handleSendMessage 호출
+        if (option === 3) {
+          const aiMessage: Message = {
+            id: Date.now().toString(),
+            text: `일정을 등록해드리겠습니다. 자세한 여행 계획이나 일정을 말씀해 주세요!`,
+            isBot: true,
+            timestamp: new Date().toISOString(),
+          };
+          setMessages((prev) => [...prev, aiMessage]);
+        } else {
+          await handleSendMessage(optionText + "_selected");
+        }
+      }
       return;
     }
 
@@ -197,7 +363,7 @@ export default function ChatScreen() {
           .filter(
             (msg) =>
               !msg.text.includes("누구와 함께 여행하시나요") &&
-              !msg.text.includes("아래 두 옵션 중 하나를 선택")
+              !msg.text.includes("아래 세 옵션 중 하나를 선택")
           )
           .concat([
             userMessage,
@@ -309,70 +475,6 @@ export default function ChatScreen() {
     try {
       setIsLoading(true);
 
-      // ✅ 🔄 일정 재생성 요청 감지 및 AI 일정 생성
-      if (text === "새로운 일정을 요청합니다.") {
-        const aiResponse = await chatWithAI("새로운 일정을 요청합니다.");
-
-        const aiMessage: Message = {
-          id: Date.now().toString(),
-          text: `🗓 새로운 일정이 생성되었습니다!\n\n${aiResponse}`,
-          isBot: true,
-          timestamp: new Date().toISOString(),
-        };
-
-        setMessages((prev) => [...prev, aiMessage]);
-        setIsLoading(false);
-        return; // ✅ 여기서 함수 종료
-      }
-
-      // 예산 응답 처리
-      if (messages.some((msg) => msg.text.includes("여행 예산은 어느 정도"))) {
-        // 숫자만 추출하고 만원 단위로 변환
-        const budget = text.replace(/[^0-9]/g, "");
-        const formattedBudget = `${budget}만원`;
-
-        // AI 응답 메시지
-        const confirmMessage: Message = {
-          id: Date.now().toString(),
-          text: `예산을 ${formattedBudget}으로 설정하셨군요! 👍`,
-          isBot: true,
-          timestamp: new Date().toISOString(),
-        };
-
-        // 다음 질문 (교통수단)
-        const nextQuestion: Message = {
-          id: (Date.now() + 1).toString(),
-          text: "선호하는 교통수단을 선택해주세요 (다수 선택 가능):",
-          isBot: true,
-          timestamp: new Date().toISOString(),
-          styleOptions: [
-            { text: "대중교통", value: "public", selected: false },
-            { text: "자가용", value: "car", selected: false },
-            { text: "택시", value: "taxi", selected: false },
-            { text: "걷기", value: "walk", selected: false },
-          ],
-        };
-
-        // 이전 예산 질문 제거 후 새로운 메시지들 추가
-        setMessages((prev) =>
-          prev
-            .filter((msg) => !msg.text.includes("여행 예산은 어느 정도"))
-            .concat([
-              {
-                id: Date.now().toString(),
-                text: formattedBudget,
-                isBot: false,
-                timestamp: new Date().toISOString(),
-              },
-              confirmMessage,
-              nextQuestion,
-            ])
-        );
-
-        setIsLoading(false);
-        return;
-      }
-
       // 옵션 선택된 경우는 사용자 메시지를 추가하지 않음
       if (!text.endsWith("_selected")) {
         const userMessage: Message = {
@@ -382,8 +484,122 @@ export default function ChatScreen() {
           timestamp: new Date().toISOString(),
         };
         setMessages((prev) => [...prev, userMessage]);
+
+        // 3번 옵션(기존 일정) 선택 후 사용자가 일정을 입력한 경우
+        const hasInitialMessage = messages.some((msg) =>
+          msg.text.includes(
+            "일정을 등록해드리겠습니다. 자세한 여행 계획이나 일정을 말씀해 주세요!"
+          )
+        );
+
+        if (hasInitialMessage) {
+          // 로딩 메시지 추가
+          const loadingMessage: Message = {
+            id: `loading-${Date.now()}`,
+            text: "🔄 입력하신 일정을 분석하고 있습니다...",
+            isBot: true,
+            timestamp: new Date().toISOString(),
+            isLoading: true,
+          };
+          setMessages((prev) => [...prev, loadingMessage]);
+
+          // 사용자가 "네"라고 답변한 경우
+          if (text === "네" || text === "네, 맞습니다") {
+            const confirmMessage: Message = {
+              id: Date.now().toString(),
+              text: "✅ 일정이 성공적으로 등록되었습니다!\n\n이제 여행 일정을 생성해드리겠습니다.",
+              isBot: true,
+              timestamp: new Date().toISOString(),
+            };
+
+            // 로딩 메시지 제거하고 확인 메시지 추가
+            setMessages((prev) =>
+              prev.filter((msg) => !msg.isLoading).concat([confirmMessage])
+            );
+            setIsLoading(false);
+            return;
+          }
+
+          // OpenAI를 통해 일정 분석 및 정리
+          const prompt = `다음 여행 일정을 분석하여 아래 포맷으로 정리해주세요:
+          "${text}"
+
+          포맷:
+          • 여행 지역:
+          • 여행 기간:
+          • 여행 인원:
+          • 주요 방문지:
+          • 교통수단:
+          • 예상 예산:
+          • 기타 특이사항:
+
+          응답은 위의 포맷만 사용하고, 다른 설명은 제외해주세요.`;
+
+          const aiResponse = await chatWithAI(prompt);
+
+          // 분석된 일정 메시지
+          const scheduleMessage: Message = {
+            id: Date.now().toString(),
+            text: `📋 입력하신 일정을 정리해드렸습니다.\n\n${aiResponse}\n\n일정이 맞다면 "네, 맞습니다"라고 답변해 주시고,\n수정이 필요하다면 수정할 내용을 말씀해 주세요.`,
+            isBot: true,
+            timestamp: new Date().toISOString(),
+          };
+
+          // 로딩 메시지 제거하고 분석된 일정 메시지 추가
+          setMessages((prev) =>
+            prev.filter((msg) => !msg.isLoading).concat([scheduleMessage])
+          );
+          setIsLoading(false);
+          return;
+        }
       } else {
         text = text.replace("_selected", "");
+      }
+
+      // 예산 입력 처리 추가
+      if (
+        messages.some((msg) =>
+          msg.text.includes("여행 예산은 어느 정도로 생각하고 계신가요")
+        )
+      ) {
+        const budget = text.replace(/[^0-9]/g, ""); // 숫자만 추출
+        if (budget) {
+          const userMessage: Message = {
+            id: Date.now().toString(),
+            text: `${budget}만원`,
+            isBot: false,
+            timestamp: new Date().toISOString(),
+          };
+
+          const confirmMessage: Message = {
+            id: (Date.now() + 1).toString(),
+            text: `예산을 ${budget}만원으로 설정하겠습니다.`,
+            isBot: true,
+            timestamp: new Date().toISOString(),
+          };
+
+          // 교통수단 선택 옵션
+          const transportationOptions: Message = {
+            id: (Date.now() + 2).toString(),
+            text: "선호하는 교통수단을 선택해주세요 (다수 선택 가능):",
+            isBot: true,
+            timestamp: new Date().toISOString(),
+            styleOptions: [
+              { text: "대중교통", value: "public", selected: false },
+              { text: "자가용", value: "car", selected: false },
+              { text: "렌트카", value: "rental", selected: false },
+              { text: "자전거", value: "bicycle", selected: false },
+              { text: "도보", value: "walk", selected: false },
+            ],
+          };
+
+          updateMessages(
+            [userMessage, confirmMessage, transportationOptions],
+            "여행 예산은 어느 정도로 생각하고 계신가요"
+          );
+          setIsLoading(false);
+          return;
+        }
       }
 
       // 날짜 입력 처리 (예산 질문 이전에만 실행)
@@ -1193,73 +1409,77 @@ export default function ChatScreen() {
         {/* DatePicker를 항상 표시 */}
         {messages.some((msg) =>
           msg.text.includes("여행 날짜를 선택해주세요")
-        ) && (
-          <View style={styles.datePickerContainer}>
-            <View style={styles.datePickerHeader}>
-              <TouchableOpacity
-                onPress={() => {
-                  // 재선택 시 시작일 선택 모드로 변경하고 날짜 초기화
-                  setDatePickerMode("start");
-                  setStartDate(new Date());
-                  setEndDate(new Date());
-                  setSelectedStartDate(null);
-                  setSelectedEndDate(null);
-                }}
-              >
-                <Text style={styles.datePickerButton}>재선택</Text>
-              </TouchableOpacity>
-              <Text style={styles.datePickerTitle}>
-                {datePickerMode === "start" ? "시작일" : "종료일"} 선택
-              </Text>
-              <TouchableOpacity
-                onPress={() => {
-                  if (datePickerMode === "start") {
-                    setDatePickerMode("end");
-                    setEndDate(startDate); // 다음날이 아닌 시작일과 동일하게 설정
-                  } else {
-                    handleConfirm();
-                  }
-                }}
-              >
-                <Text style={styles.datePickerButton}>
-                  {datePickerMode === "start" ? "다음" : "완료"}
+        ) &&
+          !selectedStartDate &&
+          !messages.some((msg) =>
+            msg.text.includes("여행 예산은 어느 정도로 생각하고 계신가요")
+          ) && (
+            <View style={styles.datePickerContainer}>
+              <View style={styles.datePickerHeader}>
+                <TouchableOpacity
+                  onPress={() => {
+                    // 재선택 시 시작일 선택 모드로 변경하고 날짜 초기화
+                    setDatePickerMode("start");
+                    setStartDate(new Date());
+                    setEndDate(new Date());
+                    setSelectedStartDate(null);
+                    setSelectedEndDate(null);
+                  }}
+                >
+                  <Text style={styles.datePickerButton}>재선택</Text>
+                </TouchableOpacity>
+                <Text style={styles.datePickerTitle}>
+                  {datePickerMode === "start" ? "시작일" : "종료일"} 선택
                 </Text>
-              </TouchableOpacity>
-            </View>
-            <DateTimePicker
-              testID="dateTimePicker"
-              value={datePickerMode === "start" ? startDate : endDate}
-              mode="date"
-              display="inline"
-              onChange={(event: DateTimePickerEvent, date?: Date) => {
-                if (event.type === "set" && date) {
-                  if (datePickerMode === "start") {
-                    // 시작일 선택
-                    setStartDate(date);
-                    setSelectedStartDate(date);
-                    setDatePickerMode("end");
-                    setEndDate(date); // 시작일과 동일한 날짜로 초기화
-                  } else {
-                    // 종료일 선택
-                    if (date >= selectedStartDate!) {
-                      setEndDate(date);
-                      setSelectedEndDate(date);
-                      handleConfirm();
+                <TouchableOpacity
+                  onPress={() => {
+                    if (datePickerMode === "start") {
+                      setDatePickerMode("end");
+                      setEndDate(startDate); // 다음날이 아닌 시작일과 동일하게 설정
                     } else {
-                      Alert.alert(
-                        "알림",
-                        "종료일은 시작일과 같거나 이후여야 합니다."
-                      );
+                      handleConfirm();
+                    }
+                  }}
+                >
+                  <Text style={styles.datePickerButton}>
+                    {datePickerMode === "start" ? "다음" : "완료"}
+                  </Text>
+                </TouchableOpacity>
+              </View>
+              <DateTimePicker
+                testID="dateTimePicker"
+                value={datePickerMode === "start" ? startDate : endDate}
+                mode="date"
+                display="inline"
+                onChange={(event: DateTimePickerEvent, date?: Date) => {
+                  if (event.type === "set" && date) {
+                    if (datePickerMode === "start") {
+                      // 시작일 선택
+                      setStartDate(date);
+                      setSelectedStartDate(date);
+                      setDatePickerMode("end");
+                      setEndDate(date); // 시작일과 동일한 날짜로 초기화
+                    } else {
+                      // 종료일 선택
+                      if (date >= selectedStartDate!) {
+                        setEndDate(date);
+                        setSelectedEndDate(date);
+                        handleConfirm();
+                      } else {
+                        Alert.alert(
+                          "알림",
+                          "종료일은 시작일과 같거나 이후여야 합니다."
+                        );
+                      }
                     }
                   }
-                }
-              }}
-              minimumDate={today} // 시작일, 종료일 모두 오늘부터 선택 가능
-              locale="ko-KR"
-              style={[styles.datePicker, { height: 350 }]}
-            />
-          </View>
-        )}
+                }}
+                minimumDate={today} // 시작일, 종료일 모두 오늘부터 선택 가능
+                locale="ko-KR"
+                style={[styles.datePicker, { height: 350 }]}
+              />
+            </View>
+          )}
 
         <View style={styles.inputContainer}>
           <MessageInput

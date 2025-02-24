@@ -7,6 +7,8 @@ import {
   Image,
   ScrollView,
   Dimensions,
+  Share,
+  Alert,
 } from "react-native";
 import Modal from "react-native-modal";
 import Carousel from "react-native-snap-carousel";
@@ -17,6 +19,8 @@ import EmptyImage from "../assets/Image.svg"; // 기본 이미지 추가
 import Svg, { SvgProps } from "react-native-svg"; // SVG 렌더링을 위한 라이브러리 추가
 import defaultTravelImage1 from "../assets/default-travel-1.jpg"; // 이미지 파일 추가 필요
 import defaultTravelImage2 from "../assets/default-travel-2.jpg"; // 이미지 파일 추가 필요
+import ShareIcon from "../assets/share.svg";
+import { getMultipleRandomKoreaImages } from "../utils/imageUtils";
 
 const { width: screenWidth } = Dimensions.get("window");
 
@@ -61,6 +65,7 @@ const OptionModal: React.FC<OptionModalProps> = ({
 }) => {
   const [schedule, setSchedule] = useState<any>(null);
   const [activeSlide, setActiveSlide] = useState(0);
+  const [carouselImages, setCarouselImages] = useState<any[]>([]);
 
   useEffect(() => {
     const fetchSchedule = async () => {
@@ -70,6 +75,8 @@ const OptionModal: React.FC<OptionModalProps> = ({
       }
     };
     fetchSchedule();
+    // 랜덤 이미지 2개 설정
+    setCarouselImages(getMultipleRandomKoreaImages(2));
   }, []);
 
   if (!schedule) {
@@ -77,51 +84,96 @@ const OptionModal: React.FC<OptionModalProps> = ({
   }
 
   const handleRemovePlace = async (dayIndex: number, placeOrder: number) => {
-    const updatedDays = schedule.days.map((day: DayPlan) => {
-      if (day.dayIndex === dayIndex) {
-        const updatedPlaces = day.places
-          .filter((place: Place) => place.order !== placeOrder)
-          .map((place: Place, index: number) => ({
-            ...place,
-            order: index + 1, // order 값 업데이트
-          }));
-        return {
-          ...day,
-          places: updatedPlaces,
-        };
-      }
-      return day;
-    });
+    Alert.alert("일정 삭제", "이 장소를 일정에서 삭제하시겠습니까?", [
+      {
+        text: "취소",
+        style: "cancel",
+      },
+      {
+        text: "삭제",
+        style: "destructive",
+        onPress: async () => {
+          const updatedDays = schedule.days.map((day: DayPlan) => {
+            if (day.dayIndex === dayIndex) {
+              const updatedPlaces = day.places
+                .filter((place: Place) => place.order !== placeOrder)
+                .map((place: Place, index: number) => ({
+                  ...place,
+                  order: index + 1,
+                }));
+              return {
+                ...day,
+                places: updatedPlaces,
+              };
+            }
+            return day;
+          });
 
-    const updatedTotalCost = updatedDays.reduce(
-      (total: number, day: DayPlan) => {
-        return (
-          total +
-          day.places.reduce(
-            (dayTotal: number, place: Place) => dayTotal + place.cost,
+          const updatedTotalCost = updatedDays.reduce(
+            (total: number, day: DayPlan) => {
+              return (
+                total +
+                day.places.reduce(
+                  (dayTotal: number, place: Place) => dayTotal + place.cost,
+                  0
+                )
+              );
+            },
             0
+          );
+
+          const updatedSchedule = {
+            ...schedule,
+            days: updatedDays,
+            extraInfo: {
+              ...schedule.extraInfo,
+              totalCost: updatedTotalCost,
+            },
+          };
+          setSchedule(updatedSchedule);
+          onUpdate(updatedSchedule);
+
+          await AsyncStorage.setItem(
+            "formattedSchedule",
+            JSON.stringify(updatedSchedule)
+          );
+        },
+      },
+    ]);
+  };
+
+  const handleShare = async () => {
+    try {
+      const shareContent = {
+        title: schedule.title,
+        message: `${schedule.title}\n\n${schedule.startDate} - ${
+          schedule.endDate
+        }\n\n${schedule.summary}\n\n${schedule.days
+          ?.map(
+            (day) =>
+              `${day.day} ${day.date}\n${day.places
+                .map((place) => `- ${place.name} (${place.duration})`)
+                .join("\n")}`
           )
-        );
-      },
-      0
-    );
+          .join("\n\n")}`,
+      };
 
-    const updatedSchedule = {
-      ...schedule,
-      days: updatedDays,
-      extraInfo: {
-        ...schedule.extraInfo,
-        totalCost: updatedTotalCost, // totalCost 업데이트
-      },
-    };
-    setSchedule(updatedSchedule);
-    onUpdate(updatedSchedule); // 추가된 부분
-
-    // AsyncStorage에 업데이트된 일정 저장
-    await AsyncStorage.setItem(
-      "formattedSchedule",
-      JSON.stringify(updatedSchedule)
-    );
+      const result = await Share.share(shareContent);
+      if (result.action === Share.sharedAction) {
+        if (result.activityType) {
+          // 공유 완료
+          console.log("Shared with activity type:", result.activityType);
+        } else {
+          // 공유 완료
+          console.log("Shared");
+        }
+      } else if (result.action === Share.dismissedAction) {
+        // 공유 취소
+        console.log("Share dismissed");
+      }
+    } catch (error) {
+      console.error("Error sharing:", error);
+    }
   };
 
   return (
@@ -143,61 +195,27 @@ const OptionModal: React.FC<OptionModalProps> = ({
             <CloseIcon width={32} height={32} />
           </TouchableOpacity>
           <View style={styles.carouselContainer}>
-            {schedule.images && schedule.images.length > 0 ? (
-              <>
-                <Carousel
-                  data={schedule.images.slice(0, 2)}
-                  renderItem={({ item }: { item: { uri: string } }) => (
-                    <Image
-                      source={{ uri: item.uri }}
-                      style={styles.carouselImage}
-                    />
-                  )}
-                  sliderWidth={screenWidth}
-                  itemWidth={screenWidth}
-                  containerCustomStyle={styles.carouselContainer}
-                  onSnapToItem={(index) => setActiveSlide(index)}
-                  autoplay={true}
-                  autoplayDelay={5000}
-                />
-                <Pagination
-                  dotsLength={Math.min(schedule.images.length, 2)}
-                  activeDotIndex={activeSlide}
-                  containerStyle={styles.carouselIndicatorContainer}
-                  dotStyle={styles.activeDot}
-                  inactiveDotStyle={styles.inactiveDot}
-                  inactiveDotOpacity={0.4}
-                  inactiveDotScale={0.6}
-                />
-              </>
-            ) : (
-              <>
-                <Carousel
-                  data={[
-                    { uri: defaultTravelImage1 },
-                    { uri: defaultTravelImage2 },
-                  ]}
-                  renderItem={({ item }) => (
-                    <Image source={item.uri} style={styles.carouselImage} />
-                  )}
-                  sliderWidth={screenWidth}
-                  itemWidth={screenWidth}
-                  containerCustomStyle={styles.carouselContainer}
-                  onSnapToItem={(index) => setActiveSlide(index)}
-                  autoplay={true}
-                  autoplayDelay={5000}
-                />
-                <Pagination
-                  dotsLength={2}
-                  activeDotIndex={activeSlide}
-                  containerStyle={styles.carouselIndicatorContainer}
-                  dotStyle={styles.activeDot}
-                  inactiveDotStyle={styles.inactiveDot}
-                  inactiveDotOpacity={0.4}
-                  inactiveDotScale={0.6}
-                />
-              </>
-            )}
+            <Carousel
+              data={carouselImages}
+              renderItem={({ item }) => (
+                <Image source={item} style={styles.carouselImage} />
+              )}
+              sliderWidth={screenWidth}
+              itemWidth={screenWidth}
+              containerCustomStyle={styles.carouselContainer}
+              onSnapToItem={(index) => setActiveSlide(index)}
+              autoplay={true}
+              autoplayDelay={5000}
+            />
+            <Pagination
+              dotsLength={2}
+              activeDotIndex={activeSlide}
+              containerStyle={styles.carouselIndicatorContainer}
+              dotStyle={styles.activeDot}
+              inactiveDotStyle={styles.inactiveDot}
+              inactiveDotOpacity={0.4}
+              inactiveDotScale={0.6}
+            />
           </View>
           <View style={styles.companionContainerLeft}>
             <Text style={styles.companion}>{schedule.companion}</Text>
@@ -261,29 +279,72 @@ const OptionModal: React.FC<OptionModalProps> = ({
               </View>
             ))}
           </View>
-          <View style={styles.extraInfoSection}>
-            <Text style={styles.sectionTitle}>추가 정보</Text>
-            {schedule.extraInfo.estimatedCost.map(
-              (cost: { type: string; amount: number }, index: number) => (
-                <Text key={index} style={styles.extraInfoText}>
-                  {cost.type}: {cost.amount.toLocaleString()}원
+          {schedule.extraInfo && (
+            <View style={styles.extraInfoSection}>
+              <Text style={styles.sectionTitle}>추가 정보</Text>
+              {schedule.extraInfo.estimatedCost?.map(
+                (cost: { type: string; amount: number }, index: number) => (
+                  <Text key={index} style={styles.extraInfoText}>
+                    {cost.type}: {cost.amount.toLocaleString()}원
+                  </Text>
+                )
+              )}
+              {schedule.extraInfo.totalCost && (
+                <Text style={styles.totalCostText}>
+                  총 비용: {schedule.extraInfo.totalCost.toLocaleString()}원
                 </Text>
-              )
-            )}
-            <Text style={styles.extraInfoText}>
-              총 비용: {schedule.extraInfo.totalCost.toLocaleString()}원
-            </Text>
-          </View>
+              )}
+            </View>
+          )}
         </ScrollView>
         <View style={styles.footerContainer}>
-          <TouchableOpacity
-            style={styles.shareWithColleaguesButton}
-            onPress={onShareWithColleagues}
-          >
-            <Text style={styles.shareWithColleaguesButtonText}>
-              동료에게 여행 장소 공유하기
-            </Text>
-          </TouchableOpacity>
+          <View style={styles.buttonRow}>
+            <TouchableOpacity
+              style={styles.confirmButton}
+              onPress={async () => {
+                try {
+                  // 일정 확정 상태로 업데이트
+                  const confirmedSchedule = {
+                    ...schedule,
+                    status: "confirmed",
+                    confirmedAt: new Date().toISOString(),
+                  };
+
+                  // AsyncStorage에 확정된 일정 저장
+                  await AsyncStorage.setItem(
+                    "confirmedSchedule",
+                    JSON.stringify(confirmedSchedule)
+                  );
+
+                  // 성공 알림 표시
+                  Alert.alert(
+                    "일정 저장 완료",
+                    "일정이 성공적으로 저장되었습니다.",
+                    [
+                      {
+                        text: "확인",
+                        onPress: () => {
+                          onUpdate(confirmedSchedule); // 부모 컴포넌트에 업데이트 알림
+                          onClose(); // 모달 닫기
+                        },
+                      },
+                    ]
+                  );
+                } catch (error) {
+                  console.error("일정 저장 중 오류 발생:", error);
+                  Alert.alert(
+                    "저장 실패",
+                    "일정을 저장하는 중 오류가 발생했습니다."
+                  );
+                }
+              }}
+            >
+              <Text style={styles.confirmButtonText}>일정이 마음에 들어요</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.shareButton} onPress={handleShare}>
+              <ShareIcon width={24} height={24} />
+            </TouchableOpacity>
+          </View>
         </View>
       </View>
     </Modal>
@@ -483,19 +544,38 @@ const styles = StyleSheet.create({
   },
   footerContainer: {
     width: "100%",
-    padding: 24,
+    padding: 12,
     backgroundColor: "white",
+    borderTopWidth: 1,
+    borderTopColor: "#E5E5EA",
+    paddingBottom: 32,
   },
-  shareWithColleaguesButton: {
+  buttonRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+  },
+  confirmButton: {
+    flex: 1,
     backgroundColor: "#007AFF",
     padding: 15,
-    borderRadius: 5,
+    borderRadius: 12,
     alignItems: "center",
-    width: "100%",
   },
-  shareWithColleaguesButtonText: {
+  confirmButtonText: {
     color: "white",
     fontSize: 16,
+    fontWeight: "600",
+  },
+  shareButton: {
+    width: 48,
+    height: 48,
+    backgroundColor: "white",
+    borderRadius: 12,
+    justifyContent: "center",
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: "#E5E5EA",
   },
   scheduleTitle: {
     fontSize: 18,
@@ -520,12 +600,24 @@ const styles = StyleSheet.create({
     color: "#333",
   },
   extraInfoSection: {
+    marginTop: 16,
     marginBottom: 16,
+    backgroundColor: "#EBEEF4",
+    padding: 16,
+    borderRadius: 8,
   },
   extraInfoText: {
-    fontSize: 12,
-    color: "#999", // 연한 글씨 색상
-    marginBottom: 2,
+    fontSize: 14,
+    lineHeight: 18,
+    color: "#71727A",
+    marginTop: 8,
+  },
+  totalCostText: {
+    fontSize: 16,
+    lineHeight: 16,
+    color: "#007AFF",
+    fontWeight: "700",
+    marginTop: 12,
   },
 });
 
