@@ -503,6 +503,23 @@ export default function ChatScreen() {
           };
           setMessages((prev) => [...prev, loadingMessage]);
 
+          // 사용자가 "네"라고 답변한 경우
+          if (text === "네" || text === "네, 맞습니다") {
+            const confirmMessage: Message = {
+              id: Date.now().toString(),
+              text: "✅ 일정이 성공적으로 등록되었습니다!\n\n이제 여행 일정을 생성해드리겠습니다.",
+              isBot: true,
+              timestamp: new Date().toISOString(),
+            };
+
+            // 로딩 메시지 제거하고 확인 메시지 추가
+            setMessages((prev) =>
+              prev.filter((msg) => !msg.isLoading).concat([confirmMessage])
+            );
+            setIsLoading(false);
+            return;
+          }
+
           // OpenAI를 통해 일정 분석 및 정리
           const prompt = `다음 여행 일정을 분석하여 아래 포맷으로 정리해주세요:
           "${text}"
@@ -537,6 +554,52 @@ export default function ChatScreen() {
         }
       } else {
         text = text.replace("_selected", "");
+      }
+
+      // 예산 입력 처리 추가
+      if (
+        messages.some((msg) =>
+          msg.text.includes("여행 예산은 어느 정도로 생각하고 계신가요")
+        )
+      ) {
+        const budget = text.replace(/[^0-9]/g, ""); // 숫자만 추출
+        if (budget) {
+          const userMessage: Message = {
+            id: Date.now().toString(),
+            text: `${budget}만원`,
+            isBot: false,
+            timestamp: new Date().toISOString(),
+          };
+
+          const confirmMessage: Message = {
+            id: (Date.now() + 1).toString(),
+            text: `예산을 ${budget}만원으로 설정하겠습니다.`,
+            isBot: true,
+            timestamp: new Date().toISOString(),
+          };
+
+          // 교통수단 선택 옵션
+          const transportationOptions: Message = {
+            id: (Date.now() + 2).toString(),
+            text: "선호하는 교통수단을 선택해주세요 (다수 선택 가능):",
+            isBot: true,
+            timestamp: new Date().toISOString(),
+            styleOptions: [
+              { text: "대중교통", value: "public", selected: false },
+              { text: "자가용", value: "car", selected: false },
+              { text: "렌트카", value: "rental", selected: false },
+              { text: "자전거", value: "bicycle", selected: false },
+              { text: "도보", value: "walk", selected: false },
+            ],
+          };
+
+          updateMessages(
+            [userMessage, confirmMessage, transportationOptions],
+            "여행 예산은 어느 정도로 생각하고 계신가요"
+          );
+          setIsLoading(false);
+          return;
+        }
       }
 
       // 날짜 입력 처리 (예산 질문 이전에만 실행)
@@ -1346,73 +1409,77 @@ export default function ChatScreen() {
         {/* DatePicker를 항상 표시 */}
         {messages.some((msg) =>
           msg.text.includes("여행 날짜를 선택해주세요")
-        ) && (
-          <View style={styles.datePickerContainer}>
-            <View style={styles.datePickerHeader}>
-              <TouchableOpacity
-                onPress={() => {
-                  // 재선택 시 시작일 선택 모드로 변경하고 날짜 초기화
-                  setDatePickerMode("start");
-                  setStartDate(new Date());
-                  setEndDate(new Date());
-                  setSelectedStartDate(null);
-                  setSelectedEndDate(null);
-                }}
-              >
-                <Text style={styles.datePickerButton}>재선택</Text>
-              </TouchableOpacity>
-              <Text style={styles.datePickerTitle}>
-                {datePickerMode === "start" ? "시작일" : "종료일"} 선택
-              </Text>
-              <TouchableOpacity
-                onPress={() => {
-                  if (datePickerMode === "start") {
-                    setDatePickerMode("end");
-                    setEndDate(startDate); // 다음날이 아닌 시작일과 동일하게 설정
-                  } else {
-                    handleConfirm();
-                  }
-                }}
-              >
-                <Text style={styles.datePickerButton}>
-                  {datePickerMode === "start" ? "다음" : "완료"}
+        ) &&
+          !selectedStartDate &&
+          !messages.some((msg) =>
+            msg.text.includes("여행 예산은 어느 정도로 생각하고 계신가요")
+          ) && (
+            <View style={styles.datePickerContainer}>
+              <View style={styles.datePickerHeader}>
+                <TouchableOpacity
+                  onPress={() => {
+                    // 재선택 시 시작일 선택 모드로 변경하고 날짜 초기화
+                    setDatePickerMode("start");
+                    setStartDate(new Date());
+                    setEndDate(new Date());
+                    setSelectedStartDate(null);
+                    setSelectedEndDate(null);
+                  }}
+                >
+                  <Text style={styles.datePickerButton}>재선택</Text>
+                </TouchableOpacity>
+                <Text style={styles.datePickerTitle}>
+                  {datePickerMode === "start" ? "시작일" : "종료일"} 선택
                 </Text>
-              </TouchableOpacity>
-            </View>
-            <DateTimePicker
-              testID="dateTimePicker"
-              value={datePickerMode === "start" ? startDate : endDate}
-              mode="date"
-              display="inline"
-              onChange={(event: DateTimePickerEvent, date?: Date) => {
-                if (event.type === "set" && date) {
-                  if (datePickerMode === "start") {
-                    // 시작일 선택
-                    setStartDate(date);
-                    setSelectedStartDate(date);
-                    setDatePickerMode("end");
-                    setEndDate(date); // 시작일과 동일한 날짜로 초기화
-                  } else {
-                    // 종료일 선택
-                    if (date >= selectedStartDate!) {
-                      setEndDate(date);
-                      setSelectedEndDate(date);
-                      handleConfirm();
+                <TouchableOpacity
+                  onPress={() => {
+                    if (datePickerMode === "start") {
+                      setDatePickerMode("end");
+                      setEndDate(startDate); // 다음날이 아닌 시작일과 동일하게 설정
                     } else {
-                      Alert.alert(
-                        "알림",
-                        "종료일은 시작일과 같거나 이후여야 합니다."
-                      );
+                      handleConfirm();
+                    }
+                  }}
+                >
+                  <Text style={styles.datePickerButton}>
+                    {datePickerMode === "start" ? "다음" : "완료"}
+                  </Text>
+                </TouchableOpacity>
+              </View>
+              <DateTimePicker
+                testID="dateTimePicker"
+                value={datePickerMode === "start" ? startDate : endDate}
+                mode="date"
+                display="inline"
+                onChange={(event: DateTimePickerEvent, date?: Date) => {
+                  if (event.type === "set" && date) {
+                    if (datePickerMode === "start") {
+                      // 시작일 선택
+                      setStartDate(date);
+                      setSelectedStartDate(date);
+                      setDatePickerMode("end");
+                      setEndDate(date); // 시작일과 동일한 날짜로 초기화
+                    } else {
+                      // 종료일 선택
+                      if (date >= selectedStartDate!) {
+                        setEndDate(date);
+                        setSelectedEndDate(date);
+                        handleConfirm();
+                      } else {
+                        Alert.alert(
+                          "알림",
+                          "종료일은 시작일과 같거나 이후여야 합니다."
+                        );
+                      }
                     }
                   }
-                }
-              }}
-              minimumDate={today} // 시작일, 종료일 모두 오늘부터 선택 가능
-              locale="ko-KR"
-              style={[styles.datePicker, { height: 350 }]}
-            />
-          </View>
-        )}
+                }}
+                minimumDate={today} // 시작일, 종료일 모두 오늘부터 선택 가능
+                locale="ko-KR"
+                style={[styles.datePicker, { height: 350 }]}
+              />
+            </View>
+          )}
 
         <View style={styles.inputContainer}>
           <MessageInput
