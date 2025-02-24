@@ -153,7 +153,7 @@ export const generateTravelSchedule = async (tripInfo: TripInfo) => {
 {
   "tripId": "고유ID",
   "timestamp": "생성시간",
-  "title": "여행 테마에 맞는 제목",
+  "title": "여행 테마에 맞는 제목(단 제목에 지역명은 포함하지않을것)",
   "companion": "동행인 정보",
   "startDate": "시작날짜",
   "endDate": "종료날짜", 
