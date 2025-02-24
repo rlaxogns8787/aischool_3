@@ -7,6 +7,7 @@ import {
   Image,
   ScrollView,
   Dimensions,
+  Share,
 } from "react-native";
 import Modal from "react-native-modal";
 import Carousel from "react-native-snap-carousel";
@@ -123,6 +124,40 @@ const OptionModal: React.FC<OptionModalProps> = ({
       "formattedSchedule",
       JSON.stringify(updatedSchedule)
     );
+  };
+
+  const handleShare = async () => {
+    try {
+      const shareContent = {
+        title: schedule.title,
+        message: `${schedule.title}\n\n${schedule.startDate} - ${
+          schedule.endDate
+        }\n\n${schedule.summary}\n\n${schedule.days
+          ?.map(
+            (day) =>
+              `${day.day} ${day.date}\n${day.places
+                .map((place) => `- ${place.name} (${place.duration})`)
+                .join("\n")}`
+          )
+          .join("\n\n")}`,
+      };
+
+      const result = await Share.share(shareContent);
+      if (result.action === Share.sharedAction) {
+        if (result.activityType) {
+          // 공유 완료
+          console.log("Shared with activity type:", result.activityType);
+        } else {
+          // 공유 완료
+          console.log("Shared");
+        }
+      } else if (result.action === Share.dismissedAction) {
+        // 공유 취소
+        console.log("Share dismissed");
+      }
+    } catch (error) {
+      console.error("Error sharing:", error);
+    }
   };
 
   return (
@@ -295,7 +330,7 @@ const OptionModal: React.FC<OptionModalProps> = ({
             >
               <Text style={styles.confirmButtonText}>일정이 마음에 들어요</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.shareButton} onPress={onShare}>
+            <TouchableOpacity style={styles.shareButton} onPress={handleShare}>
               <ShareIcon width={24} height={24} />
             </TouchableOpacity>
           </View>
