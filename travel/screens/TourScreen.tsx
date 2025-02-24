@@ -56,6 +56,7 @@ import type {
   AVPlaybackStatus as ExpoAVPlaybackStatus,
   AVPlaybackStatusToSet as ExpoAVPlaybackStatusToSet,
 } from "expo-av/build/AV.types";
+import YoutubePlayer from "react-native-youtube-iframe";
 
 // VoiceCharacterType 인터페이스 추가
 interface VoiceCharacterType {
@@ -450,6 +451,7 @@ export default function TourScreen() {
   const currentSound = useRef<Audio.Sound | null>(null);
   const [showTooltip, setShowTooltip] = useState<string | null>(null);
   const tooltipTimer = useRef<NodeJS.Timeout | null>(null);
+  const [youtubePlayerReady, setYoutubePlayerReady] = useState(false);
 
   // 사용자 관심사를 DB에서 가져오기(기본값은 '전체'설정)
   const userPreference = user?.preferences?.[0] || "전체";
@@ -1659,6 +1661,13 @@ export default function TourScreen() {
     };
   }, []);
 
+  // YouTube 플레이어 상태 변경 핸들러
+  const onYoutubeStateChange = (state: string) => {
+    if (state === "ended") {
+      setIsPlaying(false);
+    }
+  };
+
   if (!isAudioReady) {
     return (
       <View style={styles.loadingContainer}>
@@ -1855,6 +1864,19 @@ export default function TourScreen() {
               )}
             </TouchableOpacity>
           </View>
+
+          {/* YouTube Player */}
+          {currentSong?.videoId && (
+            <View style={styles.youtubePlayerContainer}>
+              <YoutubePlayer
+                height={0}
+                play={isPlaying}
+                videoId={currentSong.videoId}
+                onChangeState={onYoutubeStateChange}
+                onReady={() => setYoutubePlayerReady(true)}
+              />
+            </View>
+          )}
         </View>
       )}
 
@@ -2272,5 +2294,9 @@ const styles = StyleSheet.create({
     height: 12,
     overflow: "hidden",
     includeFontPadding: false,
+  },
+  youtubePlayerContainer: {
+    height: 0,
+    overflow: "hidden",
   },
 });

@@ -6,6 +6,10 @@ const AZURE_OPENAI_KEY =
   "65fEqo2qsGl8oJPg7lzs8ZJk7pUgdTEgEhUx2tvUsD2e07hbowbCJQQJ99BBACfhMk5XJ3w3AAABACOGr7S4";
 const DEPLOYMENT_NAME = "gpt-4o";
 
+// YouTube API 설정
+const YOUTUBE_API_KEY = "AIzaSyBcAwJBnmuJVux4c3ZzcBfZrIKHbFF9jnk";
+const YOUTUBE_API_URL = "https://www.googleapis.com/youtube/v3/search";
+
 interface MusicTrack {
   title: string;
   artist: string;
@@ -29,6 +33,17 @@ export class MusicService {
   private isPlaying: boolean = false;
   private sound: Audio.Sound | null = null;
   private currentVideoId: string | null = null;
+
+  // 기본 추천곡 설정 (장르별)
+  private defaultRecommendations: { [key: string]: string } = {
+    pop: "IVE - I AM",
+    "k-pop": "NewJeans - Super Shy",
+    ballad: "아이유 - Love poem",
+    rock: "윤도현 - 사랑했나봐",
+    hiphop: "BTS - Dynamite",
+    jazz: "Norah Jones - Don't Know Why",
+    classical: "Yiruma - River Flows in You",
+  };
 
   constructor() {
     this.sound = null;
@@ -98,54 +113,59 @@ export class MusicService {
       }
 
       const data = await response.json();
-      return data.choices[0].message.content.trim();
+      const recommendation = data.choices?.[0]?.message?.content;
+
+      // AI 추천이 실패하면 기본 추천곡 반환
+      if (!recommendation) {
+        console.log("AI 추천 실패, 기본 추천곡 사용");
+        const defaultSong =
+          this.defaultRecommendations[preferences.musicGenre.toLowerCase()] ||
+          this.defaultRecommendations["pop"];
+        return defaultSong;
+      }
+
+      return recommendation.trim();
     } catch (error) {
       console.error("AI recommendation error:", error);
-      throw error;
+      // 에러 발생 시 기본 추천곡 반환
+      const defaultSong =
+        this.defaultRecommendations[preferences.musicGenre.toLowerCase()] ||
+        this.defaultRecommendations["pop"];
+      return defaultSong;
     }
   }
 
-  // 음악 검색 및 재생
-  private async searchAndPlayMusic(query: string): Promise<{
+  // YouTube에서 음악 검색
+  private async searchYouTubeMusic(query: string): Promise<{
     videoId: string | null;
     title: string;
     artist: string;
   }> {
     try {
-      // 테스트용 오디오 URL 사용
-      const testAudioUrl =
-        "https://www2.cs.uic.edu/~i101/SoundFiles/CantinaBand3.wav";
+      const response = await fetch(
+        `${YOUTUBE_API_URL}?part=snippet&q=${encodeURIComponent(
+          query + " official music video"
+        )}&type=video&videoCategoryId=10&key=${YOUTUBE_API_KEY}&maxResults=1`
+      );
 
-      if (this.sound) {
-        await this.sound.unloadAsync();
+      if (!response.ok) {
+        throw new Error("YouTube search failed");
       }
 
-      console.log("Loading audio...");
-      this.sound = new Audio.Sound();
-      await this.sound.loadAsync({ uri: testAudioUrl });
+      const data = await response.json();
 
-      console.log("Playing audio...");
-      await this.sound.playAsync();
-      this.isPlaying = true;
+      if (data.items && data.items.length > 0) {
+        const video = data.items[0];
+        return {
+          videoId: video.id.videoId,
+          title: video.snippet.title,
+          artist: video.snippet.channelTitle,
+        };
+      }
 
-      // 재생 상태 모니터링
-      this.sound.setOnPlaybackStatusUpdate((status) => {
-        if (status.isLoaded) {
-          this.isPlaying = status.isPlaying;
-          console.log(
-            "Playback status:",
-            status.isPlaying ? "playing" : "paused"
-          );
-        }
-      });
-
-      return {
-        videoId: "test",
-        title: "Test Audio",
-        artist: "Sample",
-      };
+      throw new Error("No videos found");
     } catch (error) {
-      console.error("Audio playback error:", error);
+      console.error("YouTube search error:", error);
       return {
         videoId: null,
         title: "",
@@ -169,10 +189,12 @@ export class MusicService {
       const recommendation = await this.getAIRecommendation(preferences);
       console.log("AI Recommended song:", recommendation);
 
-      // 추천받은 곡 검색 및 재생
-      const result = await this.searchAndPlayMusic(recommendation);
+      // YouTube에서 추천받은 곡 검색
+      const result = await this.searchYouTubeMusic(recommendation);
 
       if (result.videoId) {
+        this.currentVideoId = result.videoId;
+        this.isPlaying = true;
         return {
           videoId: result.videoId,
           message: `AI가 추천한 "${result.title}"을(를) 재생합니다!`,
@@ -200,43 +222,18 @@ export class MusicService {
 
   // 음악 일시정지
   async pause(): Promise<void> {
-    try {
-      if (this.sound && this.isPlaying) {
-        console.log("Pausing audio...");
-        await this.sound.pauseAsync();
-        this.isPlaying = false;
-      }
-    } catch (error) {
-      console.error("Error pausing audio:", error);
-    }
+    this.isPlaying = false;
   }
 
   // 음악 재생
   async play(): Promise<void> {
-    try {
-      if (this.sound && !this.isPlaying) {
-        console.log("Resuming audio...");
-        await this.sound.playAsync();
-        this.isPlaying = true;
-      }
-    } catch (error) {
-      console.error("Error playing audio:", error);
-    }
+    this.isPlaying = true;
   }
 
   // 음악 중지
   async stop(): Promise<void> {
-    try {
-      if (this.sound) {
-        console.log("Stopping audio...");
-        await this.sound.stopAsync();
-        await this.sound.unloadAsync();
-        this.isPlaying = false;
-        this.currentVideoId = null;
-      }
-    } catch (error) {
-      console.error("Error stopping audio:", error);
-    }
+    this.isPlaying = false;
+    this.currentVideoId = null;
   }
 
   // 현재 재생 상태 확인
@@ -257,9 +254,11 @@ export class MusicService {
     artist?: string;
   }> {
     try {
-      const result = await this.searchAndPlayMusic(`${location} ambient music`);
+      const result = await this.searchYouTubeMusic(`${location} ambient music`);
 
       if (result.videoId) {
+        this.currentVideoId = result.videoId;
+        this.isPlaying = true;
         return {
           videoId: result.videoId,
           message: `${location}의 분위기에 어울리는 음악을 찾았습니다!`,
