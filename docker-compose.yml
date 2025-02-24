@@ -1,0 +1,53 @@
+version: "3.8"
+
+services:
+  travel-v4.0:
+    build:
+      context: ./travel-v4.0
+      dockerfile: ../Dockerfile
+    ports:
+      - "19000:19000"
+      - "19001:19001"
+      - "19002:19002"
+    volumes:
+      - ./travel-v4.0:/app
+      - /app/node_modules
+    environment:
+      - NODE_ENV=development
+      - EXPO_DEVTOOLS_LISTEN_ADDRESS=0.0.0.0
+      - REACT_NATIVE_PACKAGER_HOSTNAME=0.0.0.0
+    command: yarn start
+
+  travel-v4.2:
+    build:
+      context: ./travel-v4.2
+      dockerfile: ../Dockerfile
+    ports:
+      - "19010:19000"
+      - "19011:19001"
+      - "19012:19002"
+    volumes:
+      - ./travel-v4.2:/app
+      - /app/node_modules
+    environment:
+      - NODE_ENV=development
+      - EXPO_DEVTOOLS_LISTEN_ADDRESS=0.0.0.0
+      - REACT_NATIVE_PACKAGER_HOSTNAME=0.0.0.0
+    command: yarn start
+
+  travel-commit-cf995b:
+    build:
+      context: ./travel-commit-cf995b
+      dockerfile: ../Dockerfile
+    ports:
+      - "19020:19000"
+      - "19021:19001"
+      - "19022:19002"
+    volumes:
+      - ./travel-commit-cf995b:/app
+      - /app/node_modules
+    environment:
+      - NODE_ENV=development
+      - EXPO_DEVTOOLS_LISTEN_ADDRESS=0.0.0.0
+      - REACT_NATIVE_PACKAGER_HOSTNAME=0.0.0.0
+    command: yarn start

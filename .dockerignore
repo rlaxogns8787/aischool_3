@@ -1,0 +1,17 @@
+node_modules
+.git
+.expo
+.venv
+android
+ios
+dist
+build
+*.log
+
+# travel 폴더 내 불필요한 파일들 추가
+travel/.venv
+travel/node_modules
+travel/android
+travel/ios
+travel/dist
+travel/build 
