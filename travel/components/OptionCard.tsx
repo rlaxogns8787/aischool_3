@@ -108,13 +108,15 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 18,
-    fontWeight: "bold",
+    fontWeight: "700",
   },
   duration: {
     fontSize: 14,
+    marginTop: 4,
     color: "#666",
   },
   info: {
+    marginTop: 12,
     fontSize: 14,
     color: "#666",
   },
@@ -123,7 +125,7 @@ const styles = StyleSheet.create({
     padding: 10,
     borderRadius: 40,
     alignItems: "center",
-    margin: 8,
+    marginBottom: 16,
     width: "90%",
     height: 40,
     alignSelf: "center",
