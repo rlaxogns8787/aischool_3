@@ -8,6 +8,7 @@ import {
   ScrollView,
   Dimensions,
   Share,
+  Alert,
 } from "react-native";
 import Modal from "react-native-modal";
 import Carousel from "react-native-snap-carousel";
@@ -79,51 +80,62 @@ const OptionModal: React.FC<OptionModalProps> = ({
   }
 
   const handleRemovePlace = async (dayIndex: number, placeOrder: number) => {
-    const updatedDays = schedule.days.map((day: DayPlan) => {
-      if (day.dayIndex === dayIndex) {
-        const updatedPlaces = day.places
-          .filter((place: Place) => place.order !== placeOrder)
-          .map((place: Place, index: number) => ({
-            ...place,
-            order: index + 1, // order 값 업데이트
-          }));
-        return {
-          ...day,
-          places: updatedPlaces,
-        };
-      }
-      return day;
-    });
+    Alert.alert("일정 삭제", "이 장소를 일정에서 삭제하시겠습니까?", [
+      {
+        text: "취소",
+        style: "cancel",
+      },
+      {
+        text: "삭제",
+        style: "destructive",
+        onPress: async () => {
+          const updatedDays = schedule.days.map((day: DayPlan) => {
+            if (day.dayIndex === dayIndex) {
+              const updatedPlaces = day.places
+                .filter((place: Place) => place.order !== placeOrder)
+                .map((place: Place, index: number) => ({
+                  ...place,
+                  order: index + 1,
+                }));
+              return {
+                ...day,
+                places: updatedPlaces,
+              };
+            }
+            return day;
+          });
 
-    const updatedTotalCost = updatedDays.reduce(
-      (total: number, day: DayPlan) => {
-        return (
-          total +
-          day.places.reduce(
-            (dayTotal: number, place: Place) => dayTotal + place.cost,
+          const updatedTotalCost = updatedDays.reduce(
+            (total: number, day: DayPlan) => {
+              return (
+                total +
+                day.places.reduce(
+                  (dayTotal: number, place: Place) => dayTotal + place.cost,
+                  0
+                )
+              );
+            },
             0
-          )
-        );
-      },
-      0
-    );
+          );
 
-    const updatedSchedule = {
-      ...schedule,
-      days: updatedDays,
-      extraInfo: {
-        ...schedule.extraInfo,
-        totalCost: updatedTotalCost, // totalCost 업데이트
-      },
-    };
-    setSchedule(updatedSchedule);
-    onUpdate(updatedSchedule); // 추가된 부분
+          const updatedSchedule = {
+            ...schedule,
+            days: updatedDays,
+            extraInfo: {
+              ...schedule.extraInfo,
+              totalCost: updatedTotalCost,
+            },
+          };
+          setSchedule(updatedSchedule);
+          onUpdate(updatedSchedule);
 
-    // AsyncStorage에 업데이트된 일정 저장
-    await AsyncStorage.setItem(
-      "formattedSchedule",
-      JSON.stringify(updatedSchedule)
-    );
+          await AsyncStorage.setItem(
+            "formattedSchedule",
+            JSON.stringify(updatedSchedule)
+          );
+        },
+      },
+    ]);
   };
 
   const handleShare = async () => {
