@@ -411,3 +411,35 @@ export const saveFeedback = async (
     );
   }
 };
+
+/**
+ * 피드백 추가 API
+ */
+export const addFeedback = async (feedbackData) => {
+  try {
+    const response = await axios.post(`${BASE_URL}/api/feedback`, feedbackData);
+    console.log("Add Feedback Response:", response.data); // 서버 응답 확인
+    return response.data;
+  } catch (error) {
+    console.error("Add feedback error:", error);
+    throw new Error(
+      error.response?.data?.message || "피드백 추가에 실패했습니다."
+    );
+  }
+};
+
+/**
+ * 피드백 조회 API
+ */
+export const getFeedback = async () => {
+  try {
+    const response = await axios.get(`${BASE_URL}/api/feedback`);
+    return response.data;
+  } catch (error) {
+    console.error("Get feedback error:", error);
+    throw new Error(
+      error.response?.data?.message || "피드백 조회에 실패했습니다."
+    );
+  }
+};
+
