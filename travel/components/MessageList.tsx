@@ -443,7 +443,7 @@ const styles = StyleSheet.create({
   optionText: {
     fontSize: 16,
     color: "#007AFF",
-    textAlign: "left",
+    textAlign: "center",
   },
   optionTextSelected: {
     color: "#FFFFFF",
