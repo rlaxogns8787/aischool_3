@@ -199,16 +199,16 @@ export const generateTravelSchedule = async (tripInfo: TripInfo) => {
     {
       role: "user",
       content: `
-여행 스타일: ${tripInfo.styles?.join(", ")}
-여행 지역: ${tripInfo.destination}
-여행 기간: ${tripInfo.duration}
-여행 인원: ${tripInfo.companion}
-예산: ${tripInfo.budget}
-교통수단: ${tripInfo.transportation?.join(", ")}
+      여행 스타일: ${tripInfo.styles?.join(", ")}
+      여행 지역: ${tripInfo.destination}
+      여행 기간: ${tripInfo.duration}
+      여행 인원: ${tripInfo.companion}
+      예산: ${tripInfo.budget}
+      교통수단: ${tripInfo.transportation?.join(", ")}
 
-위 조건에 맞는 여행 일정을 JSON 형식으로 생성해주세요.
-각 장소마다 예상 소요 시간, 입장료, 설명을 포함해주세요.
-응답은 반드시 파싱 가능한 JSON 형식이어야 합니다.`,
+      위 조건에 맞는 여행 일정을 JSON 형식으로 생성해주세요.
+      각 장소마다 예상 소요 시간, 입장료, 설명을 포함해주세요.
+      응답은 반드시 파싱 가능한 JSON 형식이어야 합니다.`,
     },
   ];
 
