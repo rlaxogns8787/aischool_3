@@ -165,6 +165,22 @@ const characterTraits: VoiceCharacterType = {
     formatMessage: (text: string) => {
       return (
         text
+          // 인사말 제거 (더 포괄적인 패턴)
+          .replace(/^(안녕하세요|반갑습니다)( 여러분)?[,.!]?\s*/g, "")
+          .replace(/^여러분[,.!]?\s*/g, "")
+          // 숫자와 단위 처리
+          .replace(/(\d+\.?\d*)\s*(미터|m|M)/g, "$1m")
+          .replace(/(\d+\.?\d*)\s*(킬로미터|키로|km|KM)/g, "$1km")
+          .replace(/(\d+\.?\d*)\s*(센티미터|cm|CM)/g, "$1cm")
+          .replace(/(\d+\.?\d*)\s*(밀리미터|mm|MM)/g, "$1mm")
+          .replace(/(\d+\.?\d*)\s*(제곱미터|㎡|m2)/g, "$1㎡")
+          .replace(/(\d+\.?\d*)\s*(평방미터|m²)/g, "$1㎡")
+          .replace(/(\d+\.?\d*)\s*(평)/g, "$1평")
+          .replace(/(\d+\.?\d*)\s*(도|°)/g, "$1°")
+          .replace(/(\d+\.?\d*)\s*(원)/g, "$1원")
+          // 특수문자 제거
+          .replace(/[-#&]/g, "")
+          // 기존 포맷팅 규칙들
           .replace(/했어요?/g, "했습니다")
           .replace(/야|이야/g, "입니다")
           .replace(/볼까\?/g, "살펴보겠습니다")
@@ -180,18 +196,14 @@ const characterTraits: VoiceCharacterType = {
           .replace(/(\S+)을통해/g, "$1을 통해")
           .replace(/(\S+)를통해/g, "$1를 통해")
           .replace(/(\S+)에서는/g, "$1에서는 ")
-          // 명사로 끝나는 문장 처리 (확장된 패턴)
           .replace(
             /([가-힣]) (제공|소개|추천|안내|설명|관람|구경|체험|진행|운영|시작|종료|마무리|정리|요약|제시|제안|표현|묘사|서술|기술|전달|전파|공유|공개|발표|보고|알림|중|상태|모습|특징|분위기|매력|가치|의미|역사|전통|문화|시설|공간|장소|지역|구역|구간|코스|방향|위치|특성|특색|모양|형태|구조|성격|종류|유형|양상|현상|결과|원인|이유|계획|방법|과정|단계|순서|기간|정보|내용|사실|주제|목적|목표|대상|형태|구조|구성|요소|부분|전체|기준|조건|환경|상황|문제|해결|방안|대책|효과|영향|성과)\.?$/g,
             "$1 $2입니다."
           )
-          // 동사/형용사 기본형으로 끝나는 문장 처리
           .replace(/([가-힣])하다\.?$/g, "$1합니다.")
           .replace(/([가-힣])되다\.?$/g, "$1됩니다.")
           .replace(/([가-힣])지다\.?$/g, "$1집니다.")
-          // 일반적인 문장 마무리 처리 (가장 마지막에 적용)
           .replace(/([^.!?])$/g, "$1합니다.")
-          // 문장 부호 정리
           .replace(/\.{2,}/g, ".")
           .replace(/\s+\./g, ".")
           .replace(/합니다\.$/, ".")
@@ -1464,6 +1476,7 @@ export default function TourScreen() {
 1. 위 관심사를 중심으로 장소를 설명해주세요.
 2. ${selectedPreference}과(와) 관련된 특별한 관점이나 정보를 포함해주세요.
 3. 사용자의 관심사와 장소의 특징을 자연스럽게 연결해주세요.
+4. 인사말은 하지 말고 바로 장소 설명을 시작해주세요.
 
 ### 장소 정보:
 - 장소명: ${currentPlace.title}
@@ -1475,7 +1488,8 @@ export default function TourScreen() {
 
 ### 스토리 스타일:
 - ${selectedCharacter.style}
-- ${selectedCharacter.tone}로 자연스럽게 설명해주세요.`;
+- ${selectedCharacter.tone}로 자연스럽게 설명해주세요.
+- 인사말 없이 바로 본론으로 들어가주세요.`;
 
       const body = {
         messages: [
@@ -1485,6 +1499,7 @@ export default function TourScreen() {
 Your role is to provide an engaging and informative explanation about ${
               currentPlace.title
             } for tourists who are interested in ${userPreference}. 
+Do not start with any greetings, go straight to the description.
 
 Time: ${currentPlace.time}
 Duration: ${currentPlace.duration}
@@ -1502,7 +1517,7 @@ Your explanation style should align with ${
               tourState.currentPlaceIndex === 0 ? "st" : "th"
             } destination out of ${
               todaySchedule.places.length
-            } places for today's schedule.
+            } places for today's schedule. Do not include any greetings.
 Additional context: ${currentPlace.description}`,
           },
         ],
@@ -1607,7 +1622,7 @@ Additional context: ${currentPlace.description}`,
     }
   };
 
-  // handleNextPlace 함수 수정
+  // handleNextPlace 함수 내부를 수정
   const handleNextPlace = async () => {
     try {
       console.log("handleNextPlace: 다음 장소로 이동 시작");
@@ -1650,13 +1665,6 @@ Additional context: ${currentPlace.description}`,
       const isLastPlace = currentPlaceIndex === currentDay.places.length - 1;
       const isLastDay = currentDayIndex === storedSchedule.days.length - 1;
 
-      console.log("handleNextPlace: 현재 상태", {
-        currentDayIndex,
-        currentPlaceIndex,
-        isLastPlace,
-        isLastDay,
-      });
-
       // 현재 장소 정보 저장
       const currentPlace = currentDay.places[currentPlaceIndex];
       setCurrentLocationName(currentPlace.title);
@@ -1668,39 +1676,37 @@ Additional context: ${currentPlace.description}`,
         return;
       }
 
-      // 마지막 장소가 아닌 경우에만 다음 장소로 이동
+      // 다음 장소 인덱스 계산
       if (currentPlaceIndex < currentDay.places.length - 1) {
-        console.log("handleNextPlace: 같은 날의 다음 장소로 이동");
         currentPlaceIndex++;
       } else if (currentDayIndex < storedSchedule.days.length - 1) {
-        console.log("handleNextPlace: 다음 날의 첫 장소로 이동");
         currentDayIndex++;
         currentPlaceIndex = 0;
       }
 
+      // 상태 업데이트
       setTourState({
         currentDayIndex,
         currentPlaceIndex,
         showNextButton: false,
       });
 
-      const nextPlace =
-        storedSchedule.days[currentDayIndex].places[currentPlaceIndex];
-      console.log("handleNextPlace: 다음 장소 정보", {
-        title: nextPlace.title,
-        order: currentPlaceIndex + 1,
-        totalPlaces: currentDay.places.length,
-      });
-
-      // 마지막 장소가 아닌 경우에만 다음 장소 가이드 생성
-      if (!isLastPlace) {
-        await generateTourGuide();
-        console.log("handleNextPlace: 다음 장소 가이드 생성 완료");
-      }
+      // 다음 장소 가이드 생성은 useEffect에서 처리
     } catch (error) {
       console.error("handleNextPlace 에러:", error);
     }
   };
+
+  // 컴포넌트 내에 useEffect 추가
+  useEffect(() => {
+    const generateGuideForNextPlace = async () => {
+      if (!tourState.showNextButton) {
+        await generateTourGuide();
+      }
+    };
+
+    generateGuideForNextPlace();
+  }, [tourState]);
 
   // speakText 함수 (TTS 실행)
   const speakText = (text: string) => {
@@ -1785,7 +1791,7 @@ Additional context: ${currentPlace.description}`,
     try {
       setIsInitializing(true);
       setShowMusicSection(false); // 웰컴 메시지 시작할 때 음악 섹션 숨기기
-      const message = "안녕하세요! 여행을 시작해볼까요?";
+      const message = "여행을 시작해볼까요?";
       await startSpeaking(message);
       setIsInitializing(false);
     } catch (error) {
