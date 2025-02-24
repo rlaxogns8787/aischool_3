@@ -659,16 +659,13 @@ export default function TourScreen() {
     }
 
     try {
-      // 이전 음성 재생 중지 및 완료 대기
+      // 이미 재생 중인 경우 중단
       if (isSpeaking) {
-        console.log("startSpeaking: 이전 음성 중지 시작");
-        await Speech.stop();
-        await new Promise((resolve) => setTimeout(resolve, 100));
-        setIsSpeaking(false);
-        console.log("startSpeaking: 이전 음성 중지 완료");
+        console.log("이미 음성이 재생 중입니다. 새로운 재생을 중단합니다.");
+        return;
       }
 
-      // 이전 사운드 언로드 및 완료 대기
+      // 이전 음성 재생 중지 및 완료 대기
       if (currentSound.current) {
         console.log("startSpeaking: 이전 사운드 언로드 시작");
         await currentSound.current.unloadAsync();
@@ -770,6 +767,7 @@ export default function TourScreen() {
 
       const soundObject = new Audio.Sound();
       await soundObject.loadAsync({ uri: fileUri });
+      currentSound.current = soundObject;
 
       // 음성 파일의 재생 시간 가져오기
       const status = await soundObject.getStatusAsync();
@@ -811,8 +809,9 @@ export default function TourScreen() {
     if (!isGuiding) {
       try {
         const nearbySpot = await findNearbySpot(location.coords);
-        if (nearbySpot) {
-          // generateTourGuide 호출 제거
+        if (nearbySpot && !isLoadingStory) {
+          setIsLoadingStory(true);
+          await generateTourGuide();
           setIsGuiding(true);
         } else {
           // 근처 장소를 찾지 못했을 때 조용히 처리
@@ -928,8 +927,8 @@ export default function TourScreen() {
         }
       );
 
-      // 파라미터 없이 호출
-      generateTourGuide();
+      // generateTourGuide 호출 제거
+      console.log("Nearby spots search completed:", response.data);
     } catch (error) {
       console.error("Nearby spots search failed:", error);
     }
@@ -938,23 +937,37 @@ export default function TourScreen() {
   // 위치 추적 useEffect
   useEffect(() => {
     (async () => {
-      console.log("위치 권한 요청 시작");
-      const { status } = await Location.requestForegroundPermissionsAsync();
-      if (status !== "granted") {
-        Alert.alert("위치 권한이 필요합니다");
-        return;
+      try {
+        console.log("위치 권한 요청 시작");
+        const { status } = await Location.requestForegroundPermissionsAsync();
+        if (status !== "granted") {
+          Alert.alert("위치 권한이 필요합니다");
+          return;
+        }
+        console.log("위치 권한 허용됨");
+
+        // 저장된 일정이 있는지 확인
+        const storedSchedule = await AsyncStorage.getItem("confirmedSchedule");
+
+        // 실제 위치 가져오기
+        const realLocation = await Location.getCurrentPositionAsync({
+          accuracy: Location.Accuracy.High,
+        });
+        console.log("실제 위치 정보:", realLocation);
+        setCurrentLocation(realLocation);
+
+        if (!storedSchedule) {
+          // 저장된 일정이 없을 경우에만 근처 관광지 검색
+          console.log("저장된 일정이 없습니다. 근처 관광지를 검색합니다.");
+          const { latitude, longitude } = realLocation.coords;
+          await fetchNearbySpots(latitude, longitude);
+        } else {
+          // 저장된 일정이 있는 경우 해당 일정의 장소들 체크
+          checkNearbySpots(realLocation);
+        }
+      } catch (error) {
+        console.error("Location initialization error:", error);
       }
-      console.log("위치 권한 허용됨");
-      // 실제 위치 가져오기
-      const realLocation = await Location.getCurrentPositionAsync({
-        accuracy: Location.Accuracy.High,
-      });
-      console.log("실제 위치 정보:", realLocation);
-      setCurrentLocation(realLocation);
-      checkNearbySpots(realLocation);
-      // ✅ AI Search 기능 추가 부분 시작
-      const { latitude, longitude } = realLocation.coords;
-      fetchNearbySpots(latitude, longitude);
     })();
   }, []);
 
