@@ -331,13 +331,42 @@ const OptionModal: React.FC<OptionModalProps> = ({
           <View style={styles.buttonRow}>
             <TouchableOpacity
               style={styles.confirmButton}
-              onPress={() => {
-                onClose();
-                // 일정 확정 메시지 전달
-                onUpdate({
-                  ...schedule,
-                  status: "confirmed",
-                });
+              onPress={async () => {
+                try {
+                  // 일정 확정 상태로 업데이트
+                  const confirmedSchedule = {
+                    ...schedule,
+                    status: "confirmed",
+                    confirmedAt: new Date().toISOString(),
+                  };
+
+                  // AsyncStorage에 확정된 일정 저장
+                  await AsyncStorage.setItem(
+                    "confirmedSchedule",
+                    JSON.stringify(confirmedSchedule)
+                  );
+
+                  // 성공 알림 표시
+                  Alert.alert(
+                    "일정 저장 완료",
+                    "일정이 성공적으로 저장되었습니다.",
+                    [
+                      {
+                        text: "확인",
+                        onPress: () => {
+                          onUpdate(confirmedSchedule); // 부모 컴포넌트에 업데이트 알림
+                          onClose(); // 모달 닫기
+                        },
+                      },
+                    ]
+                  );
+                } catch (error) {
+                  console.error("일정 저장 중 오류 발생:", error);
+                  Alert.alert(
+                    "저장 실패",
+                    "일정을 저장하는 중 오류가 발생했습니다."
+                  );
+                }
               }}
             >
               <Text style={styles.confirmButtonText}>일정이 마음에 들어요</Text>
