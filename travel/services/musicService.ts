@@ -33,16 +33,62 @@ export class MusicService {
   private isPlaying: boolean = false;
   private sound: Audio.Sound | null = null;
   private currentVideoId: string | null = null;
+  private currentLocation: string = "";
 
-  // 기본 추천곡 설정 (장르별)
-  private defaultRecommendations: { [key: string]: string } = {
-    pop: "IVE - I AM",
-    "k-pop": "NewJeans - Super Shy",
-    ballad: "아이유 - Love poem",
-    rock: "윤도현 - 사랑했나봐",
-    hiphop: "BTS - Dynamite",
-    jazz: "Norah Jones - Don't Know Why",
-    classical: "Yiruma - River Flows in You",
+  // 연령대별 장르 기본곡 매핑
+  private ageGroupRecommendations: {
+    [key: string]: { [key: string]: string };
+  } = {
+    child: {
+      // 13세 미만
+      pop: "NewJeans - Ditto",
+      "k-pop": "IVE - LOVE DIVE",
+      ballad: "IU - Eight",
+      rock: "DAY6 - You Were Beautiful",
+      hiphop: "BTS - Dynamite",
+      jazz: "Disney Jazz - When You Wish Upon A Star",
+      classical: "Yiruma - River Flows in You",
+    },
+    teen: {
+      // 13-19세
+      pop: "NewJeans - Super Shy",
+      "k-pop": "LE SSERAFIM - UNFORGIVEN",
+      ballad: "IU - Love poem",
+      rock: "The Rose - Sorry",
+      hiphop: "Stray Kids - S-Class",
+      jazz: "Jamie Cullum - What A Difference A Day Made",
+      classical: "Ludovico Einaudi - Experience",
+    },
+    adult: {
+      // 20-39세
+      pop: "Charlie Puth - Attention",
+      "k-pop": "BTS - Spring Day",
+      ballad: "성시경 - 거리에서",
+      rock: "넬 - 기억을 걷는 시간",
+      hiphop: "Epik High - 빈차",
+      jazz: "Michael Bublé - Feeling Good",
+      classical: "Joe Hisaishi - Summer",
+    },
+    middle: {
+      // 40-59세
+      pop: "ABBA - Dancing Queen",
+      "k-pop": "소녀시대 - Forever 1",
+      ballad: "이문세 - 광화문 연가",
+      rock: "버스커버스커 - 벚꽃엔딩",
+      hiphop: "다이나믹듀오 - 길",
+      jazz: "Louis Armstrong - What A Wonderful World",
+      classical: "Richard Clayderman - Mariage D Amour",
+    },
+    senior: {
+      // 60세 이상
+      pop: "Frank Sinatra - My Way",
+      "k-pop": "조용필 - 단발머리",
+      ballad: "김광석 - 서른즈음에",
+      rock: "신중현과 엽전들 - 미인",
+      hiphop: "현인 - 비와 당신",
+      jazz: "Nat King Cole - Unforgettable",
+      classical: "Claude Debussy - Clair de Lune",
+    },
   };
 
   constructor() {
@@ -68,25 +114,38 @@ export class MusicService {
     }
   }
 
+  // 연령대 판별 함수
+  private getAgeGroup(birthYear: number): string {
+    const age = new Date().getFullYear() - birthYear;
+    if (age < 13) return "child";
+    if (age < 20) return "teen";
+    if (age < 40) return "adult";
+    if (age < 60) return "middle";
+    return "senior";
+  }
+
   // OpenAI를 통한 음악 추천
   private async getAIRecommendation(
-    preferences: UserPreferences
+    preferences: UserPreferences,
+    location: string
   ): Promise<string> {
     try {
       const currentYear = new Date().getFullYear();
       const age = currentYear - preferences.birthYear;
+      const ageGroup = this.getAgeGroup(preferences.birthYear);
 
       const prompt = `당신은 음악 추천 전문가입니다.
-현재 ${age}세의 사용자가 ${preferences.musicGenre} 장르의 음악을 듣고 싶어합니다.
-이 사용자의 연령대와 선호 장르를 고려하여 딱 한 곡을 추천해주세요.
+현재 ${age}세의 사용자가 ${location}에 있습니다.
+선호하는 음악 장르는 ${preferences.musicGenre}입니다.
+이 장소와 사용자의 취향을 고려하여 딱 한 곡을 추천해주세요.
 
 응답 형식:
 아티스트명 - 곡명
 
 주의사항:
 1. 반드시 실제로 존재하는 곡이어야 합니다
-2. 연령대에 적합한 곡이어야 합니다
-3. 장르가 일치해야 합니다
+2. 연령대(${ageGroup})에 적합한 곡이어야 합니다
+3. 장르(${preferences.musicGenre})와 장소(${location})의 분위기가 어울려야 합니다
 4. 응답은 "아티스트명 - 곡명" 형식으로만 해주세요`;
 
       const response = await fetch(
@@ -115,22 +174,26 @@ export class MusicService {
       const data = await response.json();
       const recommendation = data.choices?.[0]?.message?.content;
 
-      // AI 추천이 실패하면 기본 추천곡 반환
+      // AI 추천이 실패하면 연령대별 기본 추천곡 반환
       if (!recommendation) {
-        console.log("AI 추천 실패, 기본 추천곡 사용");
+        console.log("AI 추천 실패, 연령대별 기본 추천곡 사용");
+        const ageGroupSongs =
+          this.ageGroupRecommendations[this.getAgeGroup(preferences.birthYear)];
         const defaultSong =
-          this.defaultRecommendations[preferences.musicGenre.toLowerCase()] ||
-          this.defaultRecommendations["pop"];
+          ageGroupSongs[preferences.musicGenre.toLowerCase()] ||
+          ageGroupSongs["pop"];
         return defaultSong;
       }
 
       return recommendation.trim();
     } catch (error) {
       console.error("AI recommendation error:", error);
-      // 에러 발생 시 기본 추천곡 반환
+      // 에러 발생 시 연령대별 기본 추천곡 반환
+      const ageGroupSongs =
+        this.ageGroupRecommendations[this.getAgeGroup(preferences.birthYear)];
       const defaultSong =
-        this.defaultRecommendations[preferences.musicGenre.toLowerCase()] ||
-        this.defaultRecommendations["pop"];
+        ageGroupSongs[preferences.musicGenre.toLowerCase()] ||
+        ageGroupSongs["pop"];
       return defaultSong;
     }
   }
@@ -175,18 +238,29 @@ export class MusicService {
   }
 
   // 사용자 취향 기반 음악 재생
-  async playUserPreferredMusic(preferences: {
-    birthYear: number;
-    musicGenre: string;
-  }): Promise<{
+  async playUserPreferredMusic(
+    preferences: {
+      birthYear: number;
+      musicGenre: string;
+    },
+    location: string
+  ): Promise<{
     videoId: string | null;
     message: string;
     title: string;
     artist: string;
   }> {
     try {
+      // 이전 곡이 재생 중이면 중지
+      if (this.currentLocation !== location) {
+        await this.stop();
+      }
+
       // OpenAI로부터 음악 추천 받기
-      const recommendation = await this.getAIRecommendation(preferences);
+      const recommendation = await this.getAIRecommendation(
+        preferences,
+        location
+      );
       console.log("AI Recommended song:", recommendation);
 
       // YouTube에서 추천받은 곡 검색
@@ -194,10 +268,11 @@ export class MusicService {
 
       if (result.videoId) {
         this.currentVideoId = result.videoId;
+        this.currentLocation = location;
         this.isPlaying = true;
         return {
           videoId: result.videoId,
-          message: `AI가 추천한 "${result.title}"을(를) 재생합니다!`,
+          message: `${location}에서 "${result.title}"을(를) 재생합니다!`,
           title: result.title,
           artist: result.artist,
         };
