@@ -320,7 +320,7 @@ const OptionModal: React.FC<OptionModalProps> = ({
                 )
               )}
               {schedule.extraInfo.totalCost && (
-                <Text style={styles.extraInfoText}>
+                <Text style={styles.totalCostText}>
                   총 비용: {schedule.extraInfo.totalCost.toLocaleString()}원
                 </Text>
               )}
@@ -611,6 +611,13 @@ const styles = StyleSheet.create({
     fontSize: 14,
     lineHeight: 18,
     color: "#71727A",
+    marginTop: 8,
+  },
+  totalCostText: {
+    fontSize: 16,
+    lineHeight: 16,
+    color: "#007AFF",
+    fontWeight: "700",
     marginTop: 8,
   },
 });
