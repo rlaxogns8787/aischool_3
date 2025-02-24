@@ -679,7 +679,13 @@ export default function TourScreen() {
       setShowMusicSection(false);
 
       // 텍스트 전처리
-      let processedText = typeof text === "string" ? text : text.text;
+      let processedText =
+        typeof text === "string"
+          ? text
+          : typeof text === "object" && text.text
+          ? text.text
+          : JSON.stringify(text);
+
       if (!processedText) throw new Error("Invalid text format");
 
       // 선택된 캐릭터 속성
@@ -1212,7 +1218,7 @@ export default function TourScreen() {
 
       setTourState((prev) => ({ ...prev, showNextButton: true }));
       setTourGuide("");
-      await startSpeaking(content);
+      await startSpeaking({ text: content });
 
       // 이야기 후 음악
       setShowMusicSection(true);

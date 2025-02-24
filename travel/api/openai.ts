@@ -1,14 +1,16 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
-// Azure OpenAI 설정
-const AZURE_OPENAI_ENDPOINT = "https://ssapy-openai.openai.azure.com/";
-const AZURE_OPENAI_KEY =
+// Azure OpenAI Configuration
+export const AZURE_OPENAI_ENDPOINT = "https://ssapy-openai.openai.azure.com/";
+export const AZURE_OPENAI_KEY =
   "65fEqo2qsGl8oJPg7lzs8ZJk7pUgdTEgEhUx2tvUsD2e07hbowbCJQQJ99BBACfhMk5XJ3w3AAABACOGr7S4";
-const DEPLOYMENT_NAME = "gpt-4o";
+export const DEPLOYMENT_NAME = "gpt-4o";
 
-// Azure Search 설정
-const AZURE_SEARCH_ENDPOINT = "https://ssapy-search.search.windows.net";
-const AZURE_SEARCH_KEY = "s6d0odfWQpmQh1HpjXELLBbrq1blnEvtGOncvWqMNyAzSeA2zxTa";
-const AZURE_SEARCH_INDEX = "final-index";
+// Azure AI Search Configuration
+export const AZURE_SEARCH_ENDPOINT =
+  "https://ssapy-ai-search.search.windows.net";
+export const AZURE_SEARCH_KEY =
+  "NGZcgM1vjwqKoDNPnFXcApBFttxWmGRLmnukKldPcTAzSeBjHCk6";
+export const ATTRACTION_INDEX = "add_food_index";
 
 // 시스템 프롬프트 수정
 const SYSTEM_PROMPT = `당신은 여행 계획을 도와주는 AI 어시스턴트입니다.
@@ -127,7 +129,7 @@ export const chatWithAI = async (
 const searchTravelInfo = async (searchQuery: string) => {
   try {
     const response = await fetch(
-      `${AZURE_SEARCH_ENDPOINT}/indexes/${AZURE_SEARCH_INDEX}/docs/search?api-version=2023-07-01-Preview`,
+      `${AZURE_SEARCH_ENDPOINT}/indexes/${ATTRACTION_INDEX}/docs/search?api-version=2023-07-01-Preview`,
       {
         method: "POST",
         headers: {

@@ -2,6 +2,7 @@ import { createStackNavigator } from "@react-navigation/stack";
 import HomeScreen from "../screens/HomeScreen";
 import ChatScreen from "../screens/ChatScreen";
 import TMapScreen from "../screens/TMapScreen";
+import SpontaneousTourScreen from "../screens/SpontaneousTourScreen";
 
 const Stack = createStackNavigator();
 
@@ -26,6 +27,11 @@ export default function AppNavigator() {
       <Stack.Screen
         name="TMapScreen" // ✅ TMapScreen 추가
         component={TMapScreen}
+        options={{ headerShown: false }}
+      />
+      <Stack.Screen
+        name="가이드"
+        component={SpontaneousTourScreen}
         options={{ headerShown: false }}
       />
     </Stack.Navigator>
