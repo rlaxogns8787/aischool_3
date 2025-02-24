@@ -161,7 +161,7 @@ export const FeedbackModal: React.FC<FeedbackModalProps> = ({
                 </TouchableOpacity>
               </View>
               <Text style={styles.subtitle}>
-                도슨트 개선을 위해 피드백을 남겨주세요
+                별점은 일정과 함께 일정기록에 함께 기록됩니다.
               </Text>
             </View>
 
@@ -184,15 +184,14 @@ export const FeedbackModal: React.FC<FeedbackModalProps> = ({
                   </TouchableOpacity>
                 ))}
               </View>
-              <Text style={styles.ratingGuideText}>
+              {/* <Text style={styles.ratingGuideText}>
                 별점은 일정 스토리와 함께 일정기록에 함께 기록됩니다.
-              </Text>
+              </Text> */}
             </View>
 
             <View style={styles.emotionSection}>
               <Text style={styles.emotionGuideText}>
-                아래 감정과 피드백을 주시면,{"\n"}도슨트 설명에 참고하여
-                개선하겠습니다.
+                도슨트 개선을 위해 {"\n"} 감정과 피드백을 주시면 감사하겠습니다.
               </Text>
               <Text style={styles.sectionTitle}>여행 내내 기분은?</Text>
               <View style={styles.emotionContainer}>
@@ -291,13 +290,13 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   closeButton: {
-    padding: 8,
+    // padding: 8,
   },
   title: {
     fontSize: 24,
     fontWeight: "700",
     color: "#000000",
-    marginBottom: 8,
+    // marginBottom: 8,
   },
   subtitle: {
     fontSize: 16,
@@ -307,7 +306,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: "600",
     color: "#000000",
-    marginBottom: 16,
+    // marginBottom: 16,
   },
   ratingSection: {
     marginBottom: 24,
@@ -316,7 +315,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "center",
     gap: 8,
-    marginBottom: 8,
+    // marginBottom: 8,
   },
   starButton: {
     padding: 4,
@@ -410,7 +409,7 @@ const styles = StyleSheet.create({
   },
   skipButtonText: {
     fontSize: 16,
-    color: "#000000",
+    color: "#767676",
     fontWeight: "600",
   },
   submitButton: {
@@ -425,14 +424,15 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: "#FFFFFF",
   },
-  ratingGuideText: {
-    fontSize: 14,
-    color: "#767676",
-    textAlign: "center",
-  },
+  // ratingGuideText: {
+  //   fontSize: 14,
+  //   color: "#767676",
+  //   textAlign: "center",
+  // },
   emotionGuideText: {
-    fontSize: 14,
-    color: "#767676",
+    fontSize: 16,
+    color: "#363636",
+    lineHeight: 20,
     textAlign: "center",
     marginBottom: 24,
   },
