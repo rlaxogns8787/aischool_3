@@ -806,6 +806,14 @@ export default function TourScreen() {
   // checkNearbySpots 함수 수정
   const checkNearbySpots = async (location: Location.LocationObject) => {
     console.log("checkNearbySpots 호출, location:", location);
+
+    // 저장된 일정이 있는지 먼저 확인
+    const storedSchedule = await AsyncStorage.getItem("confirmedSchedule");
+    if (!storedSchedule) {
+      console.log("저장된 일정이 없어 checkNearbySpots를 실행하지 않습니다.");
+      return;
+    }
+
     if (!isGuiding) {
       try {
         const nearbySpot = await findNearbySpot(location.coords);
