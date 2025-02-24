@@ -310,23 +310,35 @@ const keywordMappings: Record<string, string[]> = {
   ],
 };
 
-// 2) “장소 정보”를 분석하여 가장 잘 맞는 ‘관심사’를 찾아주는 함수
+// 2) "장소 정보"를 분석하여 가장 잘 맞는 '관심사'를 찾아주는 함수
 export function findMatchingInterest(
   placeTitle: string,
   placeDescription: string,
   userInterests: string[]
 ): string {
+  console.log("🔍 [InterestUtils] 관심사 매칭 시작");
+  console.log("📍 장소:", placeTitle);
+  console.log("📝 설명:", placeDescription);
+  console.log("👤 사용자 관심사:", userInterests);
+
   // 기본값: userInterests가 비어있으면 '전체' 사용
-  if (!userInterests.length) return "전체";
+  if (!userInterests.length) {
+    console.log("✨ 선택된 관심사 없음 -> '전체' 모드로 진행");
+    return "전체";
+  }
+
+  // 우선순위: userInterests 중 첫 번째가 "전체"면 뒤 로직 통과
+  if (userInterests[0] === "전체") {
+    console.log("✨ '전체' 모드로 진행");
+    return "전체";
+  }
 
   // placeInfo 소문자로 전처리
   const placeInfo = `${placeTitle} ${placeDescription}`.toLowerCase();
 
-  // 우선순위: userInterests 중 첫 번째가 "전체"면 뒤 로직 통과
-  let selectedPreference = userInterests[0];
-
   // 사용자 관심사 여러 개인 경우:
-  if (userInterests.length > 1 && userInterests[0] !== "전체") {
+  if (userInterests.length > 1) {
+    console.log("📊 다중 관심사 매칭 시도");
     const matchingPreferences = userInterests.filter((pref) => {
       const keywords = keywordMappings[pref] || [];
       // 관심사 자체가 placeInfo에 등장하거나,
@@ -335,21 +347,35 @@ export function findMatchingInterest(
         placeInfo.includes(pref.toLowerCase()) ||
         keywords.some((kw) => placeInfo.includes(kw));
 
+      if (isMatching) {
+        console.log(`✅ 매칭된 관심사: ${pref}`);
+        console.log(
+          `🔑 매칭된 키워드:`,
+          keywords.filter((kw) => placeInfo.includes(kw))
+        );
+      }
+
       return isMatching;
     });
 
     // 매칭된 관심사가 하나 이상 있으면 랜덤으로 하나 선택
     if (matchingPreferences.length > 0) {
-      selectedPreference =
+      const selectedPreference =
         matchingPreferences[
           Math.floor(Math.random() * matchingPreferences.length)
         ];
+      console.log(`🎯 최종 선택된 관심사: ${selectedPreference}`);
+      return selectedPreference;
     } else {
       // 아무것도 안 맞으면 userInterests 중에서 랜덤
-      selectedPreference =
+      const randomPreference =
         userInterests[Math.floor(Math.random() * userInterests.length)];
+      console.log(`🎲 매칭 실패 -> 랜덤 선택: ${randomPreference}`);
+      return randomPreference;
     }
+  } else {
+    // 단일 관심사인 경우 해당 관심사 사용
+    console.log(`🎯 단일 관심사 사용: ${userInterests[0]}`);
+    return userInterests[0];
   }
-
-  return selectedPreference;
 }
