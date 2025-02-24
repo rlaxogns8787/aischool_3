@@ -357,6 +357,7 @@ interface YouTubeEvent {
   data?: any;
 }
 
+// RootStackParamList 타입 정의 수정
 type RootStackParamList = {
   Main: undefined;
   홈: undefined;
@@ -367,7 +368,9 @@ type RootStackParamList = {
   Chat: undefined;
   Schedule: undefined;
   Map: undefined;
-  Camera: undefined;
+  Camera: {
+    onPhotoTaken: (photoUri: string) => Promise<void>;
+  };
 };
 
 type TourScreenNavigationProp = NavigationProp<RootStackParamList>;
@@ -797,8 +800,7 @@ export default function TourScreen() {
       try {
         const nearbySpot = await findNearbySpot(location.coords);
         if (nearbySpot) {
-          // 파라미터 없이 호출
-          await generateTourGuide();
+          // generateTourGuide 호출 제거
           setIsGuiding(true);
         } else {
           // 근처 장소를 찾지 못했을 때 조용히 처리
@@ -1690,10 +1692,11 @@ Additional context: ${currentPlace.description}`,
         totalPlaces: currentDay.places.length,
       });
 
-      // 파라미터 없이 호출
-      await generateTourGuide();
-
-      console.log("handleNextPlace: 다음 장소 가이드 생성 완료");
+      // 마지막 장소가 아닌 경우에만 다음 장소 가이드 생성
+      if (!isLastPlace) {
+        await generateTourGuide();
+        console.log("handleNextPlace: 다음 장소 가이드 생성 완료");
+      }
     } catch (error) {
       console.error("handleNextPlace 에러:", error);
     }
@@ -1991,7 +1994,7 @@ Additional context: ${currentPlace.description}`,
 
   // 카메라 버튼 핸들러
   const handleCameraPress = () => {
-    navigation.navigate("Camera", {
+    navigation.navigate("Camera" as keyof RootStackParamList, {
       onPhotoTaken: async (photoUri: string) => {
         try {
           // 사진 저장 로직 구현
