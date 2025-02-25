@@ -1,4 +1,4 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import {
   View,
   Text,
@@ -27,6 +27,7 @@ export default function ScheduleDetail() {
   const route = useRoute<ScheduleDetailRouteProp>();
   const navigation = useNavigation();
   const { schedule } = route.params;
+  const [selectedDate, setSelectedDate] = useState<string | null>(null); // ✅ 날짜를 저장할 state: null이면 전체 보기
 
   const deleteSchedule = async (id: string) => {
     Alert.alert("일정 삭제", "이 일정을 삭제하시겠습니까?", [
@@ -86,18 +87,32 @@ export default function ScheduleDetail() {
       </View>
 
       {/* ✅ 지도 추가 (TMapScreen) */}
-      <TMap_Route scheduleId={schedule.id} />
+      <TMap_Route
+        scheduleId={schedule.id}
+        selectedDate={selectedDate} // 날짜를 prop으로 넘김
+      />
 
       <ScrollView style={styles.content}>
         <View style={styles.destinationSection}>
-          <Text style={styles.destination}>{schedule.destination}</Text>
-          <Text style={styles.date}>
-            {schedule.startDate} - {schedule.endDate}
-          </Text>
+          {/* 전체 제목 부분을 터치하면 전체 경로(즉 날짜 state를 null) */}
+          <TouchableOpacity onPress={() => setSelectedDate(null)}>
+            <Text style={styles.destination}>{schedule.destination}</Text>
+            <Text style={styles.date}>
+              {schedule.startDate} - {schedule.endDate}
+            </Text>
+          </TouchableOpacity>
         </View>
 
         {schedule.itinerary.map((day, index) => (
-          <View key={index} style={styles.daySection}>
+          // {/* 날짜 텍스트를 누르면 해당 날짜의 경로만 보이도록 */}
+          <TouchableOpacity
+            key={index}
+            onPress={() => {
+              console.log(`📅 날짜 선택됨: ${day.date}`);
+              setSelectedDate(day.date);
+            }}
+            style={styles.daySection}
+          >
             <Text style={styles.dayTitle}>{day.date}</Text>
             {day.activities.map((activity, actIndex) => (
               <View key={actIndex} style={styles.activity}>
@@ -113,7 +128,7 @@ export default function ScheduleDetail() {
                 </View>
               </View>
             ))}
-          </View>
+          </TouchableOpacity>
         ))}
       </ScrollView>
     </SafeAreaView>
