@@ -5,10 +5,8 @@ const BASE_URL = "https://5a031-gce0e3fhexdbh4c6.eastus-01.azurewebsites.net";
 
 interface FeedbackData {
   rating: number;
-  emotion: string;
-  feedback: string;
-  location?: string;
-  timestamp?: string;
+  deduction: number;
+  comment: string;
 }
 
 interface AnalyzedFeedback {
@@ -30,9 +28,8 @@ export class FeedbackService {
       const prompt = `
 분석해야 할 여행 가이드 피드백:
 - 별점: ${feedbackData.rating}/5
-- 감정: ${feedbackData.emotion}
-- 피드백 내용: "${feedbackData.feedback}"
-${feedbackData.location ? `- 장소: ${feedbackData.location}` : ""}
+- 감점: ${feedbackData.deduction}점
+- 피드백 내용: "${feedbackData.comment}"
 
 다음 형식으로 분석해주세요:
 1. 감정 분석 (positive/neutral/negative)
@@ -142,7 +139,9 @@ ${originalGuide}
 
       const userInfo = JSON.parse(userData);
       const formattedFeedbackData = {
-        ...feedbackData,
+        rating: feedbackData.rating,
+        deduction: feedbackData.deduction,
+        comment: feedbackData.comment,
         username: userInfo.username,
       };
 
@@ -219,8 +218,8 @@ ${originalGuide}
         const prompt = `
 사용자의 피드백:
 - 별점: ${feedbackData.rating}/5
-- 감정: ${feedbackData.emotion}
-- 내용: "${feedbackData.feedback}"
+- 감점: ${feedbackData.deduction}점
+- 내용: "${feedbackData.comment}"
 
 위 피드백을 받은 AI 도슨트가 여행을 마무리하며 할 인사말을 작성해주세요.
 다음 내용을 반드시 포함해주세요:
