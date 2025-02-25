@@ -21,6 +21,7 @@ import defaultTravelImage1 from "../assets/default-travel-1.jpg"; // 이미지 �
 import defaultTravelImage2 from "../assets/default-travel-2.jpg"; // 이미지 파일 추가 필요
 import ShareIcon from "../assets/share.svg";
 import { getMultipleRandomKoreaImages } from "../utils/imageUtils";
+import { addSchedule, addrecord } from "../api/loginapi"; // 추가된 부분
 
 const { width: screenWidth } = Dimensions.get("window");
 
@@ -315,6 +316,11 @@ const OptionModal: React.FC<OptionModalProps> = ({
                     "confirmedSchedule",
                     JSON.stringify(confirmedSchedule)
                   );
+
+                  // 🔹 DB에 일정 추가
+                  await addSchedule(confirmedSchedule);
+                  await addrecord(confirmedSchedule);
+                  console.log("일정이 DB에 성공적으로 저장되었습니다.");
 
                   // 성공 알림 표시
                   Alert.alert(
