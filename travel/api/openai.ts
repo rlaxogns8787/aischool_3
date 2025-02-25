@@ -188,9 +188,11 @@ export const generateTravelSchedule = async (tripInfo: TripInfo) => {
 
 응답은 반드시 아래 형식을 따라야 합니다:
 {
-  "tripId": "고유ID",
-  "timestamp": "생성시간",
-  "title": "여행 테마에 맞는 제목(단 제목에 지역명은 포함하지않을것)",
+  "tripId": "trip-${new Date().getTime()}-${Math.random()
+    .toString(36)
+    .substring(2, 15)}-${Math.random().toString(36).substring(2, 15)}",
+  "timestamp": "${new Date().toISOString()}",
+  "title": "여행 테마에 맞는 제목",
   "companion": "동행인 정보",
   "startDate": "시작날짜",
   "endDate": "종료날짜", 
