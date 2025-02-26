@@ -153,17 +153,17 @@ const characterTraits: VoiceCharacterType = {
     personality: "전문적이고 통찰력 있는 도슨트",
     style:
       "사용자의 관심사를 중심으로 장소의 맥락과 스토리를 풍부하게 전달하는",
-    tone: "우아하고 세련된 존댓말",
+    tone: "우아하고 차분한 존댓말",
     language: "ko-KR",
-    examples: `석촌호수는 서울 송파구에 위치한 도심 속 자연 휴식처입니다.
+    examples: `석촌호수는 서울 송파구에 위치한 도심 속 자연 휴식처입니다. 
 
-              이곳은 롯데월드타워와 조화를 이루며 도시와 자연이 공존하는 독특한 경관을 선보입니다.
+              이곳은 조선 시대 농경지였으나, 현대에 들어서 도시 생태공원으로 조성되었습니다. 
 
-              한강에서 유입되는 물로 관리되며 도시 생태계의 중요한 역할을 담당하고 있습니다.
+              호수 주변을 따라 걷다 보면 사계절 내내 색다른 풍경을 감상할 수 있습니다. 
 
-              조선시대부터 이어져 온 이 지역의 문화적 맥락과 현대적 발전이 어우러져 있습니다.
+              특히, 봄에는 벚꽃이 만개하여 서울의 대표적인 벚꽃 명소로 손꼽힙니다. 
 
-              오늘날에는 시민들의 휴식과 문화생활이 어우러진 복합문화공간으로 자리매김하였습니다.`,
+              또한, 근처의 롯데월드타워와 함께 멋진 야경을 감상할 수도 있습니다.`,
     formatMessage: (text: string) => {
       let formattedText = text
         .replace(/[([{].*?[)\]}]/g, "")
@@ -191,19 +191,15 @@ const characterTraits: VoiceCharacterType = {
         .replace(/볼까\?/g, "살펴보겠습니다")
         .replace(/줄게/g, "드리겠습니다")
         .replace(/있어/g, "있습니다")
+        .replace(/였습니다/g, "였습니다")
+        .replace(/드립니다/g, "드립니다")
+        .replace(/야$/g, "입니다")
+        .replace(/해$/g, "합니다")
         .replace(/(\S+)이 있습니다/g, "$1가 있습니다")
         .replace(/(\S+)이 되었습니다/g, "$1가 되었습니다")
-        .replace(/(\S+)하고 (\S+)하다/g, "$1하고 $2합니다")
-        .replace(/(\S+)하며 (\S+)하다/g, "$1하며 $2합니다")
-        .replace(/[!?][.,]/g, "$1") // 물음표나 느낌표 뒤의 마침표나 콤마를 제거하고 물음표/느낌표만 유지
-        .replace(/[.,][!?]/g, "$2") // 마침표나 콤마 뒤의 물음표나 느낌표는 물음표/느낌표만 유지
         .replace(/(\S+)을통해/g, "$1을 통해")
         .replace(/(\S+)를통해/g, "$1를 통해")
         .replace(/(\S+)에서는/g, "$1에서는 ")
-        .replace(/([가-힣])하다$/g, "$1합니다")
-        .replace(/([가-힣])되다$/g, "$1됩니다")
-        .replace(/([가-힣])지다$/g, "$1집니다")
-        .replace(/([^.!?])$/g, "$1합니다")
         .replace(/\.{2,}/g, ".")
         .replace(/\s+\./g, ".")
         .replace(/합니다[.,](?=[!?])/g, "합니다") // "합니다." 뒤에 물음표나 느낌표가 오는 경우 처리
@@ -217,15 +213,15 @@ const characterTraits: VoiceCharacterType = {
     style: "사용자 관심사를 현대적 관점과 SNS 감성으로 재해석하는",
     tone: "활기차고 트렌디한 반말",
     language: "ko-KR",
-    examples: `석촌호수는 송파구의 핫플레이스야! 봄에 벚꽃축제 할땐 여기가 인생샷 스팟이자 힐링스팟임!
+    examples: `석촌호수는 서울 송파구에 있는 도심 속 힐링 스팟이야! 
 
-              롯데타워 뷰와 호수가 만나서 만드는 야경이 진짜 대박! 감성샷 건지기 완벽해!
+              원래 농경지였는데 지금은 산책하기 딱 좋은 공원이 됐어. 
 
-              요즘 MZ들이 환경에 관심 많잖아? 이 호수가 도시 속 힐링 스팟이면서 환경 지킴이 역할도 한다는 거 알아?
+              봄에는 벚꽃이 엄청 예쁘고, 가을엔 단풍도 끝내줘! 
 
-              여기가 옛날에 농사짓던 곳이었다는 게 신기하지 않아? 지금은 완전 다른 느낌이야!
+              특히 해 질 녘에 가면 호수에 반사되는 노을이 진짜 장관이야. 
 
-              주말마다 플리마켓이랑 버스킹도 열리는데, 로컬 감성 제대로 느낄 수 있어!`,
+              근처에 롯데월드타워도 있으니까 야경 보면서 분위기 내기에도 좋아!`,
     formatMessage: (text: string) => {
       return text
         .replace(/^(안녕하세요|반갑습니다)( 여러분)?[,.!?]\s*/g, "")
@@ -242,17 +238,17 @@ const characterTraits: VoiceCharacterType = {
         .replace(/[([{].*?[)\]}]/g, "")
         .replace(/[*\-#&~!@%^+=<>{}[\]|\\:;]/g, "")
         .replace(/합니다/g, "해")
-        .replace(/했습니다/g, "했어")
-        .replace(/하겠습니다/g, "할게")
+        .replace(/했습니다/g, "했어!")
+        .replace(/하겠습니다/g, "할게!")
         .replace(/살펴보겠습니다/g, "볼까?")
-        .replace(/있습니다/g, "있어")
-        .replace(/였습니다/g, "였어")
-        .replace(/드립니다/g, "줄게")
-        .replace(/니다/g, "야")
+        .replace(/있습니다/g, "있어!")
+        .replace(/였습니다/g, "였어!")
+        .replace(/드립니다/g, "줄게!")
+        .replace(/니다/g, "야!")
         .replace(/시오/g, "어")
-        .replace(/보세요/g, "봐")
+        .replace(/보세요/g, "봐봐")
         .replace(/이에요|예요/g, "이야")
-        .replace(/\./g, "!")
+        .replace(/\.\s*/g, "!\n\n") // 문장 끝 마침표를 느낌표로 변환하고 줄바꿈 추가
         .replace(/\.{2,}/g, ".")
         .replace(/\s+\./g, ".")
         .replace(/\.$\n*\.*$/g, ".")
@@ -384,9 +380,6 @@ type RootStackParamList = {
   Chat: undefined;
   Schedule: undefined;
   Map: undefined;
-  Camera: {
-    onPhotoTaken: (photoUri: string) => Promise<void>;
-  };
 };
 
 type TourScreenNavigationProp = NavigationProp<RootStackParamList>;
@@ -442,7 +435,6 @@ export default function TourScreen() {
   const [isPlaying, setIsPlaying] = useState(false);
   const [userData, setUserData] = useState<UserData | null>(null);
   const youtubePlayerRef = useRef(null);
-  const [showCamera, setShowCamera] = useState(false);
   const [showFeedbackModal, setShowFeedbackModal] = useState(false);
   const [showExitButton, setShowExitButton] = useState(false);
   const feedbackService = useRef(new FeedbackService());
@@ -472,6 +464,7 @@ export default function TourScreen() {
       name: "Stella",
       id: "en-US-JaneNeural",
       description: "Like a local friend showing you around",
+      disabled: true,
     },
     {
       name: "최불암",
@@ -1548,37 +1541,6 @@ export default function TourScreen() {
       console.error("Music playback error:", error);
       Alert.alert("음악 재생 오류", "음악을 재생하는 중 문제가 발생했습니다.");
     }
-  };
-
-  // 카메라 버튼
-  const handleCameraPress = () => {
-    navigation.navigate("Camera" as keyof RootStackParamList, {
-      onPhotoTaken: async (photoUri: string) => {
-        try {
-          const response = await fetch("YOUR_API_ENDPOINT/photos", {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-              userId: user?.id,
-              photoUri,
-              location: currentLocation,
-              timestamp: new Date().toISOString(),
-            }),
-          });
-
-          if (response.ok) {
-            Alert.alert("성공", "사진이 저장되었습니다!");
-          } else {
-            throw new Error("사진 저장에 실패했습니다.");
-          }
-        } catch (error) {
-          console.error("Photo save error:", error);
-          Alert.alert("오류", "사진 저장 중 문제가 발생했습니다.");
-        }
-      },
-    });
   };
 
   const isLastLocation = () => {
