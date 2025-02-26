@@ -821,15 +821,14 @@ export default function TourScreen() {
     userCoords: Location.LocationObject["coords"]
   ) => {
     try {
-      const confirmedScheduleStr = await AsyncStorage.getItem(
-        "confirmedSchedule"
-      );
+      const confirmedScheduleStr = await getSchedules();
+      console.log("저장된 일정:", confirmedScheduleStr);
       if (!confirmedScheduleStr) {
         console.log("저장된 일정이 없습니다.");
         return null;
       }
 
-      const schedule = JSON.parse(confirmedScheduleStr) as Schedule;
+      const schedule = (await JSON.parse(confirmedScheduleStr)) as Schedule;
       const today = new Date().toISOString().split("T")[0];
       const todaySchedule = schedule.days.find(
         (day: { date: string }) => day.date === today
