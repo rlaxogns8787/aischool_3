@@ -1804,7 +1804,9 @@ export default function TourScreen() {
               </View>
               {currentSong ? (
                 <Text style={styles.songTitle} numberOfLines={1}>
-                  {currentSong.artist} - {currentSong.title}
+                  {currentSong.title.includes(currentSong.artist)
+                    ? currentSong.title
+                    : `${currentSong.artist} - ${currentSong.title}`}
                 </Text>
               ) : (
                 <Text style={styles.songTitle}>
