@@ -37,57 +37,161 @@ export class MusicService {
 
   // 연령대별 장르 기본곡 매핑
   private ageGroupRecommendations: {
-    [key: string]: { [key: string]: string };
+    [key: string]: { [key: string]: string[] };
   } = {
-    child: {
-      // 13세 미만
-      pop: "NewJeans - Ditto",
-      "k-pop": "IVE - LOVE DIVE",
-      ballad: "IU - Eight",
-      rock: "DAY6 - You Were Beautiful",
-      hiphop: "BTS - Dynamite",
-      jazz: "Disney Jazz - When You Wish Upon A Star",
-      classical: "Yiruma - River Flows in You",
-    },
     teen: {
       // 13-19세
-      pop: "NewJeans - Super Shy",
-      "k-pop": "LE SSERAFIM - UNFORGIVEN",
-      ballad: "IU - Love poem",
-      rock: "The Rose - Sorry",
-      hiphop: "Stray Kids - S-Class",
-      jazz: "Jamie Cullum - What A Difference A Day Made",
-      classical: "Ludovico Einaudi - Experience",
+      pop: [
+        "Doechii - DENIAL IS A RIVER",
+        "Maroon 5 - Lucky Strike",
+        "Benson Boone - Beautiful Things",
+        "Betsy, Мария Янковская - Sigma Boy",
+        "X Ambassadors - BOOM",
+        "Betty Who - Look Back",
+        "EASHA - Far Away",
+      ],
+      kpop: [
+        "IVE - ATTITUDE",
+        "카리나 - UP",
+        "NewJeans - How Sweet",
+        "ROSÉ & Bruno Mars - APT.",
+      ],
+      ballad: [
+        "Justin Bieber - All That Matters",
+        "아이유 - 밤편지",
+        "ROSÉ - number one girl",
+      ],
+      rock: [
+        "KiiiKiii - I DO ME",
+        "DAY6 - You Were Beautiful",
+        "Green Day - Boulevard of Broken Dreams",
+      ],
+      hiphop: [
+        "Kendrick Lamar - Not Like Us",
+        "J.I.D - Surround Sound ",
+        "Stray Kids - God's Menu",
+      ],
+      jazz: [
+        "Disney Jazz - When You Wish Upon A Star",
+        "Claire Rosinkranz - Don't miss me",
+      ],
+      classical: [
+        "Yiruma - River Flows in You",
+        "Mozart - Eine kleine Nachtmusik",
+      ],
     },
-    adult: {
+    youngAdult: {
       // 20-39세
-      pop: "Charlie Puth - Attention",
-      "k-pop": "BTS - Spring Day",
-      ballad: "성시경 - 거리에서",
-      rock: "넬 - 기억을 걷는 시간",
-      hiphop: "Epik High - 빈차",
-      jazz: "Michael Bublé - Feeling Good",
-      classical: "Joe Hisaishi - Summer",
+      pop: [
+        "Benson Boone - Slow It Down",
+        "Sabrina Carpenter - Please Please Please",
+        "Taylor Swift - Fortnight",
+        "Ain't Nothing Wrong With That",
+        "Alice Merton - No Roots",
+        "Lauv - Paris in the rain",
+        "24 - sundial",
+      ],
+      kpop: [
+        "아이유 - 밤편지",
+        "디오 - 별 떨어진다",
+        "NewJeans - GODS",
+        "아이유 - 홀씨",
+      ],
+      ballad: [
+        "SZA - BMF",
+        "Paul Kim - 커피 한잔 할래요",
+        "Honne - Warm On a Cold Night",
+      ],
+      rock: [
+        "넬 - 기억을 걷는 시간",
+        "Hozier - Too Sweet",
+        "Lord Huron - The Night We Met",
+      ],
+      hiphop: [
+        "Epik High - 빈차",
+        "Drake - Hotline Bling",
+        "Kendrick Lamar - luther",
+      ],
+      jazz: ["Lana Del Rey - Blue Jeans", "Norah Jones - Don't Know Why"],
+      classical: ["Joe Hisaishi - Summer", "Debussy - Clair de Lune"],
     },
     middle: {
       // 40-59세
-      pop: "ABBA - Dancing Queen",
-      "k-pop": "소녀시대 - Forever 1",
-      ballad: "이문세 - 광화문 연가",
-      rock: "버스커버스커 - 벚꽃엔딩",
-      hiphop: "다이나믹듀오 - 길",
-      jazz: "Louis Armstrong - What A Wonderful World",
-      classical: "Richard Clayderman - Mariage D Amour",
+      pop: [
+        "Mind by Eve - Let Me Blow",
+        "Bruno Mars - Runaway Baby",
+        "Maroon 5 - Moves Like Jagger",
+      ],
+      kpop: [
+        "소녀시대 - Forever 1",
+        "조용필 - 친구여",
+        "투투 - 일과 이분의 일",
+      ],
+      ballad: [
+        "이문세 - 광화문 연가",
+        "김광석 - 잊어야 한다는 마음으로",
+        "이승철 - 소녀",
+        "델리스파이스- 고백",
+      ],
+      rock: [
+        "체리필터 - 낭만고양이",
+        "Queen - Bohemian Rhapsody",
+        "The Beatles - Let It Be",
+      ],
+      hiphop: [
+        "다이나믹듀오 - 길",
+        "Eminem - Lose Yourself",
+        "Nas - The World Is Yours",
+      ],
+      jazz: [
+        "Louis Armstrong - What A Wonderful World",
+        "Sarah Vaughan - Misty",
+        "Michael Bublé - Feeling Good",
+      ],
+      classical: [
+        "Richard Clayderman - Mariage D Amour",
+        "Beethoven - Moonlight Sonata",
+      ],
     },
     senior: {
-      // 60세 이상
-      pop: "Frank Sinatra - My Way",
-      "k-pop": "조용필 - 단발머리",
-      ballad: "김광석 - 서른즈음에",
-      rock: "신중현과 엽전들 - 미인",
-      hiphop: "현인 - 비와 당신",
-      jazz: "Nat King Cole - Unforgettable",
-      classical: "Claude Debussy - Clair de Lune",
+      // 60-70세
+      pop: [
+        "ABBA - Dancing Queen",
+        "The Carpenters - Close to You",
+        "Frank Sinatra - Strangers in the Night",
+      ],
+      kpop: ["조용필 - 단발머리", "이문세 - 붉은 노을", "나훈아 - 테스형"],
+      ballad: ["김광석 - 서른즈음에", "조관우 - 꽃밭에서", "이선희 - 인연"],
+      rock: [
+        "신중현과 엽전들 - 미인",
+        "The Rolling Stones - (I Can't Get No) Satisfaction",
+      ],
+      hiphop: ["현인 - 비와 당신", "한대수 - 물 좀 주소"],
+      jazz: [
+        "Nat King Cole - Unforgettable",
+        "Duke Ellington - Take the A Train",
+      ],
+      classical: [
+        "Claude Debussy - Clair de Lune",
+        "Johann Sebastian Bach - Air on the G String",
+      ],
+    },
+    elder: {
+      // 70세 이상
+      pop: [
+        "Elvis Presley - Can't Help Falling in Love",
+        "Frank Sinatra - My Way",
+        "The Everly Brothers - All I Have to Do Is Dream",
+      ],
+      kpop: ["남진 - 둥지", "이미자 - 동백아가씨"],
+      ballad: ["패티김 - 가을을 남기고 간 사랑", "현미 - 밤안개"],
+      rock: ["The Beatles - Hey Jude", "신중현 - 미인"],
+      hiphop: ["배호 - 돌아가는 삼각지", "김추자 - 님은 먼 곳에"],
+      jazz: [
+        "Ella Fitzgerald - Dream a Little Dream of Me",
+        "Django Reinhardt - Minor Swing",
+      ],
+      classical: ["Franz Schubert - Ave Maria", "Erik Satie - Gymnopédie No.1"],
     },
   };
 
@@ -119,9 +223,14 @@ export class MusicService {
     const age = new Date().getFullYear() - birthYear;
     if (age < 13) return "child";
     if (age < 20) return "teen";
-    if (age < 40) return "adult";
+    if (age < 40) return "youngAdult";
     if (age < 60) return "middle";
-    return "senior";
+    if (age < 70) return "senior";
+    return "elder";
+  }
+
+  private getRandomSong(songs: string[]): string {
+    return songs[Math.floor(Math.random() * songs.length)];
   }
 
   // OpenAI를 통한 음악 추천
@@ -179,10 +288,10 @@ export class MusicService {
         console.log("AI 추천 실패, 연령대별 기본 추천곡 사용");
         const ageGroupSongs =
           this.ageGroupRecommendations[this.getAgeGroup(preferences.birthYear)];
-        const defaultSong =
+        const genreSongs =
           ageGroupSongs[preferences.musicGenre.toLowerCase()] ||
           ageGroupSongs["pop"];
-        return defaultSong;
+        return this.getRandomSong(genreSongs);
       }
 
       return recommendation.trim();
@@ -191,10 +300,10 @@ export class MusicService {
       // 에러 발생 시 연령대별 기본 추천곡 반환
       const ageGroupSongs =
         this.ageGroupRecommendations[this.getAgeGroup(preferences.birthYear)];
-      const defaultSong =
+      const genreSongs =
         ageGroupSongs[preferences.musicGenre.toLowerCase()] ||
         ageGroupSongs["pop"];
-      return defaultSong;
+      return this.getRandomSong(genreSongs);
     }
   }
 
@@ -354,4 +463,44 @@ export class MusicService {
       };
     }
   }
+
+  normalizeMusicGenre = (genre: string): string => {
+    const normalizedGenre = genre.toLowerCase();
+    switch (normalizedGenre) {
+      case "k-pop":
+      case "k pop":
+      case "kpop":
+        return "kpop";
+      case "hip hop":
+      case "hip-hop":
+        return "hiphop";
+      case "classic":
+      case "classics":
+      case "classical":
+        return "classical";
+      case "popular":
+      case "pop music":
+        return "pop";
+      case "rhythm and blues":
+      case "r&b":
+      case "rnb":
+        return "ballad";
+      default:
+        // pop, kpop, ballad, rock, hiphop, jazz, classical는 이미 소문자로 정규화되어 있으므로 그대로 반환
+        if (
+          [
+            "pop",
+            "kpop",
+            "ballad",
+            "rock",
+            "hiphop",
+            "jazz",
+            "classical",
+          ].includes(normalizedGenre)
+        ) {
+          return normalizedGenre;
+        }
+        return "pop"; // 알 수 없는 장르는 pop으로 기본 설정
+    }
+  };
 }

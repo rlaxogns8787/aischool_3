@@ -15,6 +15,30 @@ interface RegisterUserData {
   music_genres?: string[]; // Optional
 }
 
+// 음악 장르 정규화 함수
+const normalizeMusicGenre = (genre: string): string => {
+  const normalizedGenre = genre.toLowerCase();
+  switch (normalizedGenre) {
+    case "k-pop":
+    case "k pop":
+    case "kpop":
+      return "kpop";
+    case "hip hop":
+    case "hip-hop":
+      return "hiphop";
+    case "classic":
+    case "classics":
+    case "classical":
+      return "classical";
+    case "popular":
+    case "pop music":
+      return "pop";
+    default:
+      // ballad, rock, jazz는 이미 소문자로 정규화되어 있으므로 그대로 반환
+      return normalizedGenre;
+  }
+};
+
 /**
  * 회원가입 API 요청
  */
@@ -60,7 +84,11 @@ export const loginUser = async (userData) => {
 /**
  * 사용자 정보 업데이트 API 요청
  */
-export const updateUserInfo = async (field, value, password?) => {
+export const updateUserInfo = async (
+  field: string,
+  value: any,
+  password?: any
+) => {
   try {
     const userData = await AsyncStorage.getItem("userData");
     if (!userData) {
@@ -74,11 +102,17 @@ export const updateUserInfo = async (field, value, password?) => {
       throw new Error("username이 없습니다.");
     }
 
+    // 음악 장르 정규화
+    let normalizedValue = value;
+    if (field === "music_genres" && Array.isArray(value)) {
+      normalizedValue = value.map(normalizeMusicGenre);
+    }
+
     // 서버에 보낼 데이터 구성
     let updateData = {
-      username, // username 추가
+      username,
       field,
-      value,
+      value: normalizedValue,
     };
 
     // 비밀번호 변경의 경우
@@ -442,4 +476,3 @@ export const getFeedback = async () => {
     );
   }
 };
-

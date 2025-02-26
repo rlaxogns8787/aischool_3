@@ -183,23 +183,24 @@ const ANIMALS = [
 
 type AuthStep = "info" | "preference";
 
-// 음악 장르 옵션 추가
-const musicGenreOptions = [
-  "팝송",
-  "OLD POP",
-  "K-POP",
-  "Billboard Top 100",
-  "클래식",
-  "록",
-  "힙합",
-  "R&B",
-  "어쿠스틱",
-  "EDM",
-  "포크",
-  "재즈",
-  "트로트",
-  "가곡",
-];
+// 음악 장르 매핑
+const MUSIC_GENRE_MAPPING = {
+  pop: "팝송",
+  kpop: "케이팝",
+  ballad: "R&B",
+  rock: "락",
+  hiphop: "힙합",
+  jazz: "재즈",
+  classical: "클래식",
+} as const;
+
+// 음악 장르 옵션 (UI 표시용)
+const musicGenreOptions = Object.entries(MUSIC_GENRE_MAPPING).map(
+  ([key, value]) => ({
+    value: key,
+    label: value,
+  })
+);
 
 export default function AuthScreen({ navigation, route }: AuthScreenProps) {
   const { signIn, signUp } = useAuth();
@@ -1261,28 +1262,28 @@ export default function AuthScreen({ navigation, route }: AuthScreenProps) {
             <View style={styles.preferencesContainer}>
               {musicGenreOptions.map((genre) => (
                 <TouchableOpacity
-                  key={genre}
+                  key={genre.value}
                   style={[
                     styles.preferenceButton,
-                    selectedMusicGenres.includes(genre) &&
+                    selectedMusicGenres.includes(genre.value) &&
                       styles.preferenceButtonSelected,
                   ]}
                   onPress={() => {
                     setSelectedMusicGenres((prev) =>
-                      prev.includes(genre)
-                        ? prev.filter((g) => g !== genre)
-                        : [...prev, genre]
+                      prev.includes(genre.value)
+                        ? prev.filter((g) => g !== genre.value)
+                        : [...prev, genre.value]
                     );
                   }}
                 >
                   <Text
                     style={[
                       styles.preferenceButtonText,
-                      selectedMusicGenres.includes(genre) &&
+                      selectedMusicGenres.includes(genre.value) &&
                         styles.preferenceButtonTextSelected,
                     ]}
                   >
-                    {genre}
+                    {genre.label}
                   </Text>
                 </TouchableOpacity>
               ))}

@@ -1513,8 +1513,8 @@ export default function TourScreen() {
         } else if (userData) {
           console.log("No current song, searching for new song:", userData);
           const defaultSong = {
-            title: "Test Audio",
-            artist: "Sample",
+            title: "AI가 음악 추천중..",
+            artist: "",
             videoId: "test",
           };
 

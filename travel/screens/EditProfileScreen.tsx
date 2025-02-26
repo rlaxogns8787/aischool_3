@@ -90,20 +90,13 @@ const preferenceOptions = [
 ];
 
 const musicGenreOptions = [
-  "팝송",
-  "OLD POP",
-  "K-POP",
-  "Billboard Top 100",
-  "클래식",
-  "록",
-  "힙합",
-  "R&B",
-  "어쿠스틱",
-  "EDM",
-  "포크",
-  "재즈",
-  "트로트",
-  "가곡",
+  { value: "pop", label: "팝송" },
+  { value: "kpop", label: "케이팝" },
+  { value: "ballad", label: "R&B" },
+  { value: "rock", label: "락" },
+  { value: "hiphop", label: "힙합" },
+  { value: "jazz", label: "재즈" },
+  { value: "classical", label: "클래식" },
 ];
 
 export default function EditProfileScreen({
@@ -395,28 +388,28 @@ export default function EditProfileScreen({
             <View style={styles.tagsContainer}>
               {musicGenreOptions.map((option) => (
                 <TouchableOpacity
-                  key={option}
+                  key={option.value}
                   style={[
                     styles.tagButton,
-                    selectedMusicGenres.includes(option) &&
+                    selectedMusicGenres.includes(option.value) &&
                       styles.tagButtonSelected,
                   ]}
                   onPress={() => {
                     setSelectedMusicGenres((prev) =>
-                      prev.includes(option)
-                        ? prev.filter((item) => item !== option)
-                        : [...prev, option]
+                      prev.includes(option.value)
+                        ? prev.filter((item) => item !== option.value)
+                        : [...prev, option.value]
                     );
                   }}
                 >
                   <Text
                     style={[
                       styles.tagButtonText,
-                      selectedMusicGenres.includes(option) &&
+                      selectedMusicGenres.includes(option.value) &&
                         styles.tagButtonTextSelected,
                     ]}
                   >
-                    {option}
+                    {option.label}
                   </Text>
                 </TouchableOpacity>
               ))}
@@ -551,7 +544,7 @@ const styles = StyleSheet.create({
     borderColor: "#007AFF",
   },
   tagButtonText: {
-    fontSize: 14,
+    fontSize: 16,
     color: "#007AFF",
     fontWeight: "500",
   },

@@ -26,6 +26,25 @@ interface UserInfo {
   music_genres: string[];
 }
 
+// 음악 장르 매핑
+const MUSIC_GENRE_MAPPING = {
+  pop: "팝송",
+  kpop: "케이팝",
+  ballad: "R&B",
+  rock: "락",
+  hiphop: "힙합",
+  jazz: "재즈",
+  classical: "클래식",
+} as const;
+
+// 음악 장르 옵션 (UI 표시용)
+const musicGenreOptions = Object.entries(MUSIC_GENRE_MAPPING).map(
+  ([key, value]) => ({
+    value: key,
+    label: value,
+  })
+);
+
 type MyProfileScreenProps = {
   navigation: DrawerNavigationProp<any>;
 };
